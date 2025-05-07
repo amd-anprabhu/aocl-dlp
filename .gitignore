@@ -1,0 +1,18 @@
+# Ignore VSCode
+.vscode
+
+# Python Virtual environment
+venv
+.venv
+
+# Ignore build directories
+*build*
+
+# Ignore install directories
+*install*
+
+# Python cache
+**/__pycache__
+
+# Pre-commit cache
+.pre-commit-cache

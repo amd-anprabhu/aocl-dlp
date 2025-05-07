@@ -1,0 +1,231 @@
+/*
+ * Copyright © Advanced Micro Devices, Inc., or its affiliates.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ * 1. Redistributions of source code must retain the above copyright notice,
+ *    this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ * 3. Neither the name of the copyright holder nor the names of its contributors
+ *    may be used to endorse or promote products derived from this software
+ *    without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS “AS IS”
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES ( INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ *
+ */
+
+#include "aocl_gemm_check.h"
+#include "classic/aocl_gemm_interface_apis.h"
+#include "config/lpgemm_config.h"
+#include "gemm_utils/lpgemm_utils.h"
+#include "logging/lpgemm_logger.h"
+#include "lpgemm_5loop_interface_apis.h"
+#include "lpgemm_post_ops.h"
+#include "lpgemm_types.h"
+#include "runtime/dlp_runtime.h"
+#include "sys_utils/dlp_cpu_arch.h"
+#include "threading/lpgemm_thread_decor_openmp.h"
+
+static inline bool
+is_tiny_input_f32(md_t m, md_t n, md_t k, lpgemm_cntx_t* lcntx)
+{
+    const md_t NC = lcntx->blksz.NC;
+    const md_t MC = lcntx->blksz.MC;
+    const md_t KC = lcntx->blksz.KC;
+    const md_t MR = lcntx->blksz.MR;
+    const md_t NR = lcntx->blksz.NR;
+
+    md_t       mnk           = m * n * k;
+    md_t       mk            = m * k;
+    const md_t mnk_magic_num = 12 * 64 * 496;
+    const md_t mk_thresh     = 12000;
+    const md_t m_thresh      = 5 * MR;
+    const md_t n_thresh      = 2 * NR;
+    const md_t k_thresh      = 480;
+
+    // Need to explicitly check for MC, NC boundaries for safety.
+    if (((k < KC) && (m <= MC) && (n < NC))
+        && (((m <= m_thresh) && (n <= n_thresh) && (k <= k_thresh))
+            || ((mnk < mnk_magic_num && m != 1 && mk < mk_thresh)))) {
+        return TRUE;
+    }
+
+    return FALSE;
+}
+
+AOCL_GEMM_MATMUL(float, float, float, float, f32f32f32of32)
+{
+    LPGEMM_START_LOGGER();
+    LPGEMM_WRITE_LOGGER("f32f32f32of32", order, transa, transb, m, n, k,
+                        ((float)alpha), lda, mem_format_a, ldb, mem_format_b,
+                        ((float)beta), ldc, post_op_unparsed);
+
+    dlp_trans_t dlp_transa;
+    dlp_trans_t dlp_transb;
+
+    // Check if AVX2 ISA is supported, lpgemm fp32 matmul only works with it.
+    if (dlp_cpuid_is_avx2fma3_supported() == FALSE) {
+        dlp_print_msg(" AVX2 ISA not supported by processor, "
+                      "cannot perform f32f32f32 gemm.",
+                      __FILE__, __LINE__);
+        goto err_hndl;
+    }
+
+    // Initialize lpgemm context.
+    aocl_lpgemm_init_global_cntx();
+
+    // check for validity of params.
+    int err_no = 0;
+    AOCL_GEMM_CHECK("f32f32f32of32", order, transa, transb, m, n, k, a, lda,
+                    mem_format_a, b, ldb, mem_format_b, c, ldc, err_no);
+    if (err_no != 0) {
+        goto err_hndl;
+    }
+
+    /* Map BLAS chars to their corresponding DLP enumerated type value. */
+    dlp_param_map_netlib_to_dlp_trans(transa, &dlp_transa);
+    dlp_param_map_netlib_to_dlp_trans(transb, &dlp_transb);
+
+    bool is_row_major    = ((order == 'r') || (order == 'R'));
+    bool is_column_major = ((order == 'c') || (order == 'C'));
+
+    // The strides are set assuming a row major kernel.
+    md_t rs_a = lda;
+    md_t cs_a = 1;
+
+    if (dlp_is_trans(dlp_transa)) {
+        rs_a = 1;
+        cs_a = lda;
+    }
+
+    md_t rs_b = ldb;
+    md_t cs_b = 1;
+
+    if (dlp_is_trans(dlp_transb)) {
+        rs_b = 1;
+        cs_b = ldb;
+    }
+
+    const md_t rs_c = ldc;
+    const md_t cs_c = 1;
+
+    AOCL_MEMORY_TAG mtag_a;
+    AOCL_MEMORY_TAG mtag_b;
+
+    dlp_param_map_char_to_lpmtag(mem_format_a, &mtag_a);
+    dlp_param_map_char_to_lpmtag(mem_format_b, &mtag_b);
+
+    // Reordered A not supported now.
+    if ((is_row_major == TRUE) && (mtag_a == REORDERED)) {
+        dlp_print_msg(" Reordering of A matrix is not supported.", __FILE__,
+                      __LINE__);
+        goto err_hndl;
+    }
+
+    // Inputs swapped in column major, A becomes B from kernel point of view.
+    else if ((is_column_major == TRUE)
+             && ((mtag_b == REORDERED) || (mtag_a == REORDERED))) {
+        dlp_print_msg(" Reordering of column major matrices is not supported.",
+                      __FILE__, __LINE__);
+        goto err_hndl;
+    }
+
+    // By default enable packing for B matrix. Before the 5 loop, based on
+    // the input dimensions, the smart threading logic will adjust it
+    // (disable/enable) accordingly.
+    if ((is_row_major == TRUE) && (mtag_b == UNPACKED)) {
+        mtag_b = PACK;
+    }
+    // Inputs swapped in column major, A becomes B from kernel point of view.
+    else if ((is_column_major == TRUE) && (mtag_a == UNPACKED)) {
+        mtag_a = PACK;
+    }
+
+    // From 5-loop function point of view,
+    // A matrix when in column major storage needs to be packed to row-major
+    // storage as kernel expects A matrix to be in row-major format.
+    if ((is_row_major == TRUE) && (dlp_is_trans(dlp_transa))) {
+        mtag_a = PACK;
+    }
+    // Inputs swapped in column major, A becomes B from kernel point of view.
+    else if ((is_column_major == TRUE) && (dlp_is_trans(dlp_transb))) {
+        mtag_b = PACK;
+    }
+
+    // Convert post op struct to post op linked list format.
+    lpgemm_post_op post_op_list[AOCL_MAX_POST_OPS];
+    dlp_clsc_err_t err = lpgemm_translate_to_post_ops_list(
+        post_op_unparsed, post_op_list, (void*)c, (void*)(&order), m, n);
+
+    if (err != DLP_CLSC_SUCCESS) {
+        goto err_hndl;
+    }
+
+    // Initialize a local runtime with global settings if necessary. Note
+    // that in the case that a runtime is passed in, we make a local copy.
+    dlp_rntm_t rntm_g;
+    dlp_rntm_init_from_global(&rntm_g);
+
+    lpgemm_cntx_t* lcntx_g = lpgemm_get_global_cntx_obj(F32F32F32OF32);
+
+    if (is_single_thread(&rntm_g) == TRUE) {
+        if ((is_row_major == TRUE)
+            && (is_tiny_input_f32(m, n, k, lcntx_g) == TRUE)) {
+            lpgemm_rowvar_tiny_f32f32f32of32(
+                m, n, k, a, rs_a, cs_a, mtag_a, b, rs_b, cs_b, mtag_b, c, rs_c,
+                cs_c, alpha, beta, lcntx_g, post_op_list, F32);
+
+            return;
+        } else if ((is_column_major == TRUE)
+                   && (is_tiny_input_f32(n, m, k, lcntx_g) == TRUE)) {
+            lpgemm_rowvar_tiny_f32f32f32of32(
+                n, m, k, b, rs_b, cs_b, mtag_b, a, rs_a, cs_a, mtag_a, c, rs_c,
+                cs_c, alpha, beta, lcntx_g, post_op_list, F32);
+
+            return;
+        }
+    }
+
+#ifdef DLP_ENABLE_OPENMP
+    // Swapping inputs to induce row major computation for column major inputs.
+    if (is_column_major == TRUE) {
+        lpgemm_f32f32f32of32_openmp_thread_decorator(
+            n, m, k, b, rs_b, cs_b, mtag_b, a, rs_a, cs_a, mtag_a, c, rs_c,
+            cs_c, alpha, beta, &rntm_g, lcntx_g, post_op_list, F32);
+    } else {
+        lpgemm_f32f32f32of32_openmp_thread_decorator(
+            m, n, k, a, rs_a, cs_a, mtag_a, b, rs_b, cs_b, mtag_b, c, rs_c,
+            cs_c, alpha, beta, &rntm_g, lcntx_g, post_op_list, F32);
+    }
+#else
+    // Setting pack A and B by default for non open mp case.
+    rntm_g.pack_a = TRUE;
+    rntm_g.pack_b = TRUE;
+
+    // Swapping inputs to induce row major computation for column major inputs.
+    if (is_column_major == TRUE) {
+        lpgemm_f32f32f32of32_thread_decorator(
+            n, m, k, b, rs_b, cs_b, mtag_b, a, rs_a, cs_a, mtag_a, c, rs_c,
+            cs_c, alpha, beta, &rntm_g, lcntx_g, post_op_list, F32);
+    } else {
+        lpgemm_f32f32f32of32_thread_decorator(
+            m, n, k, a, rs_a, cs_a, mtag_a, b, rs_b, cs_b, mtag_b, c, rs_c,
+            cs_c, alpha, beta, &rntm_g, lcntx_g, post_op_list, F32);
+    }
+#endif
+
+err_hndl:;
+    LPGEMM_STOP_LOGGER();
+}
