@@ -35,6 +35,7 @@ include(cmake/dlp_install.cmake)
 include(cmake/dlp_extensions.cmake)
 include(cmake/dlp_options.cmake)
 include(cmake/dlp_dependencies.cmake)
+include(cmake/dlp_documentation.cmake)
 
 # OS specific CMake modules goes here
 if(UNIX)
@@ -105,6 +106,17 @@ endif()
 if(BUILD_EXAMPLES)
     message(STATUS "Enabling examples")
     # add_subdirectory(examples)
+endif()
+
+# Generate Doxygen documentation
+if(BUILD_DOXYGEN)
+    dlp_generate_doxygen_config()
+    dlp_generate_doxygen_docs()
+endif()
+
+# Generate Sphinx documentation
+if(BUILD_SPHINX)
+    dlp_generate_sphinx_docs()
 endif()
 
 # Generate config file with version info
