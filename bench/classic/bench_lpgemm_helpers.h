@@ -373,6 +373,11 @@ fill_array_post_ops_bfloat16(void* arr, md_t size)
             int8_t_to_float(*((int8_t*)post_op_bias_ptr + j), &ret_val);       \
             return ret_val;                                                    \
         }                                                                      \
+        if (bias_stor_type == AOCL_GEMM_UINT8) {                               \
+            float ret_val = 0.0;                                               \
+            uint8_t_to_float(*((uint8_t*)post_op_bias_ptr + j), &ret_val);     \
+            return ret_val;                                                    \
+        }                                                                      \
         if (bias_stor_type == AOCL_GEMM_INT32) {                               \
             float ret_val = 0.0;                                               \
             int32_t_to_float(*((int32_t*)post_op_bias_ptr + j), &ret_val);     \
@@ -429,8 +434,7 @@ fill_array_post_ops_bfloat16(void* arr, md_t size)
         float alpha_val;                                                       \
         int32_t_to_float(*((int32_t*)alpha), &alpha_val);                      \
         float swish_reference =                                                \
-            (temp_accum                                                        \
-             / (1 + expf((double)((alpha_val) * temp_accum * -1))));           \
+            (temp_accum / (1 + expf((double)((alpha_val)*temp_accum * -1))));  \
         return swish_reference;                                                \
     }
 
@@ -465,6 +469,12 @@ fill_array_post_ops_bfloat16(void* arr, md_t size)
             float ret_val = 0.0;                                               \
             int8_t_to_float(*((int8_t*)mat_add_ptr + (i * rs_m) + (j * cs_m)), \
                             &ret_val);                                         \
+            return ((float)ret_val * *(scl_fctr + j_scale));                   \
+        }                                                                      \
+        if (matadd_stor_type == AOCL_GEMM_UINT8) {                             \
+            float ret_val = 0.0;                                               \
+            uint8_t_to_float(                                                  \
+                *((uint8_t*)mat_add_ptr + (i * rs_m) + (j * cs_m)), &ret_val); \
             return ((float)ret_val * *(scl_fctr + j_scale));                   \
         }                                                                      \
         if (matadd_stor_type == AOCL_GEMM_INT32) {                             \
@@ -902,8 +912,8 @@ mat_mul_accuracy_check_downscale_f32f32f32of32(
             float_accum += temp_accum_float;                                   \
         }                                                                      \
         float c_ref_float = 0.0;                                               \
-        GEN_FUNC_NAME(C_type, _to_float)(                                      \
-            *(c_ref + (rs_c_ref * i) + (cs_c_ref * j)), &c_ref_float);         \
+        GEN_FUNC_NAME(C_type, _to_float)                                       \
+        (*(c_ref + (rs_c_ref * i) + (cs_c_ref * j)), &c_ref_float);            \
         float_accum =                                                          \
             ((float)beta * c_ref_float) + ((float)alpha * float_accum);        \
         return float_accum;                                                    \
@@ -1274,7 +1284,7 @@ mat_mul_accuracy_check_accum_bf16s4f32obf16(
         /* Only supporting 8 post ops at max for now.*/                        \
         md_t max_post_ops_seq_length = 8;                                      \
         post_ops->seq_vector         = (AOCL_POST_OP_TYPE*)malloc(             \
-            max_post_ops_seq_length * sizeof(AOCL_POST_OP_TYPE));      \
+                    max_post_ops_seq_length * sizeof(AOCL_POST_OP_TYPE));      \
                                                                                \
         if (post_ops->seq_vector == NULL) {                                    \
             goto err_handler;                                                  \
@@ -1342,6 +1352,9 @@ mat_mul_accuracy_check_accum_bf16s4f32obf16(
                     } else if ((strcmp(ops_tok, "s8") == 0)) {                 \
                         is_bias_stor_type = TRUE;                              \
                         bias_stor_type    = "S8";                              \
+                    } else if ((strcmp(ops_tok, "u8") == 0)) {                 \
+                        is_bias_stor_type = TRUE;                              \
+                        bias_stor_type    = "U8";                              \
                     }                                                          \
                     is_bias = TRUE;                                            \
                     cur_op_index++;                                            \
@@ -1462,6 +1475,9 @@ mat_mul_accuracy_check_accum_bf16s4f32obf16(
                     } else if ((strcmp(ops_tok, "s8") == 0)) {                 \
                         is_matadd_stor_type = TRUE;                            \
                         matadd_stor_type    = "S8";                            \
+                    } else if ((strcmp(ops_tok, "u8") == 0)) {                 \
+                        is_matadd_stor_type = TRUE;                            \
+                        matadd_stor_type    = "U8";                            \
                     }                                                          \
                     is_matrix_add = TRUE;                                      \
                     cur_op_index++;                                            \
@@ -1482,6 +1498,9 @@ mat_mul_accuracy_check_accum_bf16s4f32obf16(
                     } else if ((strcmp(ops_tok, "s8") == 0)) {                 \
                         is_matmul_stor_type = TRUE;                            \
                         matmul_stor_type    = "S8";                            \
+                    } else if ((strcmp(ops_tok, "u8") == 0)) {                 \
+                        is_matmul_stor_type = TRUE;                            \
+                        matmul_stor_type    = "U8";                            \
                     }                                                          \
                     is_matrix_mul = TRUE;                                      \
                     cur_op_index++;                                            \
@@ -1572,8 +1591,8 @@ mat_mul_accuracy_check_accum_bf16s4f32obf16(
                     if ((post_ops->bias)->bias == NULL) {                      \
                         goto err_handler;                                      \
                     }                                                          \
-                    GEN_FUNC_NAME(fill_array_post_ops_,                        \
-                                  bfloat16)((post_ops->bias)->bias, n);        \
+                    GEN_FUNC_NAME(fill_array_post_ops_, bfloat16)              \
+                    ((post_ops->bias)->bias, n);                               \
                 } else if ((strcmp(bias_stor_type, "F32") == 0)) {             \
                     (post_ops->bias)->stor_type = AOCL_GEMM_F32;               \
                     /* Allocate bias buffer, return early if alloc fails.*/    \
@@ -1581,8 +1600,8 @@ mat_mul_accuracy_check_accum_bf16s4f32obf16(
                     if ((post_ops->bias)->bias == NULL) {                      \
                         goto err_handler;                                      \
                     }                                                          \
-                    GEN_FUNC_NAME(fill_array_post_ops_,                        \
-                                  float)((post_ops->bias)->bias, n);           \
+                    GEN_FUNC_NAME(fill_array_post_ops_, float)                 \
+                    ((post_ops->bias)->bias, n);                               \
                 } else if ((strcmp(bias_stor_type, "S8") == 0)) {              \
                     (post_ops->bias)->stor_type = AOCL_GEMM_INT8;              \
                     /* Allocate bias buffer, return early if alloc fails.*/    \
@@ -1590,8 +1609,17 @@ mat_mul_accuracy_check_accum_bf16s4f32obf16(
                     if ((post_ops->bias)->bias == NULL) {                      \
                         goto err_handler;                                      \
                     }                                                          \
-                    GEN_FUNC_NAME(fill_array_post_ops_,                        \
-                                  int8_t)((post_ops->bias)->bias, n);          \
+                    GEN_FUNC_NAME(fill_array_post_ops_, int8_t)                \
+                    ((post_ops->bias)->bias, n);                               \
+                } else if ((strcmp(bias_stor_type, "U8") == 0)) {              \
+                    (post_ops->bias)->stor_type = AOCL_GEMM_UINT8;             \
+                    /* Allocate bias buffer, return early if alloc fails.*/    \
+                    (post_ops->bias)->bias = malloc(n * sizeof(int8_t));       \
+                    if ((post_ops->bias)->bias == NULL) {                      \
+                        goto err_handler;                                      \
+                    }                                                          \
+                    GEN_FUNC_NAME(fill_array_post_ops_, uint8_t)               \
+                    ((post_ops->bias)->bias, n);                               \
                 } else if ((strcmp(bias_stor_type, "S32") == 0)) {             \
                     (post_ops->bias)->stor_type = AOCL_GEMM_INT32;             \
                     /* Allocate bias buffer, return early if alloc fails.*/    \
@@ -1599,8 +1627,8 @@ mat_mul_accuracy_check_accum_bf16s4f32obf16(
                     if ((post_ops->bias)->bias == NULL) {                      \
                         goto err_handler;                                      \
                     }                                                          \
-                    GEN_FUNC_NAME(fill_array_post_ops_,                        \
-                                  int32_t)((post_ops->bias)->bias, n);         \
+                    GEN_FUNC_NAME(fill_array_post_ops_, int32_t)               \
+                    ((post_ops->bias)->bias, n);                               \
                 } else {                                                       \
                 }                                                              \
             } else {                                                           \
@@ -1610,8 +1638,8 @@ mat_mul_accuracy_check_accum_bf16s4f32obf16(
                 if ((post_ops->bias)->bias == NULL) {                          \
                     goto err_handler;                                          \
                 }                                                              \
-                GEN_FUNC_NAME(fill_array_post_ops_,                            \
-                              BIAS_type)((post_ops->bias)->bias, n);           \
+                GEN_FUNC_NAME(fill_array_post_ops_, BIAS_type)                 \
+                ((post_ops->bias)->bias, n);                                   \
             }                                                                  \
         }                                                                      \
                                                                                \
@@ -1808,8 +1836,8 @@ mat_mul_accuracy_check_accum_bf16s4f32obf16(
                     if ((post_ops->sum)->scale_factor == NULL) {               \
                         goto err_handler;                                      \
                     }                                                          \
-                    GEN_FUNC_NAME(fill_array_, bfloat16)(                      \
-                        (post_ops->sum)->scale_factor, n_scale);               \
+                    GEN_FUNC_NAME(fill_array_, bfloat16)                       \
+                    ((post_ops->sum)->scale_factor, n_scale);                  \
                     (post_ops->sum)->scale_factor_len = n_scale;               \
                 } else if ((strcmp(sf_stor_type, "F32") == 0)) {               \
                     (post_ops->sum)->sf_stor_type = AOCL_GEMM_F32;             \
@@ -1818,8 +1846,8 @@ mat_mul_accuracy_check_accum_bf16s4f32obf16(
                     if ((post_ops->sum)->scale_factor == NULL) {               \
                         goto err_handler;                                      \
                     }                                                          \
-                    GEN_FUNC_NAME(fill_array_, float)(                         \
-                        (post_ops->sum)->scale_factor, n_scale);               \
+                    GEN_FUNC_NAME(fill_array_, float)                          \
+                    ((post_ops->sum)->scale_factor, n_scale);                  \
                     (post_ops->sum)->scale_factor_len = n_scale;               \
                 } else if ((strcmp(sf_stor_type, "S32") == 0)) {               \
                     (post_ops->sum)->sf_stor_type = AOCL_GEMM_INT32;           \
@@ -1828,8 +1856,8 @@ mat_mul_accuracy_check_accum_bf16s4f32obf16(
                     if ((post_ops->sum)->scale_factor == NULL) {               \
                         goto err_handler;                                      \
                     }                                                          \
-                    GEN_FUNC_NAME(fill_array_, int32_t)(                       \
-                        (post_ops->sum)->scale_factor, n_scale);               \
+                    GEN_FUNC_NAME(fill_array_, int32_t)                        \
+                    ((post_ops->sum)->scale_factor, n_scale);                  \
                     (post_ops->sum)->scale_factor_len = n_scale;               \
                 } else if ((strcmp(sf_stor_type, "S8") == 0)) {                \
                     (post_ops->sum)->sf_stor_type = AOCL_GEMM_INT8;            \
@@ -1838,8 +1866,8 @@ mat_mul_accuracy_check_accum_bf16s4f32obf16(
                     if ((post_ops->sum)->scale_factor == NULL) {               \
                         goto err_handler;                                      \
                     }                                                          \
-                    GEN_FUNC_NAME(fill_array_, int8_t)(                        \
-                        (post_ops->sum)->scale_factor, n_scale);               \
+                    GEN_FUNC_NAME(fill_array_, int8_t)                         \
+                    ((post_ops->sum)->scale_factor, n_scale);                  \
                     (post_ops->sum)->scale_factor_len = n_scale;               \
                 } else if ((strcmp(sf_stor_type, "U8") == 0)) {                \
                     (post_ops->sum)->sf_stor_type = AOCL_GEMM_UINT8;           \
@@ -1848,8 +1876,8 @@ mat_mul_accuracy_check_accum_bf16s4f32obf16(
                     if ((post_ops->sum)->scale_factor == NULL) {               \
                         goto err_handler;                                      \
                     }                                                          \
-                    GEN_FUNC_NAME(fill_array_, uint8_t)(                       \
-                        (post_ops->sum)->scale_factor, n_scale);               \
+                    GEN_FUNC_NAME(fill_array_, uint8_t)                        \
+                    ((post_ops->sum)->scale_factor, n_scale);                  \
                     (post_ops->sum)->scale_factor_len = n_scale;               \
                 } else {                                                       \
                 }                                                              \
@@ -1861,8 +1889,8 @@ mat_mul_accuracy_check_accum_bf16s4f32obf16(
                 }                                                              \
                 DSCALE_type* temp_dscale_ptr =                                 \
                     (DSCALE_type*)(post_ops->sum)->scale_factor;               \
-                GEN_FUNC_NAME(fill_array_, DSCALE_type)(temp_dscale_ptr,       \
-                                                        n_scale);              \
+                GEN_FUNC_NAME(fill_array_, DSCALE_type)                        \
+                (temp_dscale_ptr, n_scale);                                    \
                 (post_ops->sum)->scale_factor_len = n_scale;                   \
                 if (strcmp(#BLAS_SFX, "u8s8s32ou8"))                           \
                     for (md_t i = 0; i < n_scale; i++)                         \
@@ -1877,8 +1905,8 @@ mat_mul_accuracy_check_accum_bf16s4f32obf16(
                     if ((post_ops->sum)->zero_point == NULL) {                 \
                         goto err_handler;                                      \
                     }                                                          \
-                    GEN_FUNC_NAME(fill_array_, bfloat16)(                      \
-                        (post_ops->sum)->zero_point, n_zp);                    \
+                    GEN_FUNC_NAME(fill_array_, bfloat16)                       \
+                    ((post_ops->sum)->zero_point, n_zp);                       \
                     (post_ops->sum)->zero_point_len = n_zp;                    \
                 } else if ((strcmp(zp_stor_type, "F32") == 0)) {               \
                     (post_ops->sum)->zp_stor_type = AOCL_GEMM_F32;             \
@@ -1887,8 +1915,8 @@ mat_mul_accuracy_check_accum_bf16s4f32obf16(
                     if ((post_ops->sum)->zero_point == NULL) {                 \
                         goto err_handler;                                      \
                     }                                                          \
-                    GEN_FUNC_NAME(fill_array_,                                 \
-                                  float)((post_ops->sum)->zero_point, n_zp);   \
+                    GEN_FUNC_NAME(fill_array_, float)                          \
+                    ((post_ops->sum)->zero_point, n_zp);                       \
                     (post_ops->sum)->zero_point_len = n_zp;                    \
                 } else if ((strcmp(zp_stor_type, "S32") == 0)) {               \
                     (post_ops->sum)->zp_stor_type = AOCL_GEMM_INT32;           \
@@ -1897,8 +1925,8 @@ mat_mul_accuracy_check_accum_bf16s4f32obf16(
                     if ((post_ops->sum)->zero_point == NULL) {                 \
                         goto err_handler;                                      \
                     }                                                          \
-                    GEN_FUNC_NAME(fill_array_,                                 \
-                                  int32_t)((post_ops->sum)->zero_point, n_zp); \
+                    GEN_FUNC_NAME(fill_array_, int32_t)                        \
+                    ((post_ops->sum)->zero_point, n_zp);                       \
                     (post_ops->sum)->zero_point_len = n_zp;                    \
                 } else if ((strcmp(zp_stor_type, "S8") == 0)) {                \
                     (post_ops->sum)->zp_stor_type = AOCL_GEMM_INT8;            \
@@ -1907,8 +1935,8 @@ mat_mul_accuracy_check_accum_bf16s4f32obf16(
                     if ((post_ops->sum)->zero_point == NULL) {                 \
                         goto err_handler;                                      \
                     }                                                          \
-                    GEN_FUNC_NAME(fill_array_,                                 \
-                                  int8_t)((post_ops->sum)->zero_point, n_zp);  \
+                    GEN_FUNC_NAME(fill_array_, int8_t)                         \
+                    ((post_ops->sum)->zero_point, n_zp);                       \
                     (post_ops->sum)->zero_point_len = n_zp;                    \
                 } else if ((strcmp(zp_stor_type, "U8") == 0)) {                \
                     (post_ops->sum)->zp_stor_type = AOCL_GEMM_UINT8;           \
@@ -1917,8 +1945,8 @@ mat_mul_accuracy_check_accum_bf16s4f32obf16(
                     if ((post_ops->sum)->zero_point == NULL) {                 \
                         goto err_handler;                                      \
                     }                                                          \
-                    GEN_FUNC_NAME(fill_array_,                                 \
-                                  uint8_t)((post_ops->sum)->zero_point, n_zp); \
+                    GEN_FUNC_NAME(fill_array_, uint8_t)                        \
+                    ((post_ops->sum)->zero_point, n_zp);                       \
                     (post_ops->sum)->zero_point_len = n_zp;                    \
                 } else {                                                       \
                 }                                                              \
@@ -1931,8 +1959,8 @@ mat_mul_accuracy_check_accum_bf16s4f32obf16(
                 }                                                              \
                 C_DSCALE_type* temp_dzero_point_ptr =                          \
                     (C_DSCALE_type*)(post_ops->sum)->zero_point;               \
-                GEN_FUNC_NAME(fill_array_,                                     \
-                              C_DSCALE_type)(temp_dzero_point_ptr, n_zp);      \
+                GEN_FUNC_NAME(fill_array_, C_DSCALE_type)                      \
+                (temp_dzero_point_ptr, n_zp);                                  \
                 (post_ops->sum)->zero_point_len = n_zp;                        \
                 if (strcmp(#BLAS_SFX, "u8s8s32ou8"))                           \
                     for (md_t i = 0; i < n_zp; i++)                            \
@@ -1957,8 +1985,8 @@ mat_mul_accuracy_check_accum_bf16s4f32obf16(
                     if ((post_ops->matrix_add)->matrix == NULL) {              \
                         goto err_handler;                                      \
                     }                                                          \
-                    GEN_FUNC_NAME(fill_array_, bfloat16)(                      \
-                        (post_ops->matrix_add)->matrix, (m * n));              \
+                    GEN_FUNC_NAME(fill_array_, bfloat16)                       \
+                    ((post_ops->matrix_add)->matrix, (m * n));                 \
                 } else if ((strcmp(matadd_stor_type, "F32") == 0)) {           \
                     (post_ops->matrix_add)->stor_type = AOCL_GEMM_F32;         \
                     (post_ops->matrix_add)->matrix =                           \
@@ -1966,8 +1994,8 @@ mat_mul_accuracy_check_accum_bf16s4f32obf16(
                     if ((post_ops->matrix_add)->matrix == NULL) {              \
                         goto err_handler;                                      \
                     }                                                          \
-                    GEN_FUNC_NAME(fill_array_, float)(                         \
-                        (post_ops->matrix_add)->matrix, (m * n));              \
+                    GEN_FUNC_NAME(fill_array_, float)                          \
+                    ((post_ops->matrix_add)->matrix, (m * n));                 \
                 } else if ((strcmp(matadd_stor_type, "S32") == 0)) {           \
                     (post_ops->matrix_add)->stor_type = AOCL_GEMM_INT32;       \
                     (post_ops->matrix_add)->matrix =                           \
@@ -1975,8 +2003,8 @@ mat_mul_accuracy_check_accum_bf16s4f32obf16(
                     if ((post_ops->matrix_add)->matrix == NULL) {              \
                         goto err_handler;                                      \
                     }                                                          \
-                    GEN_FUNC_NAME(fill_array_, int32_t)(                       \
-                        (post_ops->matrix_add)->matrix, (m * n));              \
+                    GEN_FUNC_NAME(fill_array_, int32_t)                        \
+                    ((post_ops->matrix_add)->matrix, (m * n));                 \
                 } else if ((strcmp(matadd_stor_type, "S8") == 0)) {            \
                     (post_ops->matrix_add)->stor_type = AOCL_GEMM_INT8;        \
                     (post_ops->matrix_add)->matrix =                           \
@@ -1984,8 +2012,17 @@ mat_mul_accuracy_check_accum_bf16s4f32obf16(
                     if ((post_ops->matrix_add)->matrix == NULL) {              \
                         goto err_handler;                                      \
                     }                                                          \
-                    GEN_FUNC_NAME(fill_array_, int8_t)(                        \
-                        (post_ops->matrix_add)->matrix, (m * n));              \
+                    GEN_FUNC_NAME(fill_array_, int8_t)                         \
+                    ((post_ops->matrix_add)->matrix, (m * n));                 \
+                } else if ((strcmp(matadd_stor_type, "U8") == 0)) {            \
+                    (post_ops->matrix_add)->stor_type = AOCL_GEMM_UINT8;       \
+                    (post_ops->matrix_add)->matrix =                           \
+                        malloc(m * n * sizeof(int8_t));                        \
+                    if ((post_ops->matrix_add)->matrix == NULL) {              \
+                        goto err_handler;                                      \
+                    }                                                          \
+                    GEN_FUNC_NAME(fill_array_, uint8_t)                        \
+                    ((post_ops->matrix_add)->matrix, (m * n));                 \
                 } else {                                                       \
                 }                                                              \
             } else {                                                           \
@@ -1999,8 +2036,8 @@ mat_mul_accuracy_check_accum_bf16s4f32obf16(
                         if ((post_ops->matrix_add)->matrix == NULL) {          \
                             goto err_handler;                                  \
                         }                                                      \
-                        GEN_FUNC_NAME(fill_array_, int8_t)(                    \
-                            (post_ops->matrix_add)->matrix, (m * n));          \
+                        GEN_FUNC_NAME(fill_array_, int8_t)                     \
+                        ((post_ops->matrix_add)->matrix, (m * n));             \
                     } else {                                                   \
                         (post_ops->matrix_add)->stor_type = NULLTYPE;          \
                         (post_ops->matrix_add)->matrix =                       \
@@ -2008,8 +2045,8 @@ mat_mul_accuracy_check_accum_bf16s4f32obf16(
                         if ((post_ops->matrix_add)->matrix == NULL) {          \
                             goto err_handler;                                  \
                         }                                                      \
-                        GEN_FUNC_NAME(fill_array_, int32_t)(                   \
-                            (post_ops->matrix_add)->matrix, (m * n));          \
+                        GEN_FUNC_NAME(fill_array_, int32_t)                    \
+                        ((post_ops->matrix_add)->matrix, (m * n));             \
                     }                                                          \
                 } else {                                                       \
                     if (global_dscale_out == 'y') {                            \
@@ -2019,8 +2056,8 @@ mat_mul_accuracy_check_accum_bf16s4f32obf16(
                         if ((post_ops->matrix_add)->matrix == NULL) {          \
                             goto err_handler;                                  \
                         }                                                      \
-                        GEN_FUNC_NAME(fill_array_, C_DSCALE_type)(             \
-                            (post_ops->matrix_add)->matrix, (m * n));          \
+                        GEN_FUNC_NAME(fill_array_, C_DSCALE_type)              \
+                        ((post_ops->matrix_add)->matrix, (m * n));             \
                     } else {                                                   \
                         (post_ops->matrix_add)->stor_type = NULLTYPE;          \
                         (post_ops->matrix_add)->matrix =                       \
@@ -2028,8 +2065,8 @@ mat_mul_accuracy_check_accum_bf16s4f32obf16(
                         if ((post_ops->matrix_add)->matrix == NULL) {          \
                             goto err_handler;                                  \
                         }                                                      \
-                        GEN_FUNC_NAME(fill_array_, float)(                     \
-                            (post_ops->matrix_add)->matrix, (m * n));          \
+                        GEN_FUNC_NAME(fill_array_, float)                      \
+                        ((post_ops->matrix_add)->matrix, (m * n));             \
                     }                                                          \
                 }                                                              \
             }                                                                  \
@@ -2070,8 +2107,8 @@ mat_mul_accuracy_check_accum_bf16s4f32obf16(
                     if ((post_ops->matrix_mul)->matrix == NULL) {              \
                         goto err_handler;                                      \
                     }                                                          \
-                    GEN_FUNC_NAME(fill_array_, bfloat16)(                      \
-                        (post_ops->matrix_mul)->matrix, (m * n));              \
+                    GEN_FUNC_NAME(fill_array_, bfloat16)                       \
+                    ((post_ops->matrix_mul)->matrix, (m * n));                 \
                 } else if ((strcmp(matmul_stor_type, "F32") == 0)) {           \
                     (post_ops->matrix_mul)->stor_type = AOCL_GEMM_F32;         \
                     (post_ops->matrix_mul)->matrix =                           \
@@ -2079,8 +2116,8 @@ mat_mul_accuracy_check_accum_bf16s4f32obf16(
                     if ((post_ops->matrix_mul)->matrix == NULL) {              \
                         goto err_handler;                                      \
                     }                                                          \
-                    GEN_FUNC_NAME(fill_array_, float)(                         \
-                        (post_ops->matrix_mul)->matrix, (m * n));              \
+                    GEN_FUNC_NAME(fill_array_, float)                          \
+                    ((post_ops->matrix_mul)->matrix, (m * n));                 \
                 } else if ((strcmp(matmul_stor_type, "S32") == 0)) {           \
                     (post_ops->matrix_mul)->stor_type = AOCL_GEMM_INT32;       \
                     (post_ops->matrix_mul)->matrix =                           \
@@ -2088,8 +2125,8 @@ mat_mul_accuracy_check_accum_bf16s4f32obf16(
                     if ((post_ops->matrix_mul)->matrix == NULL) {              \
                         goto err_handler;                                      \
                     }                                                          \
-                    GEN_FUNC_NAME(fill_array_, int32_t)(                       \
-                        (post_ops->matrix_mul)->matrix, (m * n));              \
+                    GEN_FUNC_NAME(fill_array_, int32_t)                        \
+                    ((post_ops->matrix_mul)->matrix, (m * n));                 \
                 } else if ((strcmp(matmul_stor_type, "S8") == 0)) {            \
                     (post_ops->matrix_mul)->stor_type = AOCL_GEMM_INT8;        \
                     (post_ops->matrix_mul)->matrix =                           \
@@ -2097,8 +2134,17 @@ mat_mul_accuracy_check_accum_bf16s4f32obf16(
                     if ((post_ops->matrix_mul)->matrix == NULL) {              \
                         goto err_handler;                                      \
                     }                                                          \
-                    GEN_FUNC_NAME(fill_array_, int8_t)(                        \
-                        (post_ops->matrix_mul)->matrix, (m * n));              \
+                    GEN_FUNC_NAME(fill_array_, int8_t)                         \
+                    ((post_ops->matrix_mul)->matrix, (m * n));                 \
+                } else if ((strcmp(matmul_stor_type, "U8") == 0)) {            \
+                    (post_ops->matrix_mul)->stor_type = AOCL_GEMM_UINT8;       \
+                    (post_ops->matrix_mul)->matrix =                           \
+                        malloc(m * n * sizeof(int8_t));                        \
+                    if ((post_ops->matrix_mul)->matrix == NULL) {              \
+                        goto err_handler;                                      \
+                    }                                                          \
+                    GEN_FUNC_NAME(fill_array_, uint8_t)                        \
+                    ((post_ops->matrix_mul)->matrix, (m * n));                 \
                 } else {                                                       \
                 }                                                              \
             } else {                                                           \
@@ -2112,8 +2158,8 @@ mat_mul_accuracy_check_accum_bf16s4f32obf16(
                         if ((post_ops->matrix_mul)->matrix == NULL) {          \
                             goto err_handler;                                  \
                         }                                                      \
-                        GEN_FUNC_NAME(fill_array_, int8_t)(                    \
-                            (post_ops->matrix_mul)->matrix, (m * n));          \
+                        GEN_FUNC_NAME(fill_array_, int8_t)                     \
+                        ((post_ops->matrix_mul)->matrix, (m * n));             \
                     } else {                                                   \
                         (post_ops->matrix_mul)->stor_type = NULLTYPE;          \
                         (post_ops->matrix_mul)->matrix =                       \
@@ -2121,8 +2167,8 @@ mat_mul_accuracy_check_accum_bf16s4f32obf16(
                         if ((post_ops->matrix_mul)->matrix == NULL) {          \
                             goto err_handler;                                  \
                         }                                                      \
-                        GEN_FUNC_NAME(fill_array_, int32_t)(                   \
-                            (post_ops->matrix_mul)->matrix, (m * n));          \
+                        GEN_FUNC_NAME(fill_array_, int32_t)                    \
+                        ((post_ops->matrix_mul)->matrix, (m * n));             \
                     }                                                          \
                 } else {                                                       \
                     if (global_dscale_out == 'y') {                            \
@@ -2132,8 +2178,8 @@ mat_mul_accuracy_check_accum_bf16s4f32obf16(
                         if ((post_ops->matrix_mul)->matrix == NULL) {          \
                             goto err_handler;                                  \
                         }                                                      \
-                        GEN_FUNC_NAME(fill_array_, C_DSCALE_type)(             \
-                            (post_ops->matrix_mul)->matrix, (m * n));          \
+                        GEN_FUNC_NAME(fill_array_, C_DSCALE_type)              \
+                        ((post_ops->matrix_mul)->matrix, (m * n));             \
                     } else {                                                   \
                         (post_ops->matrix_mul)->stor_type = NULLTYPE;          \
                         (post_ops->matrix_mul)->matrix =                       \
@@ -2141,8 +2187,8 @@ mat_mul_accuracy_check_accum_bf16s4f32obf16(
                         if ((post_ops->matrix_mul)->matrix == NULL) {          \
                             goto err_handler;                                  \
                         }                                                      \
-                        GEN_FUNC_NAME(fill_array_, float)(                     \
-                            (post_ops->matrix_mul)->matrix, (m * n));          \
+                        GEN_FUNC_NAME(fill_array_, float)                      \
+                        ((post_ops->matrix_mul)->matrix, (m * n));             \
                     }                                                          \
                 }                                                              \
             }                                                                  \
@@ -2223,9 +2269,9 @@ mat_mul_accuracy_check_accum_bf16s4f32obf16(
                 if (((post_ops->pre_ops)->b_scl)->scale_factor == NULL) {      \
                     goto err_handler;                                          \
                 }                                                              \
-                GEN_FUNC_NAME(fill_array_, float)(                             \
-                    ((post_ops->pre_ops)->b_scl)->scale_factor,                \
-                    num_groups * scale_factor_len);                            \
+                GEN_FUNC_NAME(fill_array_, float)                              \
+                (((post_ops->pre_ops)->b_scl)->scale_factor,                   \
+                 num_groups * scale_factor_len);                               \
                 ((post_ops->pre_ops)->b_scl)->scale_factor_type =              \
                     AOCL_GEMM_F32;                                             \
             } else {                                                           \
@@ -2234,9 +2280,9 @@ mat_mul_accuracy_check_accum_bf16s4f32obf16(
                 if (((post_ops->pre_ops)->b_scl)->scale_factor == NULL) {      \
                     goto err_handler;                                          \
                 }                                                              \
-                GEN_FUNC_NAME(fill_array_, bfloat16)(                          \
-                    ((post_ops->pre_ops)->b_scl)->scale_factor,                \
-                    num_groups * scale_factor_len);                            \
+                GEN_FUNC_NAME(fill_array_, bfloat16)                           \
+                (((post_ops->pre_ops)->b_scl)->scale_factor,                   \
+                 num_groups * scale_factor_len);                               \
                 ((post_ops->pre_ops)->b_scl)->scale_factor_type =              \
                     AOCL_GEMM_BF16;                                            \
             }                                                                  \
@@ -2291,9 +2337,8 @@ mat_mul_accuracy_check_accum_bf16s4f32obf16(
                 if (post_ops->post_op_grp->a_scl->scale_factor == NULL) {      \
                     goto err_handler;                                          \
                 }                                                              \
-                GEN_FUNC_NAME(fill_array_, bfloat16)(                          \
-                    post_ops->post_op_grp->a_scl->scale_factor,                \
-                    m * num_groups);                                           \
+                GEN_FUNC_NAME(fill_array_, bfloat16)                           \
+                (post_ops->post_op_grp->a_scl->scale_factor, m * num_groups);  \
                 post_ops->post_op_grp->a_scl->scale_factor_type =              \
                     AOCL_GEMM_BF16;                                            \
                 post_ops->post_op_grp->b_scl->scale_factor =                   \
@@ -2301,9 +2346,8 @@ mat_mul_accuracy_check_accum_bf16s4f32obf16(
                 if (post_ops->post_op_grp->b_scl->scale_factor == NULL) {      \
                     goto err_handler;                                          \
                 }                                                              \
-                GEN_FUNC_NAME(fill_array_, bfloat16)(                          \
-                    post_ops->post_op_grp->b_scl->scale_factor,                \
-                    num_groups * n);                                           \
+                GEN_FUNC_NAME(fill_array_, bfloat16)                           \
+                (post_ops->post_op_grp->b_scl->scale_factor, num_groups * n);  \
                 post_ops->post_op_grp->b_scl->scale_factor_type =              \
                     AOCL_GEMM_BF16;                                            \
             } else {                                                           \
@@ -2312,9 +2356,8 @@ mat_mul_accuracy_check_accum_bf16s4f32obf16(
                 if (post_ops->post_op_grp->a_scl->scale_factor == NULL) {      \
                     goto err_handler;                                          \
                 }                                                              \
-                GEN_FUNC_NAME(fill_array_, float)(                             \
-                    post_ops->post_op_grp->a_scl->scale_factor,                \
-                    m * num_groups);                                           \
+                GEN_FUNC_NAME(fill_array_, float)                              \
+                (post_ops->post_op_grp->a_scl->scale_factor, m * num_groups);  \
                 /* for( md_t i = 0; i < num_groups * m; i++) {                 \
                     ((float*)post_ops->post_op_grp->a_scl->scale_factor)[i]    \
                 = 1.0;                                                         \
@@ -2326,9 +2369,8 @@ mat_mul_accuracy_check_accum_bf16s4f32obf16(
                 if (post_ops->post_op_grp->b_scl->scale_factor == NULL) {      \
                     goto err_handler;                                          \
                 }                                                              \
-                GEN_FUNC_NAME(fill_array_, float)(                             \
-                    post_ops->post_op_grp->b_scl->scale_factor,                \
-                    num_groups * n);                                           \
+                GEN_FUNC_NAME(fill_array_, float)                              \
+                (post_ops->post_op_grp->b_scl->scale_factor, num_groups * n);  \
                 /*for( md_t i = 0; i < num_groups * n; i++) {                  \
                     ((float*)post_ops->post_op_grp->b_scl->scale_factor)[i]    \
                 = 1.0;                                                         \

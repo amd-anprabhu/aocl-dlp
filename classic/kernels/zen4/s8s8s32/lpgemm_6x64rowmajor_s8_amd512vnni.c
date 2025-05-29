@@ -562,10 +562,15 @@ LPGEMM_MAIN_KERN(int8_t, int8_t, int32_t, s8s8s32os32_6x64)
         // Post Ops
         lpgemm_post_op* post_ops_list_temp = post_ops_list;
         POST_OP_LABEL_LASTK_SAFE_JUMP
-    POST_OPS_BIAS_6x64: {
+    POST_OPS_BIAS_6x64 : {
         __m512    b0, b1, b2, b3;
         __mmask16 bias_mask = _cvtu32_mask16(0xFFFF);
-        if (post_ops_list_temp->stor_type == S8) {
+        if (post_ops_list_temp->stor_type == U8) {
+            U8_F32_BIAS_LOAD(b0, bias_mask, 0);
+            U8_F32_BIAS_LOAD(b1, bias_mask, 1);
+            U8_F32_BIAS_LOAD(b2, bias_mask, 2);
+            U8_F32_BIAS_LOAD(b3, bias_mask, 3);
+        } else if (post_ops_list_temp->stor_type == S8) {
             S8_F32_BIAS_LOAD(b0, bias_mask, 0);
             S8_F32_BIAS_LOAD(b1, bias_mask, 1);
             S8_F32_BIAS_LOAD(b2, bias_mask, 2);
@@ -666,7 +671,7 @@ LPGEMM_MAIN_KERN(int8_t, int8_t, int32_t, s8s8s32os32_6x64)
 
         POST_OP_LABEL_LASTK_SAFE_JUMP_WITH_NEXT_PTR
     }
-    POST_OPS_RELU_6x64: {
+    POST_OPS_RELU_6x64 : {
         __m512 zero = _mm512_setzero_ps();
 
         // c[0, 0-15]
@@ -743,7 +748,7 @@ LPGEMM_MAIN_KERN(int8_t, int8_t, int32_t, s8s8s32os32_6x64)
 
         POST_OP_LABEL_LASTK_SAFE_JUMP_WITH_NEXT_PTR
     }
-    POST_OPS_RELU_SCALE_6x64: {
+    POST_OPS_RELU_SCALE_6x64 : {
         __m512 zero = _mm512_setzero_ps();
         __m512 scale;
 
@@ -832,7 +837,7 @@ LPGEMM_MAIN_KERN(int8_t, int8_t, int32_t, s8s8s32os32_6x64)
 
         POST_OP_LABEL_LASTK_SAFE_JUMP_WITH_NEXT_PTR
     }
-    POST_OPS_GELU_TANH_6x64: {
+    POST_OPS_GELU_TANH_6x64 : {
         __m512  dn, z, x, r2, r, y;
         __m512i tmpout;
 
@@ -910,7 +915,7 @@ LPGEMM_MAIN_KERN(int8_t, int8_t, int32_t, s8s8s32os32_6x64)
 
         POST_OP_LABEL_LASTK_SAFE_JUMP_WITH_NEXT_PTR
     }
-    POST_OPS_GELU_ERF_6x64: {
+    POST_OPS_GELU_ERF_6x64 : {
         __m512 y, r, r2;
 
         // c[0, 0-15]
@@ -987,7 +992,7 @@ LPGEMM_MAIN_KERN(int8_t, int8_t, int32_t, s8s8s32os32_6x64)
 
         POST_OP_LABEL_LASTK_SAFE_JUMP_WITH_NEXT_PTR
     }
-    POST_OPS_CLIP_6x64: {
+    POST_OPS_CLIP_6x64 : {
         __m512 min = _mm512_setzero_ps();
         __m512 max = _mm512_setzero_ps();
 
@@ -1076,7 +1081,7 @@ LPGEMM_MAIN_KERN(int8_t, int8_t, int32_t, s8s8s32os32_6x64)
         POST_OP_LABEL_LASTK_SAFE_JUMP_WITH_NEXT_PTR
     }
 
-    POST_OPS_DOWNSCALE_6x64: {
+    POST_OPS_DOWNSCALE_6x64 : {
         __m512    scale0, scale1, scale2, scale3;
         __mmask16 load_mask = _cvtu32_mask16(0xFFFF);
         if (post_ops_list_temp->scale_factor_len > 1) {
@@ -1284,7 +1289,7 @@ LPGEMM_MAIN_KERN(int8_t, int8_t, int32_t, s8s8s32os32_6x64)
 
         POST_OP_LABEL_LASTK_SAFE_JUMP_WITH_NEXT_PTR
     }
-    POST_OPS_MATRIX_ADD_6x64: {
+    POST_OPS_MATRIX_ADD_6x64 : {
         md_t ldm = *(md_t*)post_ops_list_temp->op_args3;
 
         bool is_s8 = (post_ops_list_temp->stor_type == S8)
@@ -1292,6 +1297,7 @@ LPGEMM_MAIN_KERN(int8_t, int8_t, int32_t, s8s8s32os32_6x64)
                          && (post_ops_attr.c_stor_type == S8));
         bool is_bf16 = (post_ops_list_temp->stor_type == BF16);
         bool is_f32  = (post_ops_list_temp->stor_type == F32);
+        bool is_u8   = (post_ops_list_temp->stor_type == U8);
 
         __m512 scl_fctr1 = _mm512_setzero_ps();
         __m512 scl_fctr2 = _mm512_setzero_ps();
@@ -1512,6 +1518,59 @@ LPGEMM_MAIN_KERN(int8_t, int8_t, int32_t, s8s8s32os32_6x64)
                 S8_F32_MATRIX_ADD_4COL(t0, t1, t2, t3, scl_fctr6, scl_fctr6,
                                        scl_fctr6, scl_fctr6, 5);
             }
+        } else if (is_u8 == TRUE) {
+            uint8_t* matptr = (uint8_t*)post_ops_list_temp->op_args1;
+
+            if ((*(char*)post_ops_list_temp->op_args2 == 'r')
+                || (*(char*)post_ops_list_temp->op_args2 == 'R')) {
+                // c[0:0-15,16-31,32-47,48-63]
+                U8_F32_MATRIX_ADD_4COL(t0, t1, t2, t3, scl_fctr1, scl_fctr2,
+                                       scl_fctr3, scl_fctr4, 0);
+
+                // c[1:0-15,16-31,32-47,48-63]
+                U8_F32_MATRIX_ADD_4COL(t0, t1, t2, t3, scl_fctr1, scl_fctr2,
+                                       scl_fctr3, scl_fctr4, 1);
+
+                // c[2:0-15,16-31,32-47,48-63]
+                U8_F32_MATRIX_ADD_4COL(t0, t1, t2, t3, scl_fctr1, scl_fctr2,
+                                       scl_fctr3, scl_fctr4, 2);
+
+                // c[3:0-15,16-31,32-47,48-63]
+                U8_F32_MATRIX_ADD_4COL(t0, t1, t2, t3, scl_fctr1, scl_fctr2,
+                                       scl_fctr3, scl_fctr4, 3);
+
+                // c[4:0-15,16-31,32-47,48-63]
+                U8_F32_MATRIX_ADD_4COL(t0, t1, t2, t3, scl_fctr1, scl_fctr2,
+                                       scl_fctr3, scl_fctr4, 4);
+
+                // c[5:0-15,16-31,32-47,48-63]
+                U8_F32_MATRIX_ADD_4COL(t0, t1, t2, t3, scl_fctr1, scl_fctr2,
+                                       scl_fctr3, scl_fctr4, 5);
+            } else {
+                // c[0:0-15,16-31,32-47,48-63]
+                U8_F32_MATRIX_ADD_4COL(t0, t1, t2, t3, scl_fctr1, scl_fctr1,
+                                       scl_fctr1, scl_fctr1, 0);
+
+                // c[1:0-15,16-31,32-47,48-63]
+                U8_F32_MATRIX_ADD_4COL(t0, t1, t2, t3, scl_fctr2, scl_fctr2,
+                                       scl_fctr2, scl_fctr2, 1);
+
+                // c[2:0-15,16-31,32-47,48-63]
+                U8_F32_MATRIX_ADD_4COL(t0, t1, t2, t3, scl_fctr3, scl_fctr3,
+                                       scl_fctr3, scl_fctr3, 2);
+
+                // c[3:0-15,16-31,32-47,48-63]
+                U8_F32_MATRIX_ADD_4COL(t0, t1, t2, t3, scl_fctr4, scl_fctr4,
+                                       scl_fctr4, scl_fctr4, 3);
+
+                // c[4:0-15,16-31,32-47,48-63]
+                U8_F32_MATRIX_ADD_4COL(t0, t1, t2, t3, scl_fctr5, scl_fctr5,
+                                       scl_fctr5, scl_fctr5, 4);
+
+                // c[5:0-15,16-31,32-47,48-63]
+                U8_F32_MATRIX_ADD_4COL(t0, t1, t2, t3, scl_fctr6, scl_fctr6,
+                                       scl_fctr6, scl_fctr6, 5);
+            }
         } else {
             int32_t* matptr = (int32_t*)post_ops_list_temp->op_args1;
 
@@ -1569,7 +1628,7 @@ LPGEMM_MAIN_KERN(int8_t, int8_t, int32_t, s8s8s32os32_6x64)
 
         POST_OP_LABEL_LASTK_SAFE_JUMP_WITH_NEXT_PTR
     }
-    POST_OPS_MATRIX_MUL_6x64: {
+    POST_OPS_MATRIX_MUL_6x64 : {
         md_t ldm = *(md_t*)post_ops_list_temp->op_args3;
 
         bool is_s8 = (post_ops_list_temp->stor_type == S8)
@@ -1577,6 +1636,7 @@ LPGEMM_MAIN_KERN(int8_t, int8_t, int32_t, s8s8s32os32_6x64)
                          && (post_ops_attr.c_stor_type == S8));
         bool is_bf16 = (post_ops_list_temp->stor_type == BF16);
         bool is_f32  = (post_ops_list_temp->stor_type == F32);
+        bool is_u8   = (post_ops_list_temp->stor_type == U8);
 
         __m512 scl_fctr1 = _mm512_setzero_ps();
         __m512 scl_fctr2 = _mm512_setzero_ps();
@@ -1798,6 +1858,59 @@ LPGEMM_MAIN_KERN(int8_t, int8_t, int32_t, s8s8s32os32_6x64)
                 S8_F32_MATRIX_MUL_4COL(t0, t1, t2, t3, scl_fctr6, scl_fctr6,
                                        scl_fctr6, scl_fctr6, 5);
             }
+        } else if (is_u8 == TRUE) {
+            uint8_t* matptr = (uint8_t*)post_ops_list_temp->op_args1;
+
+            if ((*(char*)post_ops_list_temp->op_args2 == 'r')
+                || (*(char*)post_ops_list_temp->op_args2 == 'R')) {
+                // c[0:0-15,16-31,32-47,48-63]
+                U8_F32_MATRIX_MUL_4COL(t0, t1, t2, t3, scl_fctr1, scl_fctr2,
+                                       scl_fctr3, scl_fctr4, 0);
+
+                // c[1:0-15,16-31,32-47,48-63]
+                U8_F32_MATRIX_MUL_4COL(t0, t1, t2, t3, scl_fctr1, scl_fctr2,
+                                       scl_fctr3, scl_fctr4, 1);
+
+                // c[2:0-15,16-31,32-47,48-63]
+                U8_F32_MATRIX_MUL_4COL(t0, t1, t2, t3, scl_fctr1, scl_fctr2,
+                                       scl_fctr3, scl_fctr4, 2);
+
+                // c[3:0-15,16-31,32-47,48-63]
+                U8_F32_MATRIX_MUL_4COL(t0, t1, t2, t3, scl_fctr1, scl_fctr2,
+                                       scl_fctr3, scl_fctr4, 3);
+
+                // c[4:0-15,16-31,32-47,48-63]
+                U8_F32_MATRIX_MUL_4COL(t0, t1, t2, t3, scl_fctr1, scl_fctr2,
+                                       scl_fctr3, scl_fctr4, 4);
+
+                // c[5:0-15,16-31,32-47,48-63]
+                U8_F32_MATRIX_MUL_4COL(t0, t1, t2, t3, scl_fctr1, scl_fctr2,
+                                       scl_fctr3, scl_fctr4, 5);
+            } else {
+                // c[0:0-15,16-31,32-47,48-63]
+                U8_F32_MATRIX_MUL_4COL(t0, t1, t2, t3, scl_fctr1, scl_fctr1,
+                                       scl_fctr1, scl_fctr1, 0);
+
+                // c[1:0-15,16-31,32-47,48-63]
+                U8_F32_MATRIX_MUL_4COL(t0, t1, t2, t3, scl_fctr2, scl_fctr2,
+                                       scl_fctr2, scl_fctr2, 1);
+
+                // c[2:0-15,16-31,32-47,48-63]
+                U8_F32_MATRIX_MUL_4COL(t0, t1, t2, t3, scl_fctr3, scl_fctr3,
+                                       scl_fctr3, scl_fctr3, 2);
+
+                // c[3:0-15,16-31,32-47,48-63]
+                U8_F32_MATRIX_MUL_4COL(t0, t1, t2, t3, scl_fctr4, scl_fctr4,
+                                       scl_fctr4, scl_fctr4, 3);
+
+                // c[4:0-15,16-31,32-47,48-63]
+                U8_F32_MATRIX_MUL_4COL(t0, t1, t2, t3, scl_fctr5, scl_fctr5,
+                                       scl_fctr5, scl_fctr5, 4);
+
+                // c[5:0-15,16-31,32-47,48-63]
+                U8_F32_MATRIX_MUL_4COL(t0, t1, t2, t3, scl_fctr6, scl_fctr6,
+                                       scl_fctr6, scl_fctr6, 5);
+            }
         } else {
             int32_t* matptr = (int32_t*)post_ops_list_temp->op_args1;
 
@@ -1855,7 +1968,7 @@ LPGEMM_MAIN_KERN(int8_t, int8_t, int32_t, s8s8s32os32_6x64)
 
         POST_OP_LABEL_LASTK_SAFE_JUMP_WITH_NEXT_PTR
     }
-    POST_OPS_SWISH_6x64: {
+    POST_OPS_SWISH_6x64 : {
         __m512 scale;
 
         if ((post_ops_attr.c_stor_type == S32)
@@ -1944,7 +2057,7 @@ LPGEMM_MAIN_KERN(int8_t, int8_t, int32_t, s8s8s32os32_6x64)
 
         POST_OP_LABEL_LASTK_SAFE_JUMP_WITH_NEXT_PTR
     }
-    POST_OPS_TANH_6x64: {
+    POST_OPS_TANH_6x64 : {
         __m512  dn, z, x, r2, r;
         __m512i q;
 
@@ -2022,7 +2135,7 @@ LPGEMM_MAIN_KERN(int8_t, int8_t, int32_t, s8s8s32os32_6x64)
 
         POST_OP_LABEL_LASTK_SAFE_JUMP_WITH_NEXT_PTR
     }
-    POST_OPS_SIGMOID_6x64: {
+    POST_OPS_SIGMOID_6x64 : {
         __m512  al_in, r, r2, z, dn;
         __m512i tmpout;
 

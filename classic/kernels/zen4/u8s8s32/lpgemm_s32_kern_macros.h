@@ -289,6 +289,12 @@
         (mask), ((int32_t*)post_ops_list_temp->op_args1)                       \
                     + post_ops_attr.post_op_c_j + (n_ind * 16)));
 
+// U8 bias helper macros.
+#define U8_F32_BIAS_LOAD(scr, mask, n_ind)                                     \
+    scr = _mm512_cvtepi32_ps(_mm512_cvtepu8_epi32(_mm_maskz_loadu_epi8(        \
+        (mask), ((int8_t*)post_ops_list_temp->op_args1)                        \
+                    + post_ops_attr.post_op_c_j + (n_ind * 16))));
+
 // S8 bias helper macros.
 #define S8_F32_BIAS_LOAD(scr, mask, n_ind)                                     \
     scr = _mm512_cvtepi32_ps(_mm512_cvtepi8_epi32(_mm_maskz_loadu_epi8(        \
@@ -439,7 +445,7 @@
 // Downscale store u8 macro
 #define CVT_STORE_F32_U8_MASK(mask, reg, m_ind, n_ind)                         \
     _mm512_mask_cvtusepi32_storeu_epi8(                                        \
-        (int8_t*)post_ops_attr.buf_downscale                                   \
+        (uint8_t*)post_ops_attr.buf_downscale                                  \
             + (post_ops_attr.rs_c_downscale                                    \
                * (post_ops_attr.post_op_c_i + m_ind))                          \
             + post_ops_attr.post_op_c_j + (n_ind * 16),                        \
@@ -509,6 +515,15 @@
     scr = _mm512_cvtepi32_ps(_mm512_maskz_loadu_epi32(                         \
         (mask), ((int32_t*)post_ops_list_temp->op_args1                        \
                  + post_ops_attr.post_op_c_j + (n_ind * 16))));
+
+#define S32_S8_ZP_LOAD(scr, mask, n_ind)                                       \
+    scr = _mm512_cvtepi32_epi8(_mm512_maskz_loadu_epi32(                       \
+        (mask), ((int32_t*)post_ops_list_temp->op_args1                        \
+                 + post_ops_attr.post_op_c_j + (n_ind * 16))));
+
+#define S32_S8_ZP_BCST(scr)                                                    \
+    scr = _mm512_cvtepi32_epi8(                                                \
+        _mm512_set1_epi32(*((int32_t*)post_ops_list_temp->op_args1)));
 
 #define F32_ZP_LOAD(scr, mask, n_ind)                                          \
     scr = _mm512_maskz_loadu_ps((mask), (float*)post_ops_list_temp->op_args1   \
@@ -1326,6 +1341,41 @@
     S8_F32_MATRIX_ADD_LOAD(_cvtu32_mask16(0xFFFF), scr3, scl_fct3, m_ind, 3);  \
     F32_ACC_MATRIX_ADD_4COL(scr0, scr1, scr2, scr3, m_ind);
 
+#define U8_F32_MATRIX_ADD_LOAD(mask, scr, scl_fct, m_ind, n_ind)               \
+    scr = _mm512_cvtepi32_ps(_mm512_cvtepu8_epi32(_mm_maskz_loadu_epi8(        \
+        mask, matptr + ((post_ops_attr.post_op_c_i + m_ind) * ldm)             \
+                  + post_ops_attr.post_op_c_j + (n_ind * 16))));               \
+    scr = _mm512_mul_round_ps(                                                 \
+        (scr), scl_fct, (_MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC));
+
+#define U8_F32_MATRIX_ADD_1COL_PAR(mask, scr0, scl_fct0, m_ind)                \
+    U8_F32_MATRIX_ADD_LOAD(mask, scr0, scl_fct0, m_ind, 0);                    \
+    F32_ACC_MATRIX_ADD_1COL(scr0, m_ind);
+
+#define U8_F32_MATRIX_ADD_1COL(scr0, scl_fct0, m_ind)                          \
+    U8_F32_MATRIX_ADD_LOAD(_cvtu32_mask16(0xFFFF), scr0, scl_fct0, m_ind, 0);  \
+    F32_ACC_MATRIX_ADD_1COL(scr0, m_ind);
+
+#define U8_F32_MATRIX_ADD_2COL(scr0, scr1, scl_fct0, scl_fct1, m_ind)          \
+    U8_F32_MATRIX_ADD_LOAD(_cvtu32_mask16(0xFFFF), scr0, scl_fct0, m_ind, 0);  \
+    U8_F32_MATRIX_ADD_LOAD(_cvtu32_mask16(0xFFFF), scr1, scl_fct1, m_ind, 1);  \
+    F32_ACC_MATRIX_ADD_2COL(scr0, scr1, m_ind);
+
+#define U8_F32_MATRIX_ADD_3COL(scr0, scr1, scr2, scl_fct0, scl_fct1, scl_fct2, \
+                               m_ind)                                          \
+    U8_F32_MATRIX_ADD_LOAD(_cvtu32_mask16(0xFFFF), scr0, scl_fct0, m_ind, 0);  \
+    U8_F32_MATRIX_ADD_LOAD(_cvtu32_mask16(0xFFFF), scr1, scl_fct1, m_ind, 1);  \
+    U8_F32_MATRIX_ADD_LOAD(_cvtu32_mask16(0xFFFF), scr2, scl_fct2, m_ind, 2);  \
+    F32_ACC_MATRIX_ADD_3COL(scr0, scr1, scr2, m_ind);
+
+#define U8_F32_MATRIX_ADD_4COL(scr0, scr1, scr2, scr3, scl_fct0, scl_fct1,     \
+                               scl_fct2, scl_fct3, m_ind)                      \
+    U8_F32_MATRIX_ADD_LOAD(_cvtu32_mask16(0xFFFF), scr0, scl_fct0, m_ind, 0);  \
+    U8_F32_MATRIX_ADD_LOAD(_cvtu32_mask16(0xFFFF), scr1, scl_fct1, m_ind, 1);  \
+    U8_F32_MATRIX_ADD_LOAD(_cvtu32_mask16(0xFFFF), scr2, scl_fct2, m_ind, 2);  \
+    U8_F32_MATRIX_ADD_LOAD(_cvtu32_mask16(0xFFFF), scr3, scl_fct3, m_ind, 3);  \
+    F32_ACC_MATRIX_ADD_4COL(scr0, scr1, scr2, scr3, m_ind);
+
 #define S32_F32_MATRIX_ADD_LOAD(mask, scr, scl_fct, m_ind, n_ind)              \
     scr = _mm512_cvtepi32_ps(_mm512_maskz_loadu_epi32(                         \
         mask, matptr + ((post_ops_attr.post_op_c_i + m_ind) * ldm)             \
@@ -1449,6 +1499,38 @@
     S8_F32_MATRIX_MUL_LOAD(_cvtu32_mask16(0xFFFF), scr1, scl_fct1, m_ind, 1);  \
     S8_F32_MATRIX_MUL_LOAD(_cvtu32_mask16(0xFFFF), scr2, scl_fct2, m_ind, 2);  \
     S8_F32_MATRIX_MUL_LOAD(_cvtu32_mask16(0xFFFF), scr3, scl_fct3, m_ind, 3);  \
+    F32_ONLY_MATRIX_MUL_4COL(scr0, scr1, scr2, scr3, m_ind);
+
+// u8 buffer for matrix mul
+#define U8_F32_MATRIX_MUL_LOAD(mask, scr, scl_fct, m_ind, n_ind)               \
+    U8_F32_MATRIX_ADD_LOAD(mask, scr, scl_fct, m_ind, n_ind);
+
+#define U8_F32_MATRIX_MUL_1COL_PAR(mask, scr0, scl_fct0, m_ind)                \
+    U8_F32_MATRIX_MUL_LOAD(mask, scr0, scl_fct0, m_ind, 0);                    \
+    F32_ONLY_MATRIX_MUL_1COL(scr0, m_ind);
+
+#define U8_F32_MATRIX_MUL_1COL(scr0, scl_fct0, m_ind)                          \
+    U8_F32_MATRIX_MUL_LOAD(_cvtu32_mask16(0xFFFF), scr0, scl_fct0, m_ind, 0);  \
+    F32_ONLY_MATRIX_MUL_1COL(scr0, m_ind);
+
+#define U8_F32_MATRIX_MUL_2COL(scr0, scr1, scl_fct0, scl_fct1, m_ind)          \
+    U8_F32_MATRIX_MUL_LOAD(_cvtu32_mask16(0xFFFF), scr0, scl_fct0, m_ind, 0);  \
+    U8_F32_MATRIX_MUL_LOAD(_cvtu32_mask16(0xFFFF), scr1, scl_fct1, m_ind, 1);  \
+    F32_ONLY_MATRIX_MUL_2COL(scr0, scr1, m_ind);
+
+#define U8_F32_MATRIX_MUL_3COL(scr0, scr1, scr2, scl_fct0, scl_fct1, scl_fct2, \
+                               m_ind)                                          \
+    U8_F32_MATRIX_MUL_LOAD(_cvtu32_mask16(0xFFFF), scr0, scl_fct0, m_ind, 0);  \
+    U8_F32_MATRIX_MUL_LOAD(_cvtu32_mask16(0xFFFF), scr1, scl_fct1, m_ind, 1);  \
+    U8_F32_MATRIX_MUL_LOAD(_cvtu32_mask16(0xFFFF), scr2, scl_fct2, m_ind, 2);  \
+    F32_ONLY_MATRIX_MUL_3COL(scr0, scr1, scr2, m_ind);
+
+#define U8_F32_MATRIX_MUL_4COL(scr0, scr1, scr2, scr3, scl_fct0, scl_fct1,     \
+                               scl_fct2, scl_fct3, m_ind)                      \
+    U8_F32_MATRIX_MUL_LOAD(_cvtu32_mask16(0xFFFF), scr0, scl_fct0, m_ind, 0);  \
+    U8_F32_MATRIX_MUL_LOAD(_cvtu32_mask16(0xFFFF), scr1, scl_fct1, m_ind, 1);  \
+    U8_F32_MATRIX_MUL_LOAD(_cvtu32_mask16(0xFFFF), scr2, scl_fct2, m_ind, 2);  \
+    U8_F32_MATRIX_MUL_LOAD(_cvtu32_mask16(0xFFFF), scr3, scl_fct3, m_ind, 3);  \
     F32_ONLY_MATRIX_MUL_4COL(scr0, scr1, scr2, scr3, m_ind);
 
 #define S32_F32_MATRIX_MUL_LOAD(mask, scr, scl_fct, m_ind, n_ind)              \

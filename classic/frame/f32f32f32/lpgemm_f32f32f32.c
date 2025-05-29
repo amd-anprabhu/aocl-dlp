@@ -54,6 +54,28 @@ typedef void (*lpgemm_rowvar_f32)(const md_t,
                                   lpgemm_post_op*,
                                   lpgemm_post_op_attr);
 
+typedef void (*lpgemv_m_one_ker_ft)(const md_t,
+                                    const md_t,
+                                    const float*,
+                                    const md_t,
+                                    const md_t,
+                                    const AOCL_MEMORY_TAG,
+                                    const float*,
+                                    md_t,
+                                    const md_t,
+                                    const AOCL_MEMORY_TAG,
+                                    float*,
+                                    const md_t,
+                                    const md_t,
+                                    const float,
+                                    const float,
+                                    md_t,
+                                    const md_t,
+                                    const md_t,
+                                    const md_t,
+                                    lpgemm_post_op*,
+                                    lpgemm_post_op_attr*);
+
 typedef void (*lpgemv_n_one_ker_ft)(const md_t,
                                     const md_t,
                                     const float*,
@@ -74,14 +96,14 @@ typedef void (*lpgemv_n_one_ker_ft)(const md_t,
                                     lpgemm_post_op*,
                                     lpgemm_post_op_attr*);
 
-typedef void (*lpgemv_n_one_a_pack_ft)(float*,
-                                       const float*,
-                                       const md_t,
-                                       const md_t,
-                                       const md_t,
-                                       const md_t,
-                                       md_t*,
-                                       md_t*);
+typedef void (*lpgemv_a_pack_ft)(float*,
+                                 const float*,
+                                 const md_t,
+                                 const md_t,
+                                 const md_t,
+                                 const md_t,
+                                 md_t*,
+                                 md_t*);
 
 LPGEMV(float, float, float, f32f32f32of32)
 {
@@ -121,9 +143,9 @@ LPGEMV(float, float, float, f32f32f32of32)
     lpgemm_gen_dlp_task_ids(thread, &thread_jc, &thread_ic);
 
     if (n == 1) {
-        md_t                   MR;
-        lpgemv_n_one_ker_ft    ker_fp;
-        lpgemv_n_one_a_pack_ft packa_fp;
+        md_t                MR;
+        lpgemv_n_one_ker_ft ker_fp;
+        lpgemv_a_pack_ft    packa_fp;
 
         // Workaround to select right kernel and blocksizes based on arch
         // since GEMV parameters are not available in lpgemm context.
@@ -203,7 +225,22 @@ LPGEMV(float, float, float, f32f32f32of32)
         }
     } else {
         // m = 1 case is not implemented yet for AVX2
+
+        lpgemv_m_one_ker_ft ker_fp;
+        lpgemv_a_pack_ft    packa_fp;
+
 #ifdef DLP_KERNELS_ZEN4
+        if (lpgemm_get_enabled_arch() == DLP_ARCH_ZEN3) {
+            ker_fp   = lpgemv_m_one_f32f32f32of32_avx512_256;
+            packa_fp = packa_mr8_f32f32f32of32_col_major;
+        } else {
+            ker_fp   = lpgemv_m_one_f32f32f32of32;
+            packa_fp = packa_mr16_f32f32f32of32_col_major;
+        }
+#else
+        ker_fp   = lpgemv_m_one_f32f32f32of32_avx2;
+        packa_fp = packa_mr8_f32f32f32of32_col_major;
+#endif
         // Compute the JC loop thread range for the current thread.
         md_t jc_start, jc_end;
         thread_jc.n_way   = (thread_jc.n_way == 1) ? (thread->n_threads)
@@ -220,9 +257,8 @@ LPGEMV(float, float, float, f32f32f32of32)
                     dlp_malloc_page_aligned(mem_a_size_req, &ret_err);
             }
 
-            packa_mr16_f32f32f32of32_col_major(pack_a_buffer_f32f32f32of32,
-                                               a_use, rs_a, cs_a, 1, k,
-                                               &rs_a_use, &cs_a_use);
+            packa_fp(pack_a_buffer_f32f32f32of32, a_use, rs_a, cs_a, 1, k,
+                     &rs_a_use, &cs_a_use);
 
             a_use = pack_a_buffer_f32f32f32of32;
         }
@@ -282,10 +318,10 @@ LPGEMV(float, float, float, f32f32f32of32)
             post_ops_attr.post_op_c_j = jc;
 
             // Call kernel
-            lpgemv_m_one_f32f32f32of32(
-                nc0, k, a_use, rs_a_use, cs_a_use, mtag_a, b_use, rs_b_use,
-                cs_b_use, mtag_b, c_use, rs_c, cs_c, alpha, beta, NR, KC,
-                n_sub_updated, jc_cur_loop_rem, post_op_list, &post_ops_attr);
+            ker_fp(nc0, k, a_use, rs_a_use, cs_a_use, mtag_a, b_use, rs_b_use,
+                   cs_b_use, mtag_b, c_use, rs_c, cs_c, alpha, beta, NR, KC,
+                   n_sub_updated, jc_cur_loop_rem, post_op_list,
+                   &post_ops_attr);
 
             if (mtag_b == REORDERED) {
                 adjust_B_panel_reordered_jc(&jc, jc_cur_loop);
@@ -299,20 +335,15 @@ LPGEMV(float, float, float, f32f32f32of32)
         if ((mtag_b == PACK) && (pack_b_buffer_f32f32f32of32 != NULL)) {
             dlp_free_page_aligned(pack_b_buffer_f32f32f32of32);
         }
-#endif // m == 1 case is not implemented for AVX2 yet.
     }
 }
 
 LPGEMM_5LOOP(float, float, float, f32f32f32of32)
 {
     // Handle using LPGEMV when m or/and n equal to 1
-#ifdef DLP_KERNELS_ZEN4
-    if ((((m == 1) && (lpgemm_get_enabled_arch() != DLP_ARCH_ZEN3)) || (n == 1))
-        && (dlp_cpuid_is_avx512_supported() == TRUE)) {
-#else
-    // m=1 case is not implemented yet for AVX2
-    if (((n == 1)) && (dlp_cpuid_is_avx2fma3_supported() == TRUE)) {
-#endif
+    if (((m == 1) || (n == 1))
+        && ((dlp_cpuid_is_avx512_supported() == TRUE)
+            || (dlp_cpuid_is_avx2fma3_supported() == TRUE))) {
         lpgemv_rowvar_f32f32f32of32(
             m, n, k, a, rs_a, cs_a, mtag_a, b, rs_b, cs_b, mtag_b, c, rs_c,
             cs_c, alpha, beta, rntm, thread, lcntx, post_op_list, c_downscale);

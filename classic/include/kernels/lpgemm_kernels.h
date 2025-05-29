@@ -510,6 +510,8 @@ LPGEMM_MN_LT_NR0_FRINGE_KERN2(int8_t,
         lpgemm_post_op_attr* post_op_attr)
 
 LPGEMV_M_EQ1_KERN(float, float, float, f32f32f32of32);
+LPGEMV_M_EQ1_KERN(float, float, float, f32f32f32of32_avx2);
+LPGEMV_M_EQ1_KERN(float, float, float, f32f32f32of32_avx512_256);
 LPGEMV_M_EQ1_KERN(bfloat16, bfloat16, float, bf16bf16f32of32);
 LPGEMV_M_EQ1_KERN(uint8_t, int8_t, int32_t, u8s8s32os32);
 LPGEMV_M_EQ1_KERN(int8_t, int8_t, int32_t, s8s8s32os32);
