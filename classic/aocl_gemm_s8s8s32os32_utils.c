@@ -149,7 +149,7 @@ AOCL_GEMM_GET_REORDER_BUF_SIZE_SYM_QUANT(s8s8s32os32_sym_quant)
 #endif
     md_t group_size = meta_data->group_size;
 
-    if (group_size & 11) {
+    if (group_size & 3) {
         dlp_print_msg(
             " Group size should be multiple of 4 for s8s8s32os32_sym_quant",
             __FILE__, __LINE__);
@@ -295,7 +295,7 @@ AOCL_GEMM_REORDER_SYM_QUANT(int8_t, s8s8s32os32_sym_quant)
     }
 
     md_t group_size = meta_data->group_size;
-    if (group_size & 11) {
+    if (group_size & 3) {
         dlp_print_msg(
             " Group size should be multiple of 4 for s8s8s32os32_sym_quant",
             __FILE__, __LINE__);
