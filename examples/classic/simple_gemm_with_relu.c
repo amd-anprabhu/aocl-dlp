@@ -36,7 +36,7 @@
  * 4. Demonstrate PReLU with custom scaling factor
  */
 
-#include "aocl_gemm.h"
+#include "aocl_dlp.h"
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>

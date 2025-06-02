@@ -35,7 +35,7 @@
  * 3. Compare with separate application of each operation
  */
 
-#include "aocl_gemm.h"
+#include "aocl_dlp.h"
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>

@@ -26,8 +26,12 @@
  *
  */
 
-#ifndef DLP_CLASSIC_LPGEMM_H
-#define DLP_CLASSIC_LPGEMM_H
+#ifndef DLP_CLASSIC_AOCL_DLP_H
+#define DLP_CLASSIC_AOCL_DLP_H
+
+#include "classic/dlp_macros.h"
+
+DLP_BEGIN_EXTERN_C
 
 #include "classic/aocl_bf16_type.h"
 #include "classic/aocl_eltwise_ops_interface_apis.h"
@@ -38,4 +42,6 @@
 #include "classic/dlp_base_types.h"
 #include "classic/dlp_defines.h"
 
-#endif // DLP_CLASSIC_LPGEMM_H
+DLP_END_EXTERN_C
+
+#endif // DLP_CLASSIC_AOCL_DLP_H

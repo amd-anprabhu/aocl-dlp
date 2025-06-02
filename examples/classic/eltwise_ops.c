@@ -35,7 +35,7 @@
  * 3. Convert between different data types (f32, bf16)
  */
 
-#include "aocl_gemm.h"
+#include "aocl_dlp.h"
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>

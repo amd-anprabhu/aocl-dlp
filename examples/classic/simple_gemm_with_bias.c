@@ -35,7 +35,7 @@
  * 3. Compare with separate bias addition
  */
 
-#include "aocl_gemm.h"
+#include "aocl_dlp.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>

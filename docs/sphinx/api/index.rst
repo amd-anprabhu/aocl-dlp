@@ -1,7 +1,6 @@
-
 API Reference
 =============
-.. doxygenfile:: aocl_gemm.h
+.. doxygenfile:: aocl_dlp.h
     :project: aocl-dlp
 .. doxygenfile:: aocl_gemm_interface_apis.h
     :project: aocl-dlp

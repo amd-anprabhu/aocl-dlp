@@ -39,7 +39,7 @@
 /* Define _POSIX_C_SOURCE to access POSIX functions in strict C11 mode */
 #define _POSIX_C_SOURCE 200809L
 
-#include "aocl_gemm.h"
+#include "aocl_dlp.h"
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>

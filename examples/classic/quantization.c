@@ -36,7 +36,7 @@
  * 4. Dequantize results back to floating-point
  */
 
-#include "aocl_gemm.h"
+#include "aocl_dlp.h"
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
