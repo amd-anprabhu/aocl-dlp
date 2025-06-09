@@ -70,15 +70,15 @@ lpgemv_m_one_f32f32f32of32_avx2_LT16(const md_t            n0,
 
     lpgemm_post_op_attr post_ops_attr = *(post_op_attr);
     __m256i             masks[9]      = {
-                         _mm256_set_epi32(0, 0, 0, 0, 0, 0, 0, 0), // 0 elements (all zeros)
-                         _mm256_set_epi32(0, 0, 0, 0, 0, 0, 0, -1), // 1 element
-                         _mm256_set_epi32(0, 0, 0, 0, 0, 0, -1, -1), // 2 elements
-                         _mm256_set_epi32(0, 0, 0, 0, 0, -1, -1, -1), // 3 elements
-                         _mm256_set_epi32(0, 0, 0, 0, -1, -1, -1, -1), // 4 elements
-                         _mm256_set_epi32(0, 0, 0, -1, -1, -1, -1, -1), // 5 elements
-                         _mm256_set_epi32(0, 0, -1, -1, -1, -1, -1, -1), // 6 elements
-                         _mm256_set_epi32(0, -1, -1, -1, -1, -1, -1, -1), // 7 elements
-                         _mm256_set_epi32(-1, -1, -1, -1, -1, -1, -1, -1), // 8 elements
+        _mm256_set_epi32(0, 0, 0, 0, 0, 0, 0, 0), // 0 elements (all zeros)
+        _mm256_set_epi32(0, 0, 0, 0, 0, 0, 0, -1), // 1 element
+        _mm256_set_epi32(0, 0, 0, 0, 0, 0, -1, -1), // 2 elements
+        _mm256_set_epi32(0, 0, 0, 0, 0, -1, -1, -1), // 3 elements
+        _mm256_set_epi32(0, 0, 0, 0, -1, -1, -1, -1), // 4 elements
+        _mm256_set_epi32(0, 0, 0, -1, -1, -1, -1, -1), // 5 elements
+        _mm256_set_epi32(0, 0, -1, -1, -1, -1, -1, -1), // 6 elements
+        _mm256_set_epi32(0, -1, -1, -1, -1, -1, -1, -1), // 7 elements
+        _mm256_set_epi32(-1, -1, -1, -1, -1, -1, -1, -1), // 8 elements
     };
 
     md_t nr0   = n0;
@@ -221,7 +221,7 @@ lpgemv_m_one_f32f32f32of32_avx2_LT16(const md_t            n0,
     lpgemm_post_op* post_ops_list_temp = post_op;
     POST_OP_LABEL_LASTK_SAFE_JUMP
 
-POST_OPS_BIAS_1x16F : {
+POST_OPS_BIAS_1x16F: {
     if ((*(char*)post_ops_list_temp->op_args2 == 'r')
         || (*(char*)post_ops_list_temp->op_args2 == 'R')) {
         if (post_ops_list_temp->stor_type == BF16) {
@@ -263,7 +263,7 @@ POST_OPS_BIAS_1x16F : {
     }
     POST_OP_LABEL_LASTK_SAFE_JUMP_WITH_NEXT_PTR
 }
-POST_OPS_RELU_1x16F : {
+POST_OPS_RELU_1x16F: {
     ymm0 = _mm256_setzero_ps();
 
     // c[0,0-7]
@@ -274,7 +274,7 @@ POST_OPS_RELU_1x16F : {
 
     POST_OP_LABEL_LASTK_SAFE_JUMP_WITH_NEXT_PTR
 }
-POST_OPS_RELU_SCALE_1x16F : {
+POST_OPS_RELU_SCALE_1x16F: {
     ymm0 = _mm256_broadcast_ss((float*)post_ops_list_temp->op_args2);
     ymm1 = _mm256_setzero_ps();
 
@@ -286,7 +286,7 @@ POST_OPS_RELU_SCALE_1x16F : {
 
     POST_OP_LABEL_LASTK_SAFE_JUMP_WITH_NEXT_PTR
 }
-POST_OPS_GELU_TANH_1x16F : {
+POST_OPS_GELU_TANH_1x16F: {
     __m256  dn, x_tanh;
     __m256i q;
 
@@ -298,7 +298,7 @@ POST_OPS_GELU_TANH_1x16F : {
 
     POST_OP_LABEL_LASTK_SAFE_JUMP_WITH_NEXT_PTR
 }
-POST_OPS_GELU_ERF_1x16F : {
+POST_OPS_GELU_ERF_1x16F: {
     // c[0,0-7]
     GELU_ERF_F32S_AVX2(ymm8, ymm0, ymm1, ymm2)
 
@@ -307,7 +307,7 @@ POST_OPS_GELU_ERF_1x16F : {
 
     POST_OP_LABEL_LASTK_SAFE_JUMP_WITH_NEXT_PTR
 }
-POST_OPS_CLIP_1x16F : {
+POST_OPS_CLIP_1x16F: {
     ymm0 = _mm256_set1_ps(*(float*)post_ops_list_temp->op_args2);
     ymm1 = _mm256_set1_ps(*(float*)post_ops_list_temp->op_args3);
 
@@ -319,7 +319,7 @@ POST_OPS_CLIP_1x16F : {
 
     POST_OP_LABEL_LASTK_SAFE_JUMP_WITH_NEXT_PTR
 }
-POST_OPS_DOWNSCALE_1x16F : {
+POST_OPS_DOWNSCALE_1x16F: {
     __m256 selector1 = _mm256_setzero_ps();
     __m256 selector2 = _mm256_setzero_ps();
 
@@ -401,7 +401,7 @@ POST_OPS_DOWNSCALE_1x16F : {
     }
     POST_OP_LABEL_LASTK_SAFE_JUMP_WITH_NEXT_PTR
 }
-POST_OPS_MATRIX_ADD_1x16F : {
+POST_OPS_MATRIX_ADD_1x16F: {
     md_t ldm = *(md_t*)post_ops_list_temp->op_args3;
 
     bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
@@ -459,7 +459,7 @@ POST_OPS_MATRIX_ADD_1x16F : {
     }
     POST_OP_LABEL_LASTK_SAFE_JUMP_WITH_NEXT_PTR
 }
-POST_OPS_MATRIX_MUL_1x16F : {
+POST_OPS_MATRIX_MUL_1x16F: {
     md_t ldm = *(md_t*)post_ops_list_temp->op_args3;
 
     bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
@@ -517,7 +517,7 @@ POST_OPS_MATRIX_MUL_1x16F : {
     }
     POST_OP_LABEL_LASTK_SAFE_JUMP_WITH_NEXT_PTR
 }
-POST_OPS_SWISH_1x16F : {
+POST_OPS_SWISH_1x16F: {
     ymm0 = _mm256_broadcast_ss((float*)post_ops_list_temp->op_args2);
     __m256  z, dn;
     __m256i ex_out;
@@ -529,7 +529,7 @@ POST_OPS_SWISH_1x16F : {
     SWISH_F32_AVX2_DEF(ymm12, ymm0, ymm1, ymm2, ymm3, z, dn, ex_out)
     POST_OP_LABEL_LASTK_SAFE_JUMP_WITH_NEXT_PTR
 }
-POST_OPS_TANH_1x16F : {
+POST_OPS_TANH_1x16F: {
     __m256  dn;
     __m256i q;
 
@@ -541,7 +541,7 @@ POST_OPS_TANH_1x16F : {
 
     POST_OP_LABEL_LASTK_SAFE_JUMP_WITH_NEXT_PTR
 }
-POST_OPS_SIGMOID_1x16F : {
+POST_OPS_SIGMOID_1x16F: {
     __m256  z, dn;
     __m256i ex_out;
 
@@ -560,8 +560,8 @@ POST_OPS_1x16F_DISABLE:;
 
     if ((post_ops_attr.buf_downscale != NULL)
         && (post_ops_attr.is_last_k == TRUE)) {
-        STORE_F32_BF16_YMM(ymm8, 0, 0);
-        STORE_F32_BF16_YMM(ymm12, 0, 1);
+        STORE_F32_BF16_YMM(ymm8, 0, 0, 8);
+        STORE_F32_BF16_YMM(ymm12, 0, 1, 8);
     } else {
         _mm256_maskstore_ps(c_use, k1, ymm8);
         _mm256_maskstore_ps(c_use + 8, k2, ymm12);
@@ -728,7 +728,7 @@ LPGEMV_M_EQ1_KERN(float, float, float, f32f32f32of32_avx2)
         lpgemm_post_op* post_ops_list_temp = post_op;
         POST_OP_LABEL_LASTK_SAFE_JUMP
 
-    POST_OPS_BIAS_1x16F : {
+    POST_OPS_BIAS_1x16F: {
         if ((*(char*)post_ops_list_temp->op_args2 == 'r')
             || (*(char*)post_ops_list_temp->op_args2 == 'R')) {
             if (post_ops_list_temp->stor_type == BF16) {
@@ -768,7 +768,7 @@ LPGEMV_M_EQ1_KERN(float, float, float, f32f32f32of32_avx2)
         }
         POST_OP_LABEL_LASTK_SAFE_JUMP_WITH_NEXT_PTR
     }
-    POST_OPS_RELU_1x16F : {
+    POST_OPS_RELU_1x16F: {
         ymm0 = _mm256_setzero_ps();
 
         // c[0,0-7]
@@ -779,7 +779,7 @@ LPGEMV_M_EQ1_KERN(float, float, float, f32f32f32of32_avx2)
 
         POST_OP_LABEL_LASTK_SAFE_JUMP_WITH_NEXT_PTR
     }
-    POST_OPS_RELU_SCALE_1x16F : {
+    POST_OPS_RELU_SCALE_1x16F: {
         ymm0 = _mm256_broadcast_ss((float*)post_ops_list_temp->op_args2);
         ymm1 = _mm256_setzero_ps();
 
@@ -791,7 +791,7 @@ LPGEMV_M_EQ1_KERN(float, float, float, f32f32f32of32_avx2)
 
         POST_OP_LABEL_LASTK_SAFE_JUMP_WITH_NEXT_PTR
     }
-    POST_OPS_GELU_TANH_1x16F : {
+    POST_OPS_GELU_TANH_1x16F: {
         __m256  dn, x_tanh;
         __m256i q;
 
@@ -803,7 +803,7 @@ LPGEMV_M_EQ1_KERN(float, float, float, f32f32f32of32_avx2)
 
         POST_OP_LABEL_LASTK_SAFE_JUMP_WITH_NEXT_PTR
     }
-    POST_OPS_GELU_ERF_1x16F : {
+    POST_OPS_GELU_ERF_1x16F: {
         // c[0,0-7]
         GELU_ERF_F32S_AVX2(ymm8, ymm0, ymm1, ymm2)
 
@@ -812,7 +812,7 @@ LPGEMV_M_EQ1_KERN(float, float, float, f32f32f32of32_avx2)
 
         POST_OP_LABEL_LASTK_SAFE_JUMP_WITH_NEXT_PTR
     }
-    POST_OPS_CLIP_1x16F : {
+    POST_OPS_CLIP_1x16F: {
         ymm0 = _mm256_set1_ps(*(float*)post_ops_list_temp->op_args2);
         ymm1 = _mm256_set1_ps(*(float*)post_ops_list_temp->op_args3);
 
@@ -824,7 +824,7 @@ LPGEMV_M_EQ1_KERN(float, float, float, f32f32f32of32_avx2)
 
         POST_OP_LABEL_LASTK_SAFE_JUMP_WITH_NEXT_PTR
     }
-    POST_OPS_DOWNSCALE_1x16F : {
+    POST_OPS_DOWNSCALE_1x16F: {
         __m256 selector1 = _mm256_setzero_ps();
         __m256 selector2 = _mm256_setzero_ps();
 
@@ -910,7 +910,7 @@ LPGEMV_M_EQ1_KERN(float, float, float, f32f32f32of32_avx2)
         }
         POST_OP_LABEL_LASTK_SAFE_JUMP_WITH_NEXT_PTR
     }
-    POST_OPS_MATRIX_ADD_1x16F : {
+    POST_OPS_MATRIX_ADD_1x16F: {
         md_t ldm = *(md_t*)post_ops_list_temp->op_args3;
 
         bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
@@ -972,7 +972,7 @@ LPGEMV_M_EQ1_KERN(float, float, float, f32f32f32of32_avx2)
         }
         POST_OP_LABEL_LASTK_SAFE_JUMP_WITH_NEXT_PTR
     }
-    POST_OPS_MATRIX_MUL_1x16F : {
+    POST_OPS_MATRIX_MUL_1x16F: {
         md_t ldm = *(md_t*)post_ops_list_temp->op_args3;
 
         bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
@@ -1034,7 +1034,7 @@ LPGEMV_M_EQ1_KERN(float, float, float, f32f32f32of32_avx2)
         }
         POST_OP_LABEL_LASTK_SAFE_JUMP_WITH_NEXT_PTR
     }
-    POST_OPS_SWISH_1x16F : {
+    POST_OPS_SWISH_1x16F: {
         ymm0 = _mm256_broadcast_ss((float*)post_ops_list_temp->op_args2);
         __m256  z, dn;
         __m256i ex_out;
@@ -1047,7 +1047,7 @@ LPGEMV_M_EQ1_KERN(float, float, float, f32f32f32of32_avx2)
 
         POST_OP_LABEL_LASTK_SAFE_JUMP_WITH_NEXT_PTR
     }
-    POST_OPS_TANH_1x16F : {
+    POST_OPS_TANH_1x16F: {
         __m256  dn;
         __m256i q;
 
@@ -1059,7 +1059,7 @@ LPGEMV_M_EQ1_KERN(float, float, float, f32f32f32of32_avx2)
 
         POST_OP_LABEL_LASTK_SAFE_JUMP_WITH_NEXT_PTR
     }
-    POST_OPS_SIGMOID_1x16F : {
+    POST_OPS_SIGMOID_1x16F: {
         __m256i ex_out;
         __m256  z, dn;
 
@@ -1079,8 +1079,8 @@ LPGEMV_M_EQ1_KERN(float, float, float, f32f32f32of32_avx2)
 
         if ((post_ops_attr.buf_downscale != NULL)
             && (post_ops_attr.is_last_k == TRUE)) {
-            STORE_F32_BF16_YMM(ymm8, 0, 0);
-            STORE_F32_BF16_YMM(ymm12, 0, 1);
+            STORE_F32_BF16_YMM(ymm8, 0, 0, 8);
+            STORE_F32_BF16_YMM(ymm12, 0, 1, 8);
         } else {
             _mm256_storeu_ps(c_use, ymm8);
             _mm256_storeu_ps(c_use + 8, ymm12);

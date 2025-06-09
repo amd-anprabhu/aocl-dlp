@@ -154,8 +154,8 @@ LPGEMM_MAIN_KERN(float, float, float, f32f32f32of32_avx512_256_6x32m)
         if (beta != 0.0) {
             ymm4 = _mm256_broadcast_ss(&(beta));
 
-            if ( ( post_ops_attr.buf_downscale != NULL ) &&
-            ( post_ops_attr.is_first_k == TRUE ) ) {
+            if ((post_ops_attr.buf_downscale != NULL)
+                && (post_ops_attr.is_first_k == TRUE)) {
 
                 BF16_F32_C_BNZ_8(0, 0, ymm0, ymm4, ymm8)
                 BF16_F32_C_BNZ_8(0, 1, ymm1, ymm4, ymm9)
@@ -186,7 +186,7 @@ LPGEMM_MAIN_KERN(float, float, float, f32f32f32of32_avx512_256_6x32m)
                 BF16_F32_C_BNZ_8(5, 1, ymm1, ymm4, ymm29)
                 BF16_F32_C_BNZ_8(5, 2, ymm2, ymm4, ymm30)
                 BF16_F32_C_BNZ_8(5, 3, ymm3, ymm4, ymm31)
-            }else{
+            } else {
                 _cbuf = cbuf;
                 // load c and multiply with beta and
                 // add to accumulator and store back
@@ -237,22 +237,22 @@ LPGEMM_MAIN_KERN(float, float, float, f32f32f32of32_avx512_256_6x32m)
     POST_OPS_BIAS_6x32F: {
         if ((*(char*)post_ops_list_temp->op_args2 == 'r')
             || (*(char*)post_ops_list_temp->op_args2 == 'R')) {
-                if( post_ops_list_temp->stor_type == BF16 ){
+            if (post_ops_list_temp->stor_type == BF16) {
 
-                    BF16_F32_BIAS_LOAD_AVX2( ymm0, 0 )
-                    BF16_F32_BIAS_LOAD_AVX2( ymm1, 1 )
-                    BF16_F32_BIAS_LOAD_AVX2( ymm2, 2 )
-                    BF16_F32_BIAS_LOAD_AVX2( ymm3, 3 )
-                }else{
-                    ymm0 = _mm256_loadu_ps((float*)post_ops_list_temp->op_args1
-                                        + post_ops_attr.post_op_c_j + (0 * 8));
-                    ymm1 = _mm256_loadu_ps((float*)post_ops_list_temp->op_args1
-                                        + post_ops_attr.post_op_c_j + (1 * 8));
-                    ymm2 = _mm256_loadu_ps((float*)post_ops_list_temp->op_args1
-                                        + post_ops_attr.post_op_c_j + (2 * 8));
-                    ymm3 = _mm256_loadu_ps((float*)post_ops_list_temp->op_args1
-                                        + post_ops_attr.post_op_c_j + (3 * 8));
-                }
+                BF16_F32_BIAS_LOAD_AVX2(ymm0, 0)
+                BF16_F32_BIAS_LOAD_AVX2(ymm1, 1)
+                BF16_F32_BIAS_LOAD_AVX2(ymm2, 2)
+                BF16_F32_BIAS_LOAD_AVX2(ymm3, 3)
+            } else {
+                ymm0 = _mm256_loadu_ps((float*)post_ops_list_temp->op_args1
+                                       + post_ops_attr.post_op_c_j + (0 * 8));
+                ymm1 = _mm256_loadu_ps((float*)post_ops_list_temp->op_args1
+                                       + post_ops_attr.post_op_c_j + (1 * 8));
+                ymm2 = _mm256_loadu_ps((float*)post_ops_list_temp->op_args1
+                                       + post_ops_attr.post_op_c_j + (2 * 8));
+                ymm3 = _mm256_loadu_ps((float*)post_ops_list_temp->op_args1
+                                       + post_ops_attr.post_op_c_j + (3 * 8));
+            }
 
             ymm8  = _mm256_add_ps(ymm8, ymm0);
             ymm9  = _mm256_add_ps(ymm9, ymm1);
@@ -523,9 +523,9 @@ LPGEMM_MAIN_KERN(float, float, float, f32f32f32of32_avx512_256_6x32m)
         __m256 zero_point4 = _mm256_setzero_ps();
         __m256 zero_point5 = _mm256_setzero_ps();
 
-        bool is_bf16 = ( post_ops_list_temp->stor_type == BF16 ) ||
-                    ( ( post_ops_list_temp->stor_type == NONE ) &&
-                      ( post_ops_attr.c_stor_type == BF16 ) );
+        bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
+                       || ((post_ops_list_temp->stor_type == NONE)
+                           && (post_ops_attr.c_stor_type == BF16));
 
         if (post_ops_list_temp->scale_factor_len == 1) {
             selector1 =
@@ -543,14 +543,14 @@ LPGEMM_MAIN_KERN(float, float, float, f32f32f32of32_avx512_256_6x32m)
         }
 
         if (*((md_t*)post_ops_list_temp->op_args3) == 1) {
-            if( is_bf16 == TRUE ){
+            if (is_bf16 == TRUE) {
                 BF16_F32_ZP_SCALAR_BCAST_AVX2(zero_point0)
                 BF16_F32_ZP_SCALAR_BCAST_AVX2(zero_point1)
                 BF16_F32_ZP_SCALAR_BCAST_AVX2(zero_point2)
                 BF16_F32_ZP_SCALAR_BCAST_AVX2(zero_point3)
                 BF16_F32_ZP_SCALAR_BCAST_AVX2(zero_point4)
                 BF16_F32_ZP_SCALAR_BCAST_AVX2(zero_point5)
-            }else{
+            } else {
                 zero_point0 =
                     _mm256_set1_ps(*((float*)post_ops_list_temp->op_args1));
                 zero_point1 =
@@ -563,8 +563,8 @@ LPGEMM_MAIN_KERN(float, float, float, f32f32f32of32_avx512_256_6x32m)
                     _mm256_set1_ps(*((float*)post_ops_list_temp->op_args1));
                 zero_point5 =
                     _mm256_set1_ps(*((float*)post_ops_list_temp->op_args1));
-                }
             }
+        }
 
         if ((*(char*)post_ops_list_temp->op_args2 == 'r')
             || (*(char*)post_ops_list_temp->op_args2 == 'R')) {
@@ -583,12 +583,12 @@ LPGEMM_MAIN_KERN(float, float, float, f32f32f32of32_avx512_256_6x32m)
                                     + post_ops_attr.post_op_c_j + (3 * 8));
             }
             if (*((md_t*)post_ops_list_temp->op_args3) > 1) {
-                if( is_bf16 == TRUE ){
-                    BF16_F32_ZP_VECTOR_LOAD_AVX2(zero_point0,0)
-                    BF16_F32_ZP_VECTOR_LOAD_AVX2(zero_point1,1)
-                    BF16_F32_ZP_VECTOR_LOAD_AVX2(zero_point2,2)
-                    BF16_F32_ZP_VECTOR_LOAD_AVX2(zero_point3,3)
-                }else{
+                if (is_bf16 == TRUE) {
+                    BF16_F32_ZP_VECTOR_LOAD_AVX2(zero_point0, 0)
+                    BF16_F32_ZP_VECTOR_LOAD_AVX2(zero_point1, 1)
+                    BF16_F32_ZP_VECTOR_LOAD_AVX2(zero_point2, 2)
+                    BF16_F32_ZP_VECTOR_LOAD_AVX2(zero_point3, 3)
+                } else {
                     zero_point0 =
                         _mm256_loadu_ps((float*)post_ops_list_temp->op_args1
                                         + post_ops_attr.post_op_c_j + (0 * 8));
@@ -655,32 +655,32 @@ LPGEMM_MAIN_KERN(float, float, float, f32f32f32of32_avx512_256_6x32m)
                                      + post_ops_attr.post_op_c_i + 5));
             }
             if (*((md_t*)post_ops_list_temp->op_args3) > 1) {
-                if( is_bf16 == TRUE ){
-                    BF16_F32_ZP_VECTOR_BCAST_AVX2(zero_point0,0)
-                    BF16_F32_ZP_VECTOR_BCAST_AVX2(zero_point1,1)
-                    BF16_F32_ZP_VECTOR_BCAST_AVX2(zero_point2,2)
-                    BF16_F32_ZP_VECTOR_BCAST_AVX2(zero_point3,3)
-                    BF16_F32_ZP_VECTOR_BCAST_AVX2(zero_point4,4)
-                    BF16_F32_ZP_VECTOR_BCAST_AVX2(zero_point5,5)
-                }else{
+                if (is_bf16 == TRUE) {
+                    BF16_F32_ZP_VECTOR_BCAST_AVX2(zero_point0, 0)
+                    BF16_F32_ZP_VECTOR_BCAST_AVX2(zero_point1, 1)
+                    BF16_F32_ZP_VECTOR_BCAST_AVX2(zero_point2, 2)
+                    BF16_F32_ZP_VECTOR_BCAST_AVX2(zero_point3, 3)
+                    BF16_F32_ZP_VECTOR_BCAST_AVX2(zero_point4, 4)
+                    BF16_F32_ZP_VECTOR_BCAST_AVX2(zero_point5, 5)
+                } else {
                     zero_point0 =
                         _mm256_set1_ps(*((float*)post_ops_list_temp->op_args1
-                                        + post_ops_attr.post_op_c_i + 0));
+                                         + post_ops_attr.post_op_c_i + 0));
                     zero_point1 =
                         _mm256_set1_ps(*((float*)post_ops_list_temp->op_args1
-                                        + post_ops_attr.post_op_c_i + 1));
+                                         + post_ops_attr.post_op_c_i + 1));
                     zero_point2 =
                         _mm256_set1_ps(*((float*)post_ops_list_temp->op_args1
-                                        + post_ops_attr.post_op_c_i + 2));
+                                         + post_ops_attr.post_op_c_i + 2));
                     zero_point3 =
                         _mm256_set1_ps(*((float*)post_ops_list_temp->op_args1
-                                        + post_ops_attr.post_op_c_i + 3));
+                                         + post_ops_attr.post_op_c_i + 3));
                     zero_point4 =
                         _mm256_set1_ps(*((float*)post_ops_list_temp->op_args1
-                                        + post_ops_attr.post_op_c_i + 4));
+                                         + post_ops_attr.post_op_c_i + 4));
                     zero_point5 =
                         _mm256_set1_ps(*((float*)post_ops_list_temp->op_args1
-                                        + post_ops_attr.post_op_c_i + 5));
+                                         + post_ops_attr.post_op_c_i + 5));
                 }
             }
 
@@ -1038,42 +1038,42 @@ LPGEMM_MAIN_KERN(float, float, float, f32f32f32of32_avx512_256_6x32m)
         POST_OP_LABEL_LASTK_SAFE_JUMP_WITH_NEXT_PTR
     }
     POST_OPS_6x32F_DISABLE: {
-        uint32_t tlsb, rounded, temp[8] = {0};
-        int i;
+        uint32_t  tlsb, rounded, temp[8] = { 0 };
+        int       i;
         bfloat16* dest;
 
-        if ( ( post_ops_attr.buf_downscale != NULL ) &&
-            ( post_ops_attr.is_last_k == TRUE ) ){
-            STORE_F32_BF16_YMM(ymm8, 0, 0)
-            STORE_F32_BF16_YMM(ymm9, 0, 1)
-            STORE_F32_BF16_YMM(ymm10, 0, 2)
-            STORE_F32_BF16_YMM(ymm11, 0, 3)
+        if ((post_ops_attr.buf_downscale != NULL)
+            && (post_ops_attr.is_last_k == TRUE)) {
+            STORE_F32_BF16_YMM(ymm8, 0, 0, 8)
+            STORE_F32_BF16_YMM(ymm9, 0, 1, 8)
+            STORE_F32_BF16_YMM(ymm10, 0, 2, 8)
+            STORE_F32_BF16_YMM(ymm11, 0, 3, 8)
 
-            STORE_F32_BF16_YMM(ymm12, 1, 0)
-            STORE_F32_BF16_YMM(ymm13, 1, 1)
-            STORE_F32_BF16_YMM(ymm14, 1, 2)
-            STORE_F32_BF16_YMM(ymm15, 1, 3)
+            STORE_F32_BF16_YMM(ymm12, 1, 0, 8)
+            STORE_F32_BF16_YMM(ymm13, 1, 1, 8)
+            STORE_F32_BF16_YMM(ymm14, 1, 2, 8)
+            STORE_F32_BF16_YMM(ymm15, 1, 3, 8)
 
-            STORE_F32_BF16_YMM(ymm16, 2, 0)
-            STORE_F32_BF16_YMM(ymm17, 2, 1)
-            STORE_F32_BF16_YMM(ymm18, 2, 2)
-            STORE_F32_BF16_YMM(ymm19, 2, 3)
+            STORE_F32_BF16_YMM(ymm16, 2, 0, 8)
+            STORE_F32_BF16_YMM(ymm17, 2, 1, 8)
+            STORE_F32_BF16_YMM(ymm18, 2, 2, 8)
+            STORE_F32_BF16_YMM(ymm19, 2, 3, 8)
 
-            STORE_F32_BF16_YMM(ymm20, 3, 0)
-            STORE_F32_BF16_YMM(ymm21, 3, 1)
-            STORE_F32_BF16_YMM(ymm22, 3, 2)
-            STORE_F32_BF16_YMM(ymm23, 3, 3)
+            STORE_F32_BF16_YMM(ymm20, 3, 0, 8)
+            STORE_F32_BF16_YMM(ymm21, 3, 1, 8)
+            STORE_F32_BF16_YMM(ymm22, 3, 2, 8)
+            STORE_F32_BF16_YMM(ymm23, 3, 3, 8)
 
-            STORE_F32_BF16_YMM(ymm24, 4, 0)
-            STORE_F32_BF16_YMM(ymm25, 4, 1)
-            STORE_F32_BF16_YMM(ymm26, 4, 2)
-            STORE_F32_BF16_YMM(ymm27, 4, 3)
+            STORE_F32_BF16_YMM(ymm24, 4, 0, 8)
+            STORE_F32_BF16_YMM(ymm25, 4, 1, 8)
+            STORE_F32_BF16_YMM(ymm26, 4, 2, 8)
+            STORE_F32_BF16_YMM(ymm27, 4, 3, 8)
 
-            STORE_F32_BF16_YMM(ymm28, 5, 0)
-            STORE_F32_BF16_YMM(ymm29, 5, 1)
-            STORE_F32_BF16_YMM(ymm30, 5, 2)
-            STORE_F32_BF16_YMM(ymm31, 5, 3)
-        }else{
+            STORE_F32_BF16_YMM(ymm28, 5, 0, 8)
+            STORE_F32_BF16_YMM(ymm29, 5, 1, 8)
+            STORE_F32_BF16_YMM(ymm30, 5, 2, 8)
+            STORE_F32_BF16_YMM(ymm31, 5, 3, 8)
+        } else {
             _mm256_storeu_ps(cbuf, ymm8);
             _mm256_storeu_ps(cbuf + 8, ymm9);
             _mm256_storeu_ps(cbuf + 16, ymm10);

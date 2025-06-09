@@ -29,11 +29,11 @@
 #ifndef LPGEMM_F32_SGEMM_KERN_MACROS_H
 #define LPGEMM_F32_SGEMM_KERN_MACROS_H
 
-#include <string.h>
 #include "../gelu_avx512.h"
 #include "../math_utils_avx512.h"
 #include "../sigmoid_avx512.h"
 #include "../silu_avx512.h"
+#include <string.h>
 
 /* Zero-out all ZMM registers */
 #define ZERO_ZMM_ALL                                                           \
@@ -179,6 +179,12 @@
     zmm2 = _mm512_mul_ps(zmm2, alpha);                                         \
     zmm3 = _mm512_mul_ps(zmm3, alpha);
 
+#define ALPHA_MUL_ACC_ZMM_2_REG(zmm0, zmm1, alpha)                             \
+    zmm0 = _mm512_mul_ps(zmm0, alpha);                                         \
+    zmm1 = _mm512_mul_ps(zmm1, alpha);
+
+#define ALPHA_MUL_ACC_ZMM_1_REG(zmm0, alpha) zmm0 = _mm512_mul_ps(zmm0, alpha);
+
 /*Beta helpers*/
 // F32 fma macro
 #define F32_BETA_FMA(reg, scratch1, scratch2)                                  \
@@ -215,19 +221,20 @@
                                  + post_ops_attr.post_op_c_j + (n_ind * 16),   \
                              mask_all1, (__m256i)_mm512_cvtneps_pbh(reg))
 
-#define CVT_STORE_F32_BF16_MASK_AVX512( reg, m_ind, n_ind ) \
-{ \
-    _mm512_storeu_ps((float*)temp, reg); \
-    dest = ( bfloat16* )post_ops_attr.buf_downscale + \
-        ( post_ops_attr.rs_c_downscale * ( post_ops_attr.post_op_c_i + m_ind ) ) + \
-        post_ops_attr.post_op_c_j + ( n_ind * 16 ); \
-    for(i = 0; i < 16; i++) \
-    { \
-        tlsb = ( temp[i] & ( uint32_t )0x00010000 ) > 16; \
-        rounded = temp[i] + ( uint32_t )0x00007FFF + tlsb; \
-        memcpy( (dest+i), ((char *)(&rounded))+2, sizeof(bfloat16)); \
-    } \
-}
+// This conversion will be used when AVX512BF16 is not supported.
+#define CVT_STORE_F32_BF16_MASK_AVX512(n_elem, reg, m_ind, n_ind)              \
+    {                                                                          \
+        _mm512_storeu_ps((float*)temp, reg);                                   \
+        dest = (bfloat16*)post_ops_attr.buf_downscale                          \
+               + (post_ops_attr.rs_c_downscale                                 \
+                  * (post_ops_attr.post_op_c_i + m_ind))                       \
+               + post_ops_attr.post_op_c_j + (n_ind * 16);                     \
+        for (i = 0; i < n_elem; i++) {                                         \
+            tlsb    = (temp[i] & (uint32_t)0x00010000) > 16;                   \
+            rounded = temp[i] + (uint32_t)0x00007FFF + tlsb;                   \
+            memcpy((dest + i), ((char*)(&rounded)) + 2, sizeof(bfloat16));     \
+        }                                                                      \
+    }
 
 // BF16 bias helper macros.
 #define BF16_F32_BIAS_LOAD(scr, mask, n_ind)                                   \
@@ -284,6 +291,10 @@
         _mm512_set1_epi32(16)));
 
 // Matrix Add post-ops helper macros
+
+#define F32_MATRIX_ADD_1COL(scr0, m_ind, r_ind0)                               \
+    zmm##r_ind0 = _mm512_add_ps(scr0, zmm##r_ind0);
+
 #define F32_MATRIX_ADD_2COL(scr0, scr1, m_ind, r_ind0, r_ind1)                 \
     zmm##r_ind0 = _mm512_add_ps(scr0, zmm##r_ind0);                            \
     zmm##r_ind1 = _mm512_add_ps(scr1, zmm##r_ind1);
@@ -444,6 +455,14 @@
                   + post_ops_attr.post_op_c_j + (n_ind * 16));                 \
     scr = _mm512_mul_ps(scr, scl_fct);
 
+#define F32_F32_MATRIX_ADD_1COL_ZMM(scr0, scl_fct0, m_ind, r_ind0)             \
+    F32_F32_MATRIX_ADD_LOAD(_cvtu32_mask16(0xFFFF), scr0, scl_fct0, m_ind, 0); \
+    F32_MATRIX_ADD_1COL(scr0, m_ind, r_ind0);
+
+#define F32_F32_MATRIX_ADD_1COL_ZMM_MASK(mask, scr0, scl_fct0, m_ind, r_ind0)  \
+    F32_F32_MATRIX_ADD_LOAD(mask, scr0, scl_fct0, m_ind, 0);                   \
+    F32_MATRIX_ADD_1COL(scr0, m_ind, r_ind0);
+
 #define F32_F32_MATRIX_ADD_2COL(scr0, scr1, scl_fct0, scl_fct1, m_ind, r_ind0, \
                                 r_ind1)                                        \
     F32_F32_MATRIX_ADD_LOAD(_cvtu32_mask16(0xFFFF), scr0, scl_fct0, m_ind, 0); \
@@ -478,6 +497,9 @@
                         r_ind3);
 
 // Matrix Mul post-ops helper macros
+#define F32_MATRIX_MUL_1COL(scr0, m_ind, r_ind0)                               \
+    zmm##r_ind0 = _mm512_mul_ps(scr0, zmm##r_ind0);
+
 #define F32_MATRIX_MUL_2COL(scr0, scr1, m_ind, r_ind0, r_ind1)                 \
     zmm##r_ind0 = _mm512_mul_ps(scr0, zmm##r_ind0);                            \
     zmm##r_ind1 = _mm512_mul_ps(scr1, zmm##r_ind1);
@@ -617,6 +639,14 @@
 
 #define F32_F32_MATRIX_MUL_LOAD(mask, scr, scl_fct, m_ind, n_ind)              \
     F32_F32_MATRIX_ADD_LOAD(mask, scr, scl_fct, m_ind, n_ind);
+
+#define F32_F32_MATRIX_MUL_1COL_ZMM(scr0, scl_fct0, m_ind, r_ind0)             \
+    F32_F32_MATRIX_MUL_LOAD(_cvtu32_mask16(0xFFFF), scr0, scl_fct0, m_ind, 0); \
+    F32_MATRIX_MUL_1COL(scr0, m_ind, r_ind0);
+
+#define F32_F32_MATRIX_MUL_1COL_ZMM_MASK(mask, scr0, scl_fct0, m_ind, r_ind0)  \
+    F32_F32_MATRIX_MUL_LOAD(mask, scr0, scl_fct0, m_ind, 0);                   \
+    F32_MATRIX_MUL_1COL(scr0, m_ind, r_ind0);
 
 #define F32_F32_MATRIX_MUL_2COL(scr0, scr1, scl_fct0, scl_fct1, m_ind, r_ind0, \
                                 r_ind1)                                        \
