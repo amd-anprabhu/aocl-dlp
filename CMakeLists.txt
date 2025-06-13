@@ -67,7 +67,13 @@ set(DLP_SRCS "")
 # Create the library target
 add_library(${PROJECT_NAME} SHARED ${DLP_SRCS})
 
-# Link with the classic object library and dependencies
+# Create the static library target
+add_library(${PROJECT_NAME}_static STATIC ${DLP_SRCS})
+
+# Set binary name for static library
+set_target_properties(${PROJECT_NAME}_static PROPERTIES OUTPUT_NAME ${PROJECT_NAME})
+
+# Link with the classic object shared library and dependencies
 target_link_libraries(${PROJECT_NAME}
     PUBLIC
         ${CLASSIC_TARGETS}
@@ -75,7 +81,24 @@ target_link_libraries(${PROJECT_NAME}
         dlp::openmp
 )
 
+# Link with the classic object static library and dependencies
+target_link_libraries(${PROJECT_NAME}_static
+    PUBLIC
+        ${CLASSIC_TARGETS}
+    PUBLIC
+        dlp::openmp
+)
+
+# Set include directories for the target shared library
 target_include_directories(${PROJECT_NAME}
+    PUBLIC
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>
+        $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
+        $<INSTALL_INTERFACE:include>
+)
+
+# Set include directories for the target static library
+target_include_directories(${PROJECT_NAME}_static
     PUBLIC
         $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}/include>
         $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include>
