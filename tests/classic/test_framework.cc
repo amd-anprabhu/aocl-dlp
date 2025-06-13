@@ -1,0 +1,664 @@
+/*
+ * Copyright © Advanced Micro Devices, Inc., or its affiliates.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ * 1. Redistributions of source code must retain the above copyright notice,
+ *    this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ * 3. Neither the name of the copyright holder nor the names of its contributors
+ *    may be used to endorse or promote products derived from this software
+ *    without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS “AS IS”
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES ( INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ *
+ */
+
+// Custom Headers
+#include "framework/cartesian_product.hh"
+#include "framework/range.hh"
+#include "framework/simple_product.hh"
+#include "framework/value_iterable.hh"
+#include "framework/vector_iterable.hh"
+
+// Standard Headers
+#include <gtest/gtest.h>
+#include <vector>
+
+using namespace dlp::testing;
+
+// Helper function to create a Range (similar to Python's range)
+template<typename T>
+Range<T>
+make_range(T start, T end, T step = T(1))
+{
+    return Range<T>(start, end, step);
+}
+
+// Test fixture for Range class
+class RangeTest : public ::testing::Test
+{
+  protected:
+    void SetUp() override {}
+    void TearDown() override {}
+};
+
+// Test basic range functionality
+TEST_F(RangeTest, BasicRange)
+{
+    Range<int>       range(0, 5, 1);
+    std::vector<int> expected = { 0, 1, 2, 3, 4 };
+    std::vector<int> actual;
+
+    for (auto value : range) {
+        actual.push_back(value);
+    }
+
+    EXPECT_EQ(actual, expected);
+}
+
+// Test range with step
+TEST_F(RangeTest, RangeWithStep)
+{
+    Range<int>       range(0, 10, 2);
+    std::vector<int> expected = { 0, 2, 4, 6, 8 };
+    std::vector<int> actual;
+
+    for (auto value : range) {
+        actual.push_back(value);
+    }
+
+    EXPECT_EQ(actual, expected);
+}
+
+// Test range size calculation
+TEST_F(RangeTest, RangeSize)
+{
+    Range<int> range1(0, 5, 1);
+    EXPECT_EQ(range1.size(), 5);
+
+    Range<int> range2(0, 10, 2);
+    EXPECT_EQ(range2.size(), 5);
+
+    Range<int> range3(1, 6, 1);
+    EXPECT_EQ(range3.size(), 5);
+}
+
+// Test empty range
+TEST_F(RangeTest, EmptyRange)
+{
+    Range<int> range1(5, 5, 1); // start == end
+    EXPECT_TRUE(range1.empty());
+    EXPECT_EQ(range1.size(), 0);
+
+    Range<int> range2(5, 3, 1); // start > end with positive step
+    EXPECT_TRUE(range2.empty());
+    EXPECT_EQ(range2.size(), 0);
+}
+
+// Test negative step (countdown)
+TEST_F(RangeTest, NegativeStep)
+{
+    Range<int>       range(5, 0, -1);
+    std::vector<int> expected = { 5, 4, 3, 2, 1 };
+    std::vector<int> actual;
+
+    for (auto value : range) {
+        actual.push_back(value);
+    }
+
+    EXPECT_EQ(actual, expected);
+    EXPECT_EQ(range.size(), 5);
+}
+
+// Test make_range helper function
+TEST_F(RangeTest, MakeRangeHelper)
+{
+    auto             range    = make_range(1, 6);
+    std::vector<int> expected = { 1, 2, 3, 4, 5 };
+    std::vector<int> actual;
+
+    for (auto value : range) {
+        actual.push_back(value);
+    }
+
+    EXPECT_EQ(actual, expected);
+}
+
+// Test iterator operations
+TEST_F(RangeTest, IteratorOperations)
+{
+    Range<int> range(0, 3, 1);
+    auto       it = range.begin();
+
+    EXPECT_EQ(*it, 0);
+    ++it;
+    EXPECT_EQ(*it, 1);
+    it++;
+    EXPECT_EQ(*it, 2);
+    ++it;
+    EXPECT_EQ(it, range.end());
+}
+
+// Test with different data types
+TEST_F(RangeTest, DifferentDataTypes)
+{
+    // Test with float
+    Range<float>       float_range(0.0f, 3.0f, 0.5f);
+    std::vector<float> expected_float = { 0.0f, 0.5f, 1.0f, 1.5f, 2.0f, 2.5f };
+    std::vector<float> actual_float;
+
+    for (auto value : float_range) {
+        actual_float.push_back(value);
+    }
+
+    EXPECT_EQ(actual_float, expected_float);
+
+    // Test with char
+    Range<char>       char_range('a', 'd', 1);
+    std::vector<char> expected_char = { 'a', 'b', 'c' };
+    std::vector<char> actual_char;
+
+    for (auto value : char_range) {
+        actual_char.push_back(value);
+    }
+
+    EXPECT_EQ(actual_char, expected_char);
+}
+
+// Test bounds checking - this should demonstrate the issue
+TEST_F(RangeTest, BoundsChecking)
+{
+    Range<int>       range(0, 5, 1);
+    std::vector<int> actual;
+    int              count = 0;
+
+    // Collect values and ensure we don't iterate infinitely
+    for (auto value : range) {
+        actual.push_back(value);
+        count++;
+        // Safety check to prevent infinite loop in case of bug
+        if (count > 10) {
+            break;
+        }
+    }
+
+    // Should only have exactly 5 values: 0, 1, 2, 3, 4
+    EXPECT_EQ(actual.size(), 5);
+    EXPECT_EQ(count, 5);
+
+    // Check that no value is >= end (5)
+    for (int value : actual) {
+        EXPECT_LT(value, 5)
+            << "Value " << value << " should be less than end value 5";
+    }
+
+    // Check exact values
+    std::vector<int> expected = { 0, 1, 2, 3, 4 };
+    EXPECT_EQ(actual, expected);
+}
+
+// Test bounds checking with step > 1
+TEST_F(RangeTest, BoundsCheckingWithStep)
+{
+    Range<int>       range(0, 10, 3); // Should give: 0, 3, 6, 9
+    std::vector<int> actual;
+    int              count = 0;
+
+    for (auto value : range) {
+        actual.push_back(value);
+        count++;
+        // Safety check
+        if (count > 10) {
+            break;
+        }
+    }
+
+    // Should only have exactly 4 values: 0, 3, 6, 9
+    EXPECT_EQ(actual.size(), 4);
+    EXPECT_EQ(count, 4);
+
+    // Check that no value is >= end (10)
+    for (int value : actual) {
+        EXPECT_LT(value, 10)
+            << "Value " << value << " should be less than end value 10";
+    }
+
+    // Check exact values
+    std::vector<int> expected = { 0, 3, 6, 9 };
+    EXPECT_EQ(actual, expected);
+}
+
+// Basic tests for CartesianProduct
+TEST(CartesianProductTest, BasicCartesianProduct)
+{
+    // Create two ranges: [0, 1, 2] and [10, 11]
+    TypeErasedRange<int> range1(0, 3, 1);
+    TypeErasedRange<int> range2(10, 12, 1);
+
+    std::vector<TypeErasedIterator> iterators;
+    iterators.push_back(range1.begin());
+    iterators.push_back(range2.begin());
+
+    CartesianProduct cp(std::move(iterators));
+
+    // Expected cartesian product: (0,10), (0,11), (1,10), (1,11), (2,10),
+    // (2,11)
+    EXPECT_EQ(cp.size(), 6);
+    EXPECT_FALSE(cp.empty());
+
+    // Test a few combinations
+    auto result1 = cp.next();
+    EXPECT_EQ(std::any_cast<int>(result1[0]), 0);
+    EXPECT_EQ(std::any_cast<int>(result1[1]), 10);
+
+    auto result2 = cp.next();
+    EXPECT_EQ(std::any_cast<int>(result2[0]), 0);
+    EXPECT_EQ(std::any_cast<int>(result2[1]), 11);
+
+    auto result3 = cp.next();
+    EXPECT_EQ(std::any_cast<int>(result3[0]), 1);
+    EXPECT_EQ(std::any_cast<int>(result3[1]), 10);
+}
+
+TEST(SimpleProductTest, BasicSimpleProduct)
+{
+    // Create two ranges: [0, 1, 2] and [10, 11, 12]
+    TypeErasedRange<int> range1(0, 3, 1);
+    TypeErasedRange<int> range2(10, 13, 1);
+
+    std::vector<TypeErasedIterator> iterators;
+    iterators.push_back(range1.begin());
+    iterators.push_back(range2.begin());
+
+    SimpleProduct sp(std::move(iterators));
+
+    // Expected simple product: (0,10), (1,11), (2,12) - minimum size is 3
+    EXPECT_EQ(sp.size(), 3);
+    EXPECT_FALSE(sp.empty());
+
+    auto result1 = sp.next();
+    EXPECT_EQ(std::any_cast<int>(result1[0]), 0);
+    EXPECT_EQ(std::any_cast<int>(result1[1]), 10);
+
+    auto result2 = sp.next();
+    EXPECT_EQ(std::any_cast<int>(result2[0]), 1);
+    EXPECT_EQ(std::any_cast<int>(result2[1]), 11);
+
+    auto result3 = sp.next();
+    EXPECT_EQ(std::any_cast<int>(result3[0]), 2);
+    EXPECT_EQ(std::any_cast<int>(result3[1]), 12);
+
+    // Now it should be empty
+    EXPECT_TRUE(sp.empty());
+}
+
+TEST(CartesianProductTest, CompleteCartesianProduct)
+{
+    // Create two ranges: [0, 1] and [10, 11]
+    TypeErasedRange<int> range1(0, 2, 1);
+    TypeErasedRange<int> range2(10, 12, 1);
+
+    std::vector<TypeErasedIterator> iterators;
+    iterators.push_back(range1.begin());
+    iterators.push_back(range2.begin());
+
+    CartesianProduct cp(std::move(iterators));
+
+    // Expected cartesian product: (0,10), (0,11), (1,10), (1,11)
+    EXPECT_EQ(cp.size(), 4);
+
+    auto result1 = cp.next(); // (0,10)
+    EXPECT_EQ(std::any_cast<int>(result1[0]), 0);
+    EXPECT_EQ(std::any_cast<int>(result1[1]), 10);
+
+    auto result2 = cp.next(); // (0,11)
+    EXPECT_EQ(std::any_cast<int>(result2[0]), 0);
+    EXPECT_EQ(std::any_cast<int>(result2[1]), 11);
+
+    auto result3 = cp.next(); // (1,10)
+    EXPECT_EQ(std::any_cast<int>(result3[0]), 1);
+    EXPECT_EQ(std::any_cast<int>(result3[1]), 10);
+
+    auto result4 = cp.next(); // (1,11)
+    EXPECT_EQ(std::any_cast<int>(result4[0]), 1);
+    EXPECT_EQ(std::any_cast<int>(result4[1]), 11);
+
+    // Should be finished now
+    EXPECT_TRUE(cp.empty());
+}
+
+TEST(SimpleProductTest, UnequalSizes)
+{
+    // Create ranges of different sizes: [0, 1] and [10, 11, 12]
+    TypeErasedRange<int> range1(0, 2, 1);   // size 2
+    TypeErasedRange<int> range2(10, 13, 1); // size 3
+
+    std::vector<TypeErasedIterator> iterators;
+    iterators.push_back(range1.begin());
+    iterators.push_back(range2.begin());
+
+    SimpleProduct sp(std::move(iterators));
+
+    // Size should be minimum of the two ranges
+    EXPECT_EQ(sp.size(), 2);
+
+    auto result1 = sp.next(); // (0,10)
+    EXPECT_EQ(std::any_cast<int>(result1[0]), 0);
+    EXPECT_EQ(std::any_cast<int>(result1[1]), 10);
+
+    auto result2 = sp.next(); // (1,11)
+    EXPECT_EQ(std::any_cast<int>(result2[0]), 1);
+    EXPECT_EQ(std::any_cast<int>(result2[1]), 11);
+
+    // Should be finished now
+    EXPECT_TRUE(sp.empty());
+}
+
+TEST(CartesianProductTest, MixedTypesRangeAndVector)
+{
+    // Create a range of integers 1 to 10
+    TypeErasedRange<int> int_range(1, 11, 1); // [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+    // Create a vector of 10 float values
+    std::vector<float>    float_vec = { 1.1f, 2.2f, 3.3f, 4.4f, 5.5f,
+                                        6.6f, 7.7f, 8.8f, 9.9f, 10.0f };
+    VectorIterable<float> float_iterable(float_vec);
+
+    std::vector<TypeErasedIterator> iterators;
+    iterators.push_back(int_range.begin());
+    iterators.push_back(float_iterable.begin());
+
+    CartesianProduct cp(std::move(iterators));
+
+    // Should have 10 * 10 = 100 combinations
+    EXPECT_EQ(cp.size(), 100);
+    EXPECT_FALSE(cp.empty());
+
+    // Test first few combinations
+    auto result1 = cp.next(); // (1, 1.1f)
+    EXPECT_EQ(std::any_cast<int>(result1[0]), 1);
+    EXPECT_FLOAT_EQ(std::any_cast<float>(result1[1]), 1.1f);
+
+    auto result2 = cp.next(); // (1, 2.2f)
+    EXPECT_EQ(std::any_cast<int>(result2[0]), 1);
+    EXPECT_FLOAT_EQ(std::any_cast<float>(result2[1]), 2.2f);
+
+    // Skip ahead and test some middle combinations
+    for (int i = 0; i < 8; i++) {
+        cp.next(); // Skip to get to (1, 10.0f) then (2, 1.1f)
+    }
+
+    auto result11 = cp.next(); // (2, 1.1f)
+    EXPECT_EQ(std::any_cast<int>(result11[0]), 2);
+    EXPECT_FLOAT_EQ(std::any_cast<float>(result11[1]), 1.1f);
+
+    // Skip to near the end
+    for (int i = 0; i < 88; i++) {
+        cp.next(); // Skip to get near the end
+    }
+
+    auto result100 = cp.next(); // (10, 10.0f) - the last combination
+    EXPECT_EQ(std::any_cast<int>(result100[0]), 10);
+    EXPECT_FLOAT_EQ(std::any_cast<float>(result100[1]), 10.0f);
+
+    // Should be finished now
+    EXPECT_TRUE(cp.empty());
+}
+
+TEST(SimpleProductTest, MixedTypesRangeAndVector)
+{
+    // Create a range of integers 1 to 10
+    TypeErasedRange<int> int_range(1, 11, 1); // [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+
+    // Create a vector of 10 float values
+    std::vector<float>    float_vec = { 1.1f, 2.2f, 3.3f, 4.4f, 5.5f,
+                                        6.6f, 7.7f, 8.8f, 9.9f, 10.0f };
+    VectorIterable<float> float_iterable(float_vec);
+
+    std::vector<TypeErasedIterator> iterators;
+    iterators.push_back(int_range.begin());
+    iterators.push_back(float_iterable.begin());
+
+    SimpleProduct sp(std::move(iterators));
+
+    // Should have min(10, 10) = 10 combinations
+    EXPECT_EQ(sp.size(), 10);
+    EXPECT_FALSE(sp.empty());
+
+    // Test all 10 combinations - pairs values sequentially
+    std::vector<float> expected_floats = { 1.1f, 2.2f, 3.3f, 4.4f, 5.5f,
+                                           6.6f, 7.7f, 8.8f, 9.9f, 10.0f };
+    for (int i = 1; i <= 10; i++) {
+        auto result = sp.next();
+        EXPECT_EQ(std::any_cast<int>(result[0]), i);
+        EXPECT_FLOAT_EQ(std::any_cast<float>(result[1]),
+                        expected_floats[i - 1]);
+    }
+
+    // Should be finished now
+    EXPECT_TRUE(sp.empty());
+}
+
+TEST(SimpleProductTest, MixedTypesUnequalSizes)
+{
+    // Create a range of integers 1 to 5 (smaller)
+    TypeErasedRange<int> int_range(1, 6, 1); // [1, 2, 3, 4, 5]
+
+    // Create a vector of 10 float values (larger)
+    std::vector<float>    float_vec = { 1.1f, 2.2f, 3.3f, 4.4f, 5.5f,
+                                        6.6f, 7.7f, 8.8f, 9.9f, 10.0f };
+    VectorIterable<float> float_iterable(float_vec);
+
+    std::vector<TypeErasedIterator> iterators;
+    iterators.push_back(int_range.begin());
+    iterators.push_back(float_iterable.begin());
+
+    SimpleProduct sp(std::move(iterators));
+
+    // Should have min(5, 10) = 5 combinations
+    EXPECT_EQ(sp.size(), 5);
+    EXPECT_FALSE(sp.empty());
+
+    // Test all 5 combinations (limited by the smaller range)
+    std::vector<float> expected_floats = { 1.1f, 2.2f, 3.3f, 4.4f, 5.5f };
+    for (int i = 1; i <= 5; i++) {
+        auto result = sp.next();
+        EXPECT_EQ(std::any_cast<int>(result[0]), i);
+        EXPECT_FLOAT_EQ(std::any_cast<float>(result[1]),
+                        expected_floats[i - 1]);
+    }
+
+    // Should be finished now
+    EXPECT_TRUE(sp.empty());
+}
+
+TEST(CartesianProductTest, WithSingleValue)
+{
+    // Test the example: a = {1}, b = {3,4}, c = {10,11}
+    // cartesian_product(a,b,c) -> {1,3,10}, {1,3,11}, {1,4,10}, {1,4,11}
+
+    ValueIterable<int>   single_value(1, false); // Single value, finite size
+    TypeErasedRange<int> range_b(3, 5, 1);       // [3, 4]
+    TypeErasedRange<int> range_c(10, 12, 1);     // [10, 11]
+
+    std::vector<TypeErasedIterator> iterators;
+    iterators.push_back(single_value.begin());
+    iterators.push_back(range_b.begin());
+    iterators.push_back(range_c.begin());
+
+    CartesianProduct cp(std::move(iterators));
+
+    // Should have 1 * 2 * 2 = 4 combinations
+    EXPECT_EQ(cp.size(), 4);
+    EXPECT_FALSE(cp.empty());
+
+    // Test all combinations
+    auto result1 = cp.next(); // {1, 3, 10}
+    EXPECT_EQ(std::any_cast<int>(result1[0]), 1);
+    EXPECT_EQ(std::any_cast<int>(result1[1]), 3);
+    EXPECT_EQ(std::any_cast<int>(result1[2]), 10);
+
+    auto result2 = cp.next(); // {1, 3, 11}
+    EXPECT_EQ(std::any_cast<int>(result2[0]), 1);
+    EXPECT_EQ(std::any_cast<int>(result2[1]), 3);
+    EXPECT_EQ(std::any_cast<int>(result2[2]), 11);
+
+    auto result3 = cp.next(); // {1, 4, 10}
+    EXPECT_EQ(std::any_cast<int>(result3[0]), 1);
+    EXPECT_EQ(std::any_cast<int>(result3[1]), 4);
+    EXPECT_EQ(std::any_cast<int>(result3[2]), 10);
+
+    auto result4 = cp.next(); // {1, 4, 11}
+    EXPECT_EQ(std::any_cast<int>(result4[0]), 1);
+    EXPECT_EQ(std::any_cast<int>(result4[1]), 4);
+    EXPECT_EQ(std::any_cast<int>(result4[2]), 11);
+
+    // Should be finished now
+    EXPECT_TRUE(cp.empty());
+}
+
+TEST(SimpleProductTest, WithSingleValueExpanded)
+{
+    // Test the example: a = {1}, b = {3,4}, c = {10,11}
+    // simple_product(a,b,c) -> {1,3,10}, {1,4,11}
+    // Here "a" is expanded by setting m_report_size_inf as true
+
+    ValueIterable<int> single_value(
+        1, true); // Single value, infinite size for simple product
+    TypeErasedRange<int> range_b(3, 5, 1);   // [3, 4]
+    TypeErasedRange<int> range_c(10, 12, 1); // [10, 11]
+
+    std::vector<TypeErasedIterator> iterators;
+    iterators.push_back(single_value.begin());
+    iterators.push_back(range_b.begin());
+    iterators.push_back(range_c.begin());
+
+    SimpleProduct sp(std::move(iterators));
+
+    // Should have min(inf, 2, 2) = 2 combinations
+    EXPECT_EQ(sp.size(), 2);
+    EXPECT_FALSE(sp.empty());
+
+    // Test the two combinations
+    auto result1 = sp.next(); // {1, 3, 10}
+    EXPECT_EQ(std::any_cast<int>(result1[0]), 1);
+    EXPECT_EQ(std::any_cast<int>(result1[1]), 3);
+    EXPECT_EQ(std::any_cast<int>(result1[2]), 10);
+
+    auto result2 = sp.next(); // {1, 4, 11}
+    EXPECT_EQ(std::any_cast<int>(result2[0]), 1);
+    EXPECT_EQ(std::any_cast<int>(result2[1]), 4);
+    EXPECT_EQ(std::any_cast<int>(result2[2]), 11);
+
+    // Should be finished now
+    EXPECT_TRUE(sp.empty());
+}
+
+TEST(SimpleProductTest, WithSingleValueNotExpanded)
+{
+    // Test simple product with single value but not expanded (finite size)
+    // This should only yield one combination
+
+    ValueIterable<int>   single_value(1, false); // Single value, finite size
+    TypeErasedRange<int> range_b(3, 5, 1);       // [3, 4]
+    TypeErasedRange<int> range_c(10, 12, 1);     // [10, 11]
+
+    std::vector<TypeErasedIterator> iterators;
+    iterators.push_back(single_value.begin());
+    iterators.push_back(range_b.begin());
+    iterators.push_back(range_c.begin());
+
+    SimpleProduct sp(std::move(iterators));
+
+    // Should have min(1, 2, 2) = 1 combination
+    EXPECT_EQ(sp.size(), 1);
+    EXPECT_FALSE(sp.empty());
+
+    // Test the single combination
+    auto result1 = sp.next(); // {1, 3, 10}
+    EXPECT_EQ(std::any_cast<int>(result1[0]), 1);
+    EXPECT_EQ(std::any_cast<int>(result1[1]), 3);
+    EXPECT_EQ(std::any_cast<int>(result1[2]), 10);
+
+    // Should be finished now
+    EXPECT_TRUE(sp.empty());
+}
+
+TEST(CartesianProductTest, MultipleSingleValues)
+{
+    // Test cartesian product with multiple single values
+    ValueIterable<int> value_a(1, false);
+    ValueIterable<int> value_b(2, false);
+    ValueIterable<int> value_c(3, false);
+
+    std::vector<TypeErasedIterator> iterators;
+    iterators.push_back(value_a.begin());
+    iterators.push_back(value_b.begin());
+    iterators.push_back(value_c.begin());
+
+    CartesianProduct cp(std::move(iterators));
+
+    // Should have 1 * 1 * 1 = 1 combination
+    EXPECT_EQ(cp.size(), 1);
+    EXPECT_FALSE(cp.empty());
+
+    auto result = cp.next(); // {1, 2, 3}
+    EXPECT_EQ(std::any_cast<int>(result[0]), 1);
+    EXPECT_EQ(std::any_cast<int>(result[1]), 2);
+    EXPECT_EQ(std::any_cast<int>(result[2]), 3);
+
+    // Should be finished now
+    EXPECT_TRUE(cp.empty());
+}
+
+TEST(SimpleProductTest, MultipleSingleValuesExpanded)
+{
+    // Test simple product with multiple single values, all expanded
+    ValueIterable<int>   value_a(1, true); // Infinite
+    ValueIterable<int>   value_b(2, true); // Infinite
+    TypeErasedRange<int> range_c(
+        10, 13, 1); // [10, 11, 12] - this limits the combinations
+
+    std::vector<TypeErasedIterator> iterators;
+    iterators.push_back(value_a.begin());
+    iterators.push_back(value_b.begin());
+    iterators.push_back(range_c.begin());
+
+    SimpleProduct sp(std::move(iterators));
+
+    // Should have min(inf, inf, 3) = 3 combinations
+    EXPECT_EQ(sp.size(), 3);
+    EXPECT_FALSE(sp.empty());
+
+    // Test all three combinations - single values repeat
+    auto result1 = sp.next(); // {1, 2, 10}
+    EXPECT_EQ(std::any_cast<int>(result1[0]), 1);
+    EXPECT_EQ(std::any_cast<int>(result1[1]), 2);
+    EXPECT_EQ(std::any_cast<int>(result1[2]), 10);
+
+    auto result2 = sp.next(); // {1, 2, 11}
+    EXPECT_EQ(std::any_cast<int>(result2[0]), 1);
+    EXPECT_EQ(std::any_cast<int>(result2[1]), 2);
+    EXPECT_EQ(std::any_cast<int>(result2[2]), 11);
+
+    auto result3 = sp.next(); // {1, 2, 12}
+    EXPECT_EQ(std::any_cast<int>(result3[0]), 1);
+    EXPECT_EQ(std::any_cast<int>(result3[1]), 2);
+    EXPECT_EQ(std::any_cast<int>(result3[2]), 12);
+
+    // Should be finished now
+    EXPECT_TRUE(sp.empty());
+}

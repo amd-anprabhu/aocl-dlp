@@ -1,0 +1,29 @@
+# GEMM test configuration file
+yaml_test:
+  - name: "small_matrix"
+    a_type: ["f32"]
+    b_type: ["f32"]
+    c_type: ["f32"]
+    acc_type: ["f32"]
+    storage_format: ["row-major"]
+    transA: [false, true]
+    transB: [true]
+    m: 10
+    n: 10
+    k: 10
+    alpha: [2.5, 0, -2.5]
+    beta: [2.5, 0, -2.5]
+    lda: [10, 20, 30]
+    ldb: 10
+    ldc: 10
+    reorderA: false
+    reorderB: true
+    tolerances:
+      float: 1.0e-5
+      bfloat16: 1.0e-2
+      int8: 0
+    # post_operations:
+    #   - type: "RELU"
+    #   - type: "CLIP"
+    #     params:
+    #       lower-bound: 0

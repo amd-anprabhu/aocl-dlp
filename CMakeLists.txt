@@ -36,6 +36,7 @@ include(cmake/dlp_extensions.cmake)
 include(cmake/dlp_options.cmake)
 include(cmake/dlp_dependencies.cmake)
 include(cmake/dlp_documentation.cmake)
+include(cmake/dlp_testing.cmake)
 
 # OS specific CMake modules goes here
 if(UNIX)

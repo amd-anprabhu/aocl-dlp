@@ -1,5 +1,6 @@
 # Ignore VSCode
 .vscode
+.cache
 
 # Python Virtual environment
 venv
