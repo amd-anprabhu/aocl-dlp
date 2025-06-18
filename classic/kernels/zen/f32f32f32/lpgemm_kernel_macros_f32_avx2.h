@@ -387,6 +387,16 @@ multiply with Beta, and add to alpha*A*B*/
     BF16_F32_MATRIX_ADD_LOAD_YMM_MASK(scr0, scl_fct0, m_ind, 0, mask);         \
     F32_MATRIX_ADD_1COL_YMM(scr0, m_ind, r_ind0);
 
+#define BF16_F32_MATRIX_ADD_GEMV_MASK(matptr, scr0, scl_fct0, n_ind)           \
+    {                                                                          \
+        scr0 = (__m256)(_mm256_sllv_epi32(                                     \
+            _mm256_cvtepi16_epi32(_mm_loadu_si128(                             \
+                (__m128i const*)(matptr + post_ops_attr.post_op_c_j            \
+                                 + (n_ind * 8)))),                             \
+            _mm256_set1_epi32(16)));                                           \
+        scr0 = _mm256_mul_ps(scr0, scl_fct0);                                  \
+    }
+
 #define BF16_F32_MATRIX_ADD_LOAD_XMM(scr, scl_fct, m_ind, n_ind)               \
     scr = (__m128)_mm_sllv_epi32(                                              \
         _mm_cvtepi16_epi32((__m128i)_mm_load_sd(                               \
@@ -545,6 +555,9 @@ multiply with Beta, and add to alpha*A*B*/
 
 #define BF16_F32_MATRIX_MUL_LOAD_YMM_MASK(scr0, scl_fct0, m_ind, n_ind, mask)  \
     BF16_F32_MATRIX_ADD_LOAD_YMM_MASK(scr0, scl_fct0, m_ind, n_ind, mask);
+
+#define BF16_F32_MATRIX_MUL_GEMV_MASK(matptr, scr0, scl_fct0, n_ind)           \
+    BF16_F32_MATRIX_ADD_GEMV_MASK(matptr, scr0, scl_fct0, n_ind);
 
 #ifdef BF16_F32_MATRIX_MUL_1COL
 #undef BF16_F32_MATRIX_MUL_1COL
