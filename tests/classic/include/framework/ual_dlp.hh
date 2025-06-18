@@ -90,7 +90,8 @@ class UalDlp : public IUal
     /**
      * @brief Reorder matrix data to specified accumulation type
      *
-     * @param A Input matrix
+     * @param in Input matrix to reorder
+     * @param out Output matrix to store reordered data
      * @param accType Accumulation type
      * @return true on success
      */
@@ -109,6 +110,23 @@ class UalDlp : public IUal
               const Matrix& B,
               Matrix&       C,
               MatrixType    accType) override;
+
+  private:
+    /**
+     * @brief Validate GEMM parameters for correctness
+     *
+     * FIXMME: This client-side validation is not ideal - proper error handling
+     * should be implemented at the library level to provide consistent
+     * parameter validation across all UAL implementations.
+     *
+     * @param A First input matrix
+     * @param B Second input matrix
+     * @param C Output matrix
+     * @return bool True if parameters are valid, false otherwise
+     */
+    bool checkValidGemmParams(const Matrix& A,
+                              const Matrix& B,
+                              const Matrix& C);
 };
 
 } // namespace dlp::testing::classic

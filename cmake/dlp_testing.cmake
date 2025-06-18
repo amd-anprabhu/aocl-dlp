@@ -25,6 +25,7 @@
 #
 
 include(FetchContent)
+include(GoogleTest)
 
 function(fetch_gtest)
     FetchContent_Declare(
@@ -100,7 +101,7 @@ function(dlp_add_test)
 
     # Add test to CTest
     if(NOT DLP_TEST_DISABLED)
-        add_test(NAME ${DLP_TEST_NAME} COMMAND ${DLP_TEST_NAME})
+        gtest_discover_tests(${DLP_TEST_NAME})
     endif()
 
 endfunction()

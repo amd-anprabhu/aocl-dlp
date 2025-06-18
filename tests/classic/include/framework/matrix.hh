@@ -30,9 +30,8 @@
 
 #include "classic/dlp_base_types.h"
 #include "types.hh"
-#include <cstdint>
-#include <stdexcept>
-#include <string>
+#include <any>
+#include <limits>
 
 namespace dlp { namespace testing {
 
@@ -49,8 +48,18 @@ namespace dlp { namespace testing {
     {
       public:
         /**
-         * @brief Enhanced constructor with layout, leading dimension, and
-         * transposition support
+         * @brief Default constructor
+         *
+         * Creates an empty matrix with default values. The matrix will need to
+         * be properly initialized before use (e.g., through assignment).
+         */
+        Matrix();
+
+        /**
+         * @brief Enhanced constructor with full parameterization
+         *
+         * Creates a matrix with specified dimensions, data type, layout, and
+         * optional parameters for advanced use cases.
          *
          * @param rows Number of rows in the matrix
          * @param cols Number of columns in the matrix
@@ -59,6 +68,9 @@ namespace dlp { namespace testing {
          * @param leadingDim Leading dimension (0 for automatic calculation)
          * @param transposed Whether the matrix is logically transposed without
          * data movement
+         * @param reordered Whether the matrix is reordered
+         * @param allocSize Override allocation size in BYTES (0 for automatic
+         * calculation)
          */
         Matrix(md_t         rows,
                md_t         cols,
@@ -66,7 +78,8 @@ namespace dlp { namespace testing {
                MatrixLayout layout     = MatrixLayout::ROW_MAJOR,
                md_t         leadingDim = 0,
                bool         transposed = false,
-               bool         reordered  = false);
+               bool         reordered  = false,
+               md_t         allocSize  = 0);
 
         /**
          * @brief Backward compatibility constructor
@@ -79,6 +92,15 @@ namespace dlp { namespace testing {
          * @param type Data type of the matrix elements
          */
         Matrix(md_t rows, md_t cols, MatrixType type);
+
+        /**
+         * @brief Copy constructor
+         *
+         * Creates a deep copy of the source matrix.
+         *
+         * @param other The matrix to copy from
+         */
+        Matrix(const Matrix& other);
 
         /**
          * @brief Destructor
@@ -180,6 +202,13 @@ namespace dlp { namespace testing {
         void setReordered(bool reordered);
 
         /**
+         * @brief Set the k dimension for tolerance calculation
+         *
+         * @param k The k dimension for tolerance calculation
+         */
+        void setK(md_t k);
+
+        /**
          * @brief Compare two matrices for equality
          *
          * Checks if two matrices have the same dimensions, type, and content
@@ -188,6 +217,16 @@ namespace dlp { namespace testing {
          * @return bool True if matrices are equal, false otherwise
          */
         bool operator==(const Matrix& other) const;
+
+        /**
+         * @brief Compare two matrices for inequality
+         *
+         * Checks if two matrices differ in dimensions, type, or content
+         *
+         * @param other The matrix to compare with
+         * @return bool True if matrices are not equal, false otherwise
+         */
+        bool operator!=(const Matrix& other) const;
 
         /**
          * @brief Copy assignment operator
@@ -211,14 +250,26 @@ namespace dlp { namespace testing {
          */
         void fillRandom(unsigned int seed = 0);
 
+        /**
+         * @brief Fill matrix with a single value
+         *
+         * Fills the matrix with a single value of the appropriate data type.
+         *
+         * @param value The value to fill the matrix with
+         */
+        void fillValue(std::any value);
+
       private:
-        md_t         m_rows;       ///< Number of rows in the matrix
-        md_t         m_cols;       ///< Number of columns in the matrix
-        MatrixData   m_data;       ///< Matrix data container
-        MatrixLayout m_layout;     ///< Memory layout
+        md_t m_rows; ///< Number of rows in the matrix
+        md_t m_cols; ///< Number of columns in the matrix
+        md_t m_k = std::numeric_limits<md_t>::max(); ///< K Dim for tolerance
+                                                     ///< calculation
+        MatrixData   m_data;                         ///< Matrix data container
+        MatrixLayout m_layout;                       ///< Memory layout
         md_t         m_leadingDim; ///< Leading dimension (stride)
         bool m_transposed; ///< Whether the matrix is logically transposed
         bool m_reordered;  ///< Whether the matrix is reordered
+        md_t m_allocSize;  ///< Allocation size for the matrix
     };
 
 }} // namespace dlp::testing

@@ -76,7 +76,8 @@ class IUal
     /**
      * @brief Reorder matrix data to specified accumulation type
      *
-     * @param A Input matrix
+     * @param in Input matrix to reorder
+     * @param out Output matrix to store reordered data
      * @param accType Accumulation type
      * @return true on success
      */

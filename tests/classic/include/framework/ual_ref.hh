@@ -90,7 +90,8 @@ class UalRef : public IUal
     /**
      * @brief Reorder matrix data to specified accumulation type
      *
-     * @param A Input matrix
+     * @param in Input matrix to reorder
+     * @param out Output matrix to store reordered data
      * @param accType Accumulation type
      * @return true on success
      */
@@ -111,6 +112,18 @@ class UalRef : public IUal
               MatrixType    accType) override;
 
   private:
+    /**
+     * @brief Validate GEMM parameters for correctness
+     *
+     * @param A First input matrix
+     * @param B Second input matrix
+     * @param C Output matrix
+     * @return bool True if parameters are valid, false otherwise
+     */
+    bool checkValidGemmParams(const Matrix& A,
+                              const Matrix& B,
+                              const Matrix& C);
+
     /**
      * @brief Internal implementation of reorder with layout and
      * transposition support

@@ -92,16 +92,18 @@ UalRef::toString(UALType type)
 /**
  * @brief Public reorder interface that unpacks Matrix object
  *
- * @param A Input matrix to reorder
+ * @param in Input matrix to reorder
+ * @param out Output matrix to store reordered data
  * @param accType Target accumulation type
  * @return bool Success status
  */
 bool
 UalRef::reorder(const Matrix& in, Matrix& out, MatrixType accType)
 {
-    return reorder(in.getMatrixData().getMatrixPtr(), in.getMatrixType(),
-                   in.getRows(), in.getCols(), in.getLeadingDimension(),
-                   in.getLayout(), in.isTransposed(), accType);
+    // Reference implementation doesn't actually reorder - just copy the input
+    // to output
+    out = in;
+    return true;
 }
 
 /**
@@ -133,6 +135,99 @@ UalRef::reorder(void*        A,
 }
 
 /**
+ * @brief Validate GEMM parameters for correctness
+ *
+ * @param A First input matrix
+ * @param B Second input matrix
+ * @param C Output matrix
+ * @return bool True if parameters are valid, false otherwise
+ */
+bool
+UalRef::checkValidGemmParams(const Matrix& A, const Matrix& B, const Matrix& C)
+{
+    // Get effective dimensions considering transposition
+    uint32_t m = A.getEffectiveRows(); // Rows of A (and C)
+    uint32_t n = B.getEffectiveCols(); // Cols of B (and C)
+    uint32_t k = A.getEffectiveCols(); // Cols of A, Rows of B
+
+    // Check basic dimensions - must be positive
+    if (m <= 0 || n <= 0 || k <= 0) {
+        return false;
+    }
+
+    // Check dimension compatibility for matrix multiplication
+    if (A.getEffectiveCols() != B.getEffectiveRows()) {
+        return false;
+    }
+
+    // Check that C has correct dimensions
+    if (C.getEffectiveRows() != m || C.getEffectiveCols() != n) {
+        return false;
+    }
+
+    bool row_stored = (A.getLayout() == MatrixLayout::ROW_MAJOR);
+    bool col_stored = (A.getLayout() == MatrixLayout::COLUMN_MAJOR);
+
+    // All matrices should have the same layout
+    if (A.getLayout() != B.getLayout() || A.getLayout() != C.getLayout()) {
+        return false;
+    }
+
+    // Check leading dimension for matrix A
+    if (row_stored) {
+        // Row-major storage
+        if ((!A.isTransposed()
+             && A.getLeadingDimension() < A.getEffectiveCols())
+            || (A.isTransposed()
+                && A.getLeadingDimension() < A.getEffectiveRows())) {
+            return false;
+        }
+    } else if (col_stored) {
+        // Column-major storage
+        if ((!A.isTransposed()
+             && A.getLeadingDimension() < A.getEffectiveRows())
+            || (A.isTransposed()
+                && A.getLeadingDimension() < A.getEffectiveCols())) {
+            return false;
+        }
+    }
+
+    // Check leading dimension for matrix B
+    if (row_stored) {
+        // Row-major storage
+        if ((!B.isTransposed()
+             && B.getLeadingDimension() < B.getEffectiveCols())
+            || (B.isTransposed()
+                && B.getLeadingDimension() < B.getEffectiveRows())) {
+            return false;
+        }
+    } else if (col_stored) {
+        // Column-major storage
+        if ((!B.isTransposed()
+             && B.getLeadingDimension() < B.getEffectiveRows())
+            || (B.isTransposed()
+                && B.getLeadingDimension() < B.getEffectiveCols())) {
+            return false;
+        }
+    }
+
+    // Check leading dimension for matrix C
+    if (row_stored) {
+        // Row-major storage: C is always m x n, so ldc >= n
+        if (C.getLeadingDimension() < C.getEffectiveCols()) {
+            return false;
+        }
+    } else if (col_stored) {
+        // Column-major storage: C is always m x n, so ldc >= m
+        if (C.getLeadingDimension() < C.getEffectiveRows()) {
+            return false;
+        }
+    }
+
+    return true;
+}
+
+/**
  * @brief Public GEMM interface that unpacks Matrix objects
  *
  * @param A First input matrix
@@ -144,6 +239,11 @@ UalRef::reorder(void*        A,
 bool
 UalRef::gemm(const Matrix& A, const Matrix& B, Matrix& C, MatrixType accType)
 {
+    // Validate parameters first
+    if (!checkValidGemmParams(A, B, C)) {
+        return false;
+    }
+
     uint64_t type = encode_types(A.getMatrixType(), B.getMatrixType(),
                                  C.getMatrixType(), accType);
 
@@ -171,7 +271,7 @@ UalRef::gemm(const Matrix& A, const Matrix& B, Matrix& C, MatrixType accType)
                 static_cast<int>(A.getLeadingDimension()),
                 reinterpret_cast<const float*>(
                     B.getMatrixData().getMatrixPtr()),
-                static_cast<int>(B.getLeadingDimension()), 0.0,
+                static_cast<int>(B.getLeadingDimension()), 1.0,
                 reinterpret_cast<float*>(C.getMatrixData().getMatrixPtr()),
                 static_cast<int>(C.getLeadingDimension()), nullptr);
 
