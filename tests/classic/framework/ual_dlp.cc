@@ -38,10 +38,7 @@
 #include "framework/ual_dlp.hh"
 #include <iostream>
 
-extern "C"
-{
 #include "aocl_dlp.h"
-}
 
 namespace dlp::testing::classic {
 
@@ -102,19 +99,22 @@ UalDlp::reorder(const Matrix& in, Matrix& out, MatrixType accType)
     md_t effective_rows = in.getEffectiveRows();
     md_t effective_cols = in.getEffectiveCols();
 
-    md_t alloc_size = aocl_get_reorder_buf_size_f32f32f32of32(
+    md_t alloc_bytes = aocl_get_reorder_buf_size_f32f32f32of32(
         in.getLayout() == MatrixLayout::ROW_MAJOR ? 'r' : 'c',
-        in.isTransposed() ? 't' : 'n', 'B', effective_cols, effective_rows);
+        in.isTransposed() ? 't' : 'n', 'B', effective_rows, effective_cols);
 
-    // Convert element count to bytes for f32 type
-    md_t alloc_bytes = alloc_size * sizeof(float);
+    // Create output matrix with dimensions that preserve the logical operation
+    // If input was transposed, the reordered output should have physical
+    // dimensions that match the effective dimensions (since reordering handles
+    // transposition)
+    md_t out_rows = effective_rows;
+    md_t out_cols = effective_cols;
 
     // Create output matrix with correct parameter order:
     // Matrix(rows, cols, type, layout, leadingDim, transposed, reordered,
     // allocSize)
-    out =
-        Matrix(in.getRows(), in.getCols(), in.getMatrixType(), in.getLayout(),
-               in.getLeadingDimension(), in.isTransposed(), true, alloc_bytes);
+    out = Matrix(out_rows, out_cols, in.getMatrixType(), in.getLayout(),
+                 in.getLeadingDimension(), false, true, alloc_bytes);
 
     char layout = in.getLayout() == MatrixLayout::ROW_MAJOR ? 'r' : 'c';
     switch (in.getMatrixType()) {
@@ -129,6 +129,7 @@ UalDlp::reorder(const Matrix& in, Matrix& out, MatrixType accType)
         default:
             return false;
     }
+
     return true;
 }
 
@@ -147,7 +148,9 @@ UalDlp::reorder(const Matrix& in, Matrix& out, MatrixType accType)
 bool
 UalDlp::checkValidGemmParams(const Matrix& A, const Matrix& B, const Matrix& C)
 {
-    // Get effective dimensions considering transposition
+    // Always use effective dimensions for validation - reordering is just a
+    // storage optimization and doesn't change the logical matrix multiplication
+    // dimensions
     uint32_t m = A.getEffectiveRows(); // Rows of A (and C)
     uint32_t n = B.getEffectiveCols(); // Cols of B (and C)
     uint32_t k = A.getEffectiveCols(); // Cols of A, Rows of B
@@ -162,7 +165,7 @@ UalDlp::checkValidGemmParams(const Matrix& A, const Matrix& B, const Matrix& C)
         return false;
     }
 
-    // Check that C has correct dimensions
+    // Check that C has correct dimensions (C is never reordered)
     if (C.getEffectiveRows() != m || C.getEffectiveCols() != n) {
         return false;
     }
@@ -175,45 +178,49 @@ UalDlp::checkValidGemmParams(const Matrix& A, const Matrix& B, const Matrix& C)
         return false;
     }
 
-    // Check leading dimension for matrix A
-    if (row_stored) {
-        // Row-major storage
-        if ((!A.isTransposed()
-             && A.getLeadingDimension() < A.getEffectiveCols())
-            || (A.isTransposed()
-                && A.getLeadingDimension() < A.getEffectiveRows())) {
-            return false;
-        }
-    } else if (col_stored) {
-        // Column-major storage
-        if ((!A.isTransposed()
-             && A.getLeadingDimension() < A.getEffectiveRows())
-            || (A.isTransposed()
-                && A.getLeadingDimension() < A.getEffectiveCols())) {
-            return false;
-        }
-    }
-
-    // Check leading dimension for matrix B
-    if (row_stored) {
-        // Row-major storage
-        if ((!B.isTransposed()
-             && B.getLeadingDimension() < B.getEffectiveCols())
-            || (B.isTransposed()
-                && B.getLeadingDimension() < B.getEffectiveRows())) {
-            return false;
-        }
-    } else if (col_stored) {
-        // Column-major storage
-        if ((!B.isTransposed()
-             && B.getLeadingDimension() < B.getEffectiveRows())
-            || (B.isTransposed()
-                && B.getLeadingDimension() < B.getEffectiveCols())) {
-            return false;
+    // Check leading dimension for matrix A (only if not reordered)
+    if (!A.isReordered()) {
+        if (row_stored) {
+            // Row-major storage
+            if ((!A.isTransposed()
+                 && A.getLeadingDimension() < A.getEffectiveCols())
+                || (A.isTransposed()
+                    && A.getLeadingDimension() < A.getEffectiveRows())) {
+                return false;
+            }
+        } else if (col_stored) {
+            // Column-major storage
+            if ((!A.isTransposed()
+                 && A.getLeadingDimension() < A.getEffectiveRows())
+                || (A.isTransposed()
+                    && A.getLeadingDimension() < A.getEffectiveCols())) {
+                return false;
+            }
         }
     }
 
-    // Check leading dimension for matrix C
+    // Check leading dimension for matrix B (only if not reordered)
+    if (!B.isReordered()) {
+        if (row_stored) {
+            // Row-major storage
+            if ((!B.isTransposed()
+                 && B.getLeadingDimension() < B.getEffectiveCols())
+                || (B.isTransposed()
+                    && B.getLeadingDimension() < B.getEffectiveRows())) {
+                return false;
+            }
+        } else if (col_stored) {
+            // Column-major storage
+            if ((!B.isTransposed()
+                 && B.getLeadingDimension() < B.getEffectiveRows())
+                || (B.isTransposed()
+                    && B.getLeadingDimension() < B.getEffectiveCols())) {
+                return false;
+            }
+        }
+    }
+
+    // Check leading dimension for matrix C (C is never reordered)
     if (row_stored) {
         // Row-major storage: C is always m x n, so ldc >= n
         if (C.getLeadingDimension() < C.getEffectiveCols()) {
@@ -253,7 +260,7 @@ UalDlp::gemm(const Matrix& A, const Matrix& B, Matrix& C, MatrixType accType)
                                  C.getMatrixType(), accType);
 
     char transA = A.isTransposed() ? 't' : 'n';
-    char transB = B.isTransposed() ? 't' : 'n';
+    char transB = B.isReordered() ? 'n' : (B.isTransposed() ? 't' : 'n');
     // char transC = C.isTransposed() ? 't' : 'n';
 
     char layoutA = A.getLayout() == MatrixLayout::ROW_MAJOR ? 'r' : 'c';
