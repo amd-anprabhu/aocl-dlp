@@ -42,11 +42,11 @@
 
 // Utility function to initialize a matrix with values
 void
-init_matrix(float* matrix, int rows, int cols, float value)
+init_matrix(float* matrix, int rows, int cols, int ld, float value)
 {
     for (int i = 0; i < rows; i++) {
         for (int j = 0; j < cols; j++) {
-            matrix[i * cols + j] = value * (i + j + 1) / (rows * cols);
+            matrix[i * ld + j] = value * (i + j + 1) / (rows * cols);
         }
     }
 }
@@ -117,11 +117,11 @@ main()
     md_t ldc = n;
 
     // Allocate memory for matrices
-    float* a  = (float*)malloc(m * k * sizeof(float));
-    float* b  = (float*)malloc(k * n * sizeof(float));
-    float* c1 = (float*)malloc(m * n * sizeof(float)); // For fused operation
+    float* a  = (float*)malloc(lda * m * sizeof(float));
+    float* b  = (float*)malloc(ldb * k * sizeof(float));
+    float* c1 = (float*)malloc(ldc * m * sizeof(float)); // For fused operation
     float* c2 =
-        (float*)malloc(m * n * sizeof(float));       // For separate operations
+        (float*)malloc(ldc * m * sizeof(float));     // For separate operations
     float* bias = (float*)malloc(n * sizeof(float)); // Bias vector
 
     if (!a || !b || !c1 || !c2 || !bias) {
@@ -130,10 +130,10 @@ main()
     }
 
     // Initialize matrices with some values
-    init_matrix(a, m, k, 1.0f);
-    init_matrix(b, k, n, 0.5f);
-    memset(c1, 0, m * n * sizeof(float));
-    memset(c2, 0, m * n * sizeof(float));
+    init_matrix(a, m, k, lda, 1.0f);
+    init_matrix(b, k, n, ldb, 0.5f);
+    memset(c1, 0, ldc * m * sizeof(float));
+    memset(c2, 0, ldc * m * sizeof(float));
     init_bias(bias, n, 1.5f);
 
     // Print a small section of the input matrices and bias

@@ -85,11 +85,11 @@ main()
     int num_iterations = 10;
 
     // Allocate memory for matrices
-    float* a  = (float*)malloc(m * k * sizeof(float));
-    float* b  = (float*)malloc(k * n * sizeof(float));
-    float* c1 = (float*)malloc(m * n * sizeof(float)); // For standard GEMM
+    float* a  = (float*)malloc(lda * m * sizeof(float));
+    float* b  = (float*)malloc(ldb * k * sizeof(float));
+    float* c1 = (float*)malloc(ldc * m * sizeof(float)); // For standard GEMM
     float* c2 =
-        (float*)malloc(m * n * sizeof(float)); // For GEMM with reordered B
+        (float*)malloc(ldc * m * sizeof(float)); // For GEMM with reordered B
 
     if (!a || !b || !c1 || !c2) {
         printf("Memory allocation failed\n");

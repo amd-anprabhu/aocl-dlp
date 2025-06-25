@@ -225,16 +225,16 @@ main()
 
     // Allocate memory for float matrices (for reference calculation and initial
     // data)
-    float* a_f32     = (float*)malloc(m * k * sizeof(float));
-    float* b_f32     = (float*)malloc(k * n * sizeof(float));
-    float* c_ref     = (float*)malloc(m * n * sizeof(float));
-    float* c_dequant = (float*)malloc(m * n * sizeof(float));
+    float* a_f32     = (float*)malloc(lda * m * sizeof(float));
+    float* b_f32     = (float*)malloc(ldb * k * sizeof(float));
+    float* c_ref     = (float*)malloc(ldc * m * sizeof(float));
+    float* c_dequant = (float*)malloc(ldc * m * sizeof(float));
 
     // Allocate memory for quantized matrices
-    uint8_t* a_u8  = (uint8_t*)malloc(m * k * sizeof(uint8_t));
-    int8_t*  b_s8  = (int8_t*)malloc(k * n * sizeof(int8_t));
-    int32_t* c_s32 = (int32_t*)malloc(m * n * sizeof(int32_t));
-    int8_t*  c_s8  = (int8_t*)malloc(m * n * sizeof(int8_t));
+    uint8_t* a_u8  = (uint8_t*)malloc(lda * m * sizeof(uint8_t));
+    int8_t*  b_s8  = (int8_t*)malloc(ldb * k * sizeof(int8_t));
+    int32_t* c_s32 = (int32_t*)malloc(ldc * m * sizeof(int32_t));
+    int8_t*  c_s8  = (int8_t*)malloc(ldc * m * sizeof(int8_t));
 
     if (!a_f32 || !b_f32 || !c_ref || !c_dequant || !a_u8 || !b_s8 || !c_s32
         || !c_s8) {

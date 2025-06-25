@@ -144,10 +144,11 @@ main()
     // Allocate and initialize each matrix in the batch
     printf("Initializing matrices...\n");
     for (int i = 0; i < batch_size; i++) {
-        a_array[i]      = (float*)malloc(m * k * sizeof(float));
-        b_array[i]      = (float*)malloc(k * n * sizeof(float));
-        c_batch[i]      = (float*)malloc(m * n * sizeof(float));
-        c_sequential[i] = (float*)malloc(m * n * sizeof(float));
+        a_array[i] = (float*)malloc(lda_array[i] * m_array[i] * sizeof(float));
+        b_array[i] = (float*)malloc(ldb_array[i] * k_array[i] * sizeof(float));
+        c_batch[i] = (float*)malloc(ldc_array[i] * m_array[i] * sizeof(float));
+        c_sequential[i] =
+            (float*)malloc(ldc_array[i] * m_array[i] * sizeof(float));
 
         if (!a_array[i] || !b_array[i] || !c_batch[i] || !c_sequential[i]) {
             printf("Memory allocation for matrices failed\n");

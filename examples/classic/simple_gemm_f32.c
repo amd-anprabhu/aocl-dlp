@@ -42,11 +42,11 @@
 
 // Utility function to initialize a matrix with values
 void
-init_matrix(float* matrix, int rows, int cols, float value)
+init_matrix(float* matrix, int rows, int cols, int ld, float value)
 {
     for (int i = 0; i < rows; i++) {
         for (int j = 0; j < cols; j++) {
-            matrix[i * cols + j] = value * (i + j + 1) / (rows * cols);
+            matrix[i * ld + j] = value * (i + j + 1) / (rows * cols);
         }
     }
 }
@@ -85,9 +85,9 @@ main()
     md_t ldc = n;
 
     // Allocate memory for matrices
-    float* a = (float*)malloc(m * k * sizeof(float));
-    float* b = (float*)malloc(k * n * sizeof(float));
-    float* c = (float*)malloc(m * n * sizeof(float));
+    float* a = (float*)malloc(lda * m * sizeof(float));
+    float* b = (float*)malloc(ldb * k * sizeof(float));
+    float* c = (float*)malloc(ldc * m * sizeof(float));
 
     if (!a || !b || !c) {
         printf("Memory allocation failed\n");
@@ -95,9 +95,9 @@ main()
     }
 
     // Initialize matrices with some values
-    init_matrix(a, m, k, 1.0f);
-    init_matrix(b, k, n, 0.5f);
-    init_matrix(c, m, n, 0.0f); // Initialize C with zeros
+    init_matrix(a, m, k, lda, 1.0f);
+    init_matrix(b, k, n, ldb, 0.5f);
+    init_matrix(c, m, n, ldc, 0.0f); // Initialize C with zeros
 
     // Print a small section of the input matrices
     print_matrix_section("Matrix A", a, m, k, 3, 3);

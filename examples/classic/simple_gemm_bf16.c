@@ -42,7 +42,7 @@
 
 // Utility function to initialize a BFloat16 matrix from float values
 void
-init_bf16_matrix(bfloat16* matrix, int rows, int cols, float value)
+init_bf16_matrix(bfloat16* matrix, int rows, int cols, int ld, float value)
 {
     for (int i = 0; i < rows; i++) {
         for (int j = 0; j < cols; j++) {
@@ -54,7 +54,7 @@ init_bf16_matrix(bfloat16* matrix, int rows, int cols, float value)
             uint16_t  bf16_val   = (*float_bits >> 16);
 
             // Store the bfloat16 value
-            matrix[i * cols + j] = bf16_val;
+            matrix[i * ld + j] = bf16_val;
         }
     }
 }
@@ -118,9 +118,9 @@ main()
     md_t ldc = n;
 
     // Allocate memory for matrices
-    bfloat16* a = (bfloat16*)malloc(m * k * sizeof(bfloat16));
-    bfloat16* b = (bfloat16*)malloc(k * n * sizeof(bfloat16));
-    float*    c = (float*)malloc(m * n * sizeof(float));
+    bfloat16* a = (bfloat16*)malloc(lda * m * sizeof(bfloat16));
+    bfloat16* b = (bfloat16*)malloc(ldb * k * sizeof(bfloat16));
+    float*    c = (float*)malloc(ldc * m * sizeof(float));
 
     if (!a || !b || !c) {
         printf("Memory allocation failed\n");
@@ -128,9 +128,9 @@ main()
     }
 
     // Initialize matrices with some values
-    init_bf16_matrix(a, m, k, 1.0f);
-    init_bf16_matrix(b, k, n, 0.5f);
-    memset(c, 0, m * n * sizeof(float)); // Initialize C with zeros
+    init_bf16_matrix(a, m, k, lda, 1.0f);
+    init_bf16_matrix(b, k, n, ldb, 0.5f);
+    memset(c, 0, ldc * m * sizeof(float)); // Initialize C with zeros
 
     // Print a small section of the input matrices
     print_bf16_matrix_section("Matrix A (BF16)", a, m, k, 3, 3);

@@ -44,13 +44,13 @@
 
 // Utility function to initialize a matrix with values (positive and negative)
 void
-init_matrix(float* matrix, int rows, int cols, float value)
+init_matrix(float* matrix, int rows, int cols, int ld, float value)
 {
     for (int i = 0; i < rows; i++) {
         for (int j = 0; j < cols; j++) {
             // Alternating positive and negative values
-            float sign           = ((i + j) % 2 == 0) ? 1.0f : -1.0f;
-            matrix[i * cols + j] = sign * value * (i + j + 1) / (rows * cols);
+            float sign         = ((i + j) % 2 == 0) ? 1.0f : -1.0f;
+            matrix[i * ld + j] = sign * value * (i + j + 1) / (rows * cols);
         }
     }
 }
@@ -117,11 +117,11 @@ main()
     md_t ldc = n;
 
     // Allocate memory for matrices
-    float* a  = (float*)malloc(m * k * sizeof(float));
-    float* b  = (float*)malloc(k * n * sizeof(float));
-    float* c1 = (float*)malloc(m * n * sizeof(float)); // For fused ReLU
-    float* c2 = (float*)malloc(m * n * sizeof(float)); // For separate ReLU
-    float* c3 = (float*)malloc(m * n * sizeof(float)); // For PReLU
+    float* a  = (float*)malloc(lda * m * sizeof(float));
+    float* b  = (float*)malloc(ldb * k * sizeof(float));
+    float* c1 = (float*)malloc(ldc * m * sizeof(float)); // For fused ReLU
+    float* c2 = (float*)malloc(ldc * m * sizeof(float)); // For separate ReLU
+    float* c3 = (float*)malloc(ldc * m * sizeof(float)); // For PReLU
 
     if (!a || !b || !c1 || !c2 || !c3) {
         printf("Memory allocation failed\n");
@@ -129,11 +129,11 @@ main()
     }
 
     // Initialize matrices with some values (including negative values)
-    init_matrix(a, m, k, 1.0f);
-    init_matrix(b, k, n, 0.5f);
-    memset(c1, 0, m * n * sizeof(float));
-    memset(c2, 0, m * n * sizeof(float));
-    memset(c3, 0, m * n * sizeof(float));
+    init_matrix(a, m, k, lda, 1.0f);
+    init_matrix(b, k, n, ldb, 0.5f);
+    memset(c1, 0, ldc * m * sizeof(float));
+    memset(c2, 0, ldc * m * sizeof(float));
+    memset(c3, 0, ldc * m * sizeof(float));
 
     // Print a small section of the input matrices
     print_matrix_section("Matrix A", a, m, k, 3, 3);

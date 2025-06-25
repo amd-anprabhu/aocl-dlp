@@ -157,12 +157,16 @@ main()
     md_t m = 64; // Rows
     md_t n = 64; // Columns
 
+    // Leading dimensions
+    md_t lda = n;
+    md_t ldb = n;
+
     // Allocate memory for matrices
-    float*    a_f32     = (float*)malloc(m * n * sizeof(float));
-    float*    b_f32     = (float*)malloc(m * n * sizeof(float));
-    float*    b_f32_ref = (float*)malloc(m * n * sizeof(float));
-    bfloat16* a_bf16    = (bfloat16*)malloc(m * n * sizeof(bfloat16));
-    bfloat16* b_bf16    = (bfloat16*)malloc(m * n * sizeof(bfloat16));
+    float*    a_f32     = (float*)malloc(lda * m * sizeof(float));
+    float*    b_f32     = (float*)malloc(ldb * m * sizeof(float));
+    float*    b_f32_ref = (float*)malloc(ldb * m * sizeof(float));
+    bfloat16* a_bf16    = (bfloat16*)malloc(lda * m * sizeof(bfloat16));
+    bfloat16* b_bf16    = (bfloat16*)malloc(ldb * m * sizeof(bfloat16));
 
     if (!a_f32 || !b_f32 || !b_f32_ref || !a_bf16 || !b_bf16) {
         printf("Memory allocation failed\n");
@@ -183,10 +187,6 @@ main()
 
     // Copy input to reference matrix for manual calculation
     memcpy(b_f32_ref, a_f32, m * n * sizeof(float));
-
-    // Leading dimensions
-    md_t lda = n;
-    md_t ldb = n;
 
     // Set up post-op for GeLU_Tanh
     aocl_post_op* gelu_post_ops = (aocl_post_op*)malloc(sizeof(aocl_post_op));

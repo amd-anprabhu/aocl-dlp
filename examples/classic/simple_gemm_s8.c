@@ -139,9 +139,9 @@ main()
     md_t ldc = n;
 
     // Allocate memory for matrices
-    uint8_t* a = (uint8_t*)malloc(m * k * sizeof(uint8_t));
-    int8_t*  b = (int8_t*)malloc(k * n * sizeof(int8_t));
-    int32_t* c = (int32_t*)malloc(m * n * sizeof(int32_t));
+    uint8_t* a = (uint8_t*)malloc(lda * m * sizeof(uint8_t));
+    int8_t*  b = (int8_t*)malloc(ldb * k * sizeof(int8_t));
+    int32_t* c = (int32_t*)malloc(ldc * m * sizeof(int32_t));
 
     if (!a || !b || !c) {
         printf("Memory allocation failed\n");
@@ -181,7 +181,7 @@ main()
     printf("\n--- Example with signed 8-bit inputs (S8S8) ---\n\n");
 
     // Allocate memory for a signed 8-bit A matrix
-    int8_t* a_s8 = (int8_t*)malloc(m * k * sizeof(int8_t));
+    int8_t* a_s8 = (int8_t*)malloc(lda * m * sizeof(int8_t));
     if (!a_s8) {
         printf("Memory allocation failed\n");
         goto cleanup;
