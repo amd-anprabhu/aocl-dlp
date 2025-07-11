@@ -12,7 +12,7 @@
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS “AS IS”
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
  * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
@@ -26,10 +26,59 @@
  *
  */
 
-#ifndef DLP_CPU_ARCH_H
-#define DLP_CPU_ARCH_H
+#pragma once
 
-dlp_arch_t
-dlp_get_arch(void);
+#include <cstdint>
 
-#endif // DLP_CPU_ARCH_H
+namespace dlp::cpu_utils {
+
+enum class isaFeature : uint32_t
+{
+    invalid = 0,
+
+    // x86_64 ISA features
+    sse3,
+    ssse3,
+    sse41,
+    sse42,
+    avx,
+    avx2,
+    fma3,
+    fma4,
+    avx512f,
+    avx512dq,
+    avx512pf,
+    avx512er,
+    avx512cd,
+    avx512bw,
+    avx512vl,
+    avx512vnni,
+    avx512bf16,
+    avx512vbmi,
+    avxvnni,
+    avx512vp2intersect,
+    movdiri,
+    movdir64b,
+    datapath_fp128,
+    datapath_fp256,
+    datapath_fp512,
+
+    // Other ISA Features
+
+    feature_limit
+};
+
+enum class cpuVendor : uint32_t
+{
+    invalid = 0,
+
+    // x86_64 vendors
+    amd,
+    intel,
+
+    // Other ISA vendors
+
+    vendor_limit
+};
+
+} // namespace dlp::cpu_utils

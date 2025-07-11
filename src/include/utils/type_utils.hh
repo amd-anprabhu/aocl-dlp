@@ -12,7 +12,7 @@
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS “AS IS”
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
  * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
@@ -26,10 +26,27 @@
  *
  */
 
-#ifndef DLP_CPU_ARCH_H
-#define DLP_CPU_ARCH_H
+#pragma once
 
-dlp_arch_t
-dlp_get_arch(void);
+#include <type_traits>
 
-#endif // DLP_CPU_ARCH_H
+namespace dlp::utils {
+
+template<typename T>
+inline std::underlying_type_t<T>
+getUnderlyingValueOfEnum(T enumVal)
+{
+    static_assert(std::is_enum_v<T>, "Argument type must be an enum type.");
+    return static_cast<std::underlying_type_t<T>>(enumVal);
+}
+
+template<typename E, typename T>
+inline E
+getEnumFromUnderlyingType(T val)
+{
+    static_assert(std::is_same_v<std::underlying_type_t<E>, T>,
+                  "Argument type must be same as enum underlying type.");
+    return static_cast<E>(val);
+}
+
+} // namespace dlp::utils

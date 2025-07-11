@@ -24,4 +24,4 @@
 #
 
 FILE_FORMATS = [".c", ".cc", ".cpp", ".h", ".hh", ".hpp"]
-EXCLUDE_PATTERNS = ["build", ".git", "xbyak" ]
+EXCLUDE_PATTERNS = ["build", ".git", "xbyak", "JIT/xbyak"]

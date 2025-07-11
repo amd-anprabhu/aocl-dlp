@@ -179,6 +179,10 @@ AOCL_GEMM_MATMUL(float, float, float, float, f32f32f32of32)
     dlp_rntm_init_from_global(&rntm_g);
 
     lpgemm_cntx_t* lcntx_g = lpgemm_get_global_cntx_obj(F32F32F32OF32);
+    lcntx_g->dlp_kernel_hndl.kernel_base = NULL;
+    lcntx_g->dlp_kernel_hndl             = dlp_init_and_get_kernel_hndl(
+        DLP_KERNEL_F32F32F32OF32, m, n, k, (void*)&alpha, (void*)&beta,
+        post_op_unparsed, lcntx_g->blksz.MR, lcntx_g->blksz.NR);
 
     if (is_single_thread(&rntm_g) == TRUE) {
         if ((is_row_major == TRUE)

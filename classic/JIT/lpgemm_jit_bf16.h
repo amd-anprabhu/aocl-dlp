@@ -31,10 +31,10 @@
 
 #include <cstring>
 #include <functional>
+#include <jit/xbyak/xbyak.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <time.h>
-#include <xbyak/xbyak.h>
 
 #include "classic/dlp_base_types.h"
 

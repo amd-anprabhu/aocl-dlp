@@ -62,6 +62,7 @@ dlp_check_znver_support()
 
 # Add classic directory
 add_subdirectory(classic)
+add_subdirectory(src)
 
 set(DLP_SRCS "")
 
@@ -78,6 +79,7 @@ set_target_properties(${PROJECT_NAME}_static PROPERTIES OUTPUT_NAME ${PROJECT_NA
 target_link_libraries(${PROJECT_NAME}
     PUBLIC
         ${CLASSIC_TARGETS}
+        ${DLP_PLUS_TARGETS}
     PUBLIC
         dlp::openmp
 )

@@ -25,46 +25,44 @@
 #
 
 # Get all source files in the current directory
-dlp_glob_sources(CLASSIC_SOURCES)
+dlp_glob_sources(DLP_PLUS_SOURCES)
 
-set(CLASSIC_INCLUDES ${CLASSIC_INCLUDES} ${CMAKE_CURRENT_SOURCE_DIR}/include ${KERNELS_INCLUDES})
-# DLP Plus dependencies.
-set(CLASSIC_INCLUDES ${CLASSIC_INCLUDES} ${PROJECT_SOURCE_DIR}/src/include)
+set(DLP_PLUS_INCLUDES ${PROJECT_INCLUDES} ${CMAKE_CURRENT_SOURCE_DIR}/include)
 
 # Add the frame subdirectory
 add_subdirectory(frame)
-add_subdirectory(JIT)
-add_subdirectory(kernels)
-add_subdirectory(config)
+add_subdirectory(jit)
 
 # Output the found sources (optional, for debugging)
-# message(STATUS "Classic sources: ${CLASSIC_SOURCES}")
-# message(STATUS "Combined sources (without kernels): ${CLASSIC_SOURCES} ${FRAME_SOURCES}")
+# message(STATUS "DLP Plus sources: ${DLP_PLUS_SOURCES}")
 
 # Create the classic library without kernel sources (they're in the object libraries)
-add_library(aocl_dlp_classic OBJECT ${CLASSIC_SOURCES} ${FRAME_SOURCES} ${CONFIG_SOURCES})
+add_library(aocl_dlp_plus OBJECT
+    ${DLP_PLUS_SOURCES}
+    ${DLP_PLUS_FRAME_SOURCES}
+    ${DLP_PLUS_JIT_SOURCES}
+)
 
 # Enable position-independent code for the object library
-set_property(TARGET aocl_dlp_classic PROPERTY POSITION_INDEPENDENT_CODE ON)
+set_property(TARGET aocl_dlp_plus PROPERTY POSITION_INDEPENDENT_CODE ON)
 
 # Set include directories for the target
-target_include_directories(aocl_dlp_classic
+target_include_directories(aocl_dlp_plus
     PUBLIC
-        ${CLASSIC_INCLUDES}
-        $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include> # For aocl_dlp_config.h
+    ${DLP_PLUS_INCLUDES}
+    $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include> # For aocl_dlp_config.h
 )
 
 # Link with OpenMP for threading support
-target_link_libraries(aocl_dlp_classic PRIVATE dlp::openmp)
+target_link_libraries(aocl_dlp_plus PRIVATE dlp::openmp)
 
-set(CLASSIC_TARGETS
-    aocl_dlp_classic
-    ${KERNEL_TARGETS}
+set(DLP_PLUS_TARGETS
+    aocl_dlp_plus
     PARENT_SCOPE
 )
 
 # Apply centralized compiler flags
-dlp_set_global_compile_flags(aocl_dlp_classic)
+dlp_set_global_compile_flags(aocl_dlp_plus)
 
-# Install the classic library
-# dlp_install(aocl_dlp_classic)
+# Install the plus library
+# dlp_install(aocl_dlp_plus)

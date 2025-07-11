@@ -142,10 +142,9 @@ is_single_thread(dlp_rntm_t* rntm_g)
     md_t jc_ways   = rntm_g->jc_ways;
     md_t ic_ways   = rntm_g->ic_ways;
 
-    ic_ways = (ic_ways > 0) ? ic_ways : 1;
-    jc_ways = (jc_ways > 0) ? jc_ways : 1;
-
-    if ((n_threads == 1) || ((ic_ways * jc_ways) == 1)) {
+    if (n_threads == 1) {
+        is_st = TRUE;
+    } else if ((ic_ways > 0) && (jc_ways > 0) && ((ic_ways * jc_ways) == 1)) {
         is_st = TRUE;
     }
 

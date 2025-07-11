@@ -358,8 +358,12 @@ LPGEMM_5LOOP(float, float, float, f32f32f32of32)
     const md_t NC = lcntx->blksz.NC;
     const md_t KC = lcntx->blksz.KC;
     const md_t MC = lcntx->blksz.MC;
-    const md_t NR = lcntx->blksz.NR;
-    const md_t MR = lcntx->blksz.MR;
+    const md_t NR = (lcntx->dlp_kernel_hndl.kernel_base != NULL)
+                        ? lcntx->dlp_kernel_hndl.nr
+                        : lcntx->blksz.NR;
+    const md_t MR = (lcntx->dlp_kernel_hndl.kernel_base != NULL)
+                        ? lcntx->dlp_kernel_hndl.mr
+                        : lcntx->blksz.MR;
 
     // Strides are updated based on matrix packing/reordering.
     const float* a_use    = NULL;
@@ -596,10 +600,20 @@ LPGEMM_5LOOP(float, float, float, f32f32f32of32)
                     post_ops_attr.rs_c_downscale = rs_c_downscale;
 
                     // Call the micro-kernel
-                    ker_ptr(mc0, nr0, kc0, (float*)a_use, rs_a_use, cs_a_use,
-                            ps_a_use, (float*)(b_use + (jr * ps_b_use)),
-                            rs_b_use, cs_b_use, (c_use_ic + jr), rs_c, cs_c_use,
-                            alpha, beta0, post_op_list, post_ops_attr);
+                    if (lcntx->dlp_kernel_hndl.kernel_base != NULL) {
+                        dlp_execute_kernel(
+                            lcntx->dlp_kernel_hndl, mc0, nr0, kc0,
+                            (float*)a_use, rs_a_use, cs_a_use, ps_a_use,
+                            (float*)(b_use + (jr * ps_b_use)), rs_b_use,
+                            cs_b_use, (c_use_ic + jr), rs_c, cs_c_use,
+                            (void*)&alpha, (void*)&beta0);
+                    } else {
+                        ker_ptr(mc0, nr0, kc0, (float*)a_use, rs_a_use,
+                                cs_a_use, ps_a_use,
+                                (float*)(b_use + (jr * ps_b_use)), rs_b_use,
+                                cs_b_use, (c_use_ic + jr), rs_c, cs_c_use,
+                                alpha, beta0, post_op_list, post_ops_attr);
+                    }
                 }
             }
         }

@@ -12,7 +12,7 @@
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS “AS IS”
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
  * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
@@ -26,10 +26,30 @@
  *
  */
 
-#ifndef DLP_CPU_ARCH_H
-#define DLP_CPU_ARCH_H
+#pragma once
 
-dlp_arch_t
-dlp_get_arch(void);
+#include <type_traits>
 
-#endif // DLP_CPU_ARCH_H
+#include "cpu_utils/cpu_features.hh"
+
+namespace dlp::cpu_utils {
+
+class x86CpuFeatureDetector : public cpuFeatureDetectorBase
+{
+    // Not using std::vector<bool> for now, its more of a bitset.
+    std::vector<uint8_t> featureMap;
+    cpuVendor            thisVendor;
+    void                 detectx86IsaFeatures();
+
+  public:
+    x86CpuFeatureDetector();
+    ~x86CpuFeatureDetector() = default;
+
+    bool hasFeatures(const std::vector<isaFeature>& featureList) const final;
+    bool hasFeature(const isaFeature feature) const final;
+    std::vector<isaFeature> getFeatures() const final;
+    bool                    isCpuVendor(cpuVendor vendor) const final;
+    cpuVendor               getCpuVendor() const final;
+};
+
+} // namespace dlp::cpu_utils

@@ -9,7 +9,7 @@
     @note modified new BSD license
     http://opensource.org/licenses/BSD-3-Clause
 */
-#if (not+0)                                                                    \
+#if (not +0)                                                                   \
     && !defined(                                                               \
         XBYAK_NO_OP_NAMES) // trick to detect whether 'not' is operator or not
 #define XBYAK_NO_OP_NAMES
@@ -360,7 +360,7 @@ class Error : public std::exception
             err_ = ERR_INTERNAL;
         }
     }
-                operator int() const { return err_; }
+    operator int() const { return err_; }
     const char* what() const XBYAK_NOEXCEPT
     {
         return ConvertErrorToString(err_);

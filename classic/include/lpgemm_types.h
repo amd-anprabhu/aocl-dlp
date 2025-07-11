@@ -32,6 +32,9 @@
 #include "classic/dlp_base_types.h"
 #include "threading/lpgemm_thread_utils.h"
 
+#include "bindings/c_wrappers/capi_cpu_features.h"
+#include "bindings/c_wrappers/capi_kernel_frame_wrappers.h"
+
 typedef enum
 {
     LPGEMM_INT8  = 0,
@@ -173,6 +176,7 @@ typedef struct
     opaq_fp_t             packsclb_fun_ptr;
     lpgemm_pack_strides_t pack_s;
     lpgemm_sup_thres_t    sup_thres;
+    dlp_kernel_hndl_t     dlp_kernel_hndl;
 } lpgemm_cntx_t;
 
 typedef struct

@@ -12,7 +12,7 @@
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS “AS IS”
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
  * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
@@ -26,10 +26,73 @@
  *
  */
 
-#ifndef DLP_CPU_ARCH_H
-#define DLP_CPU_ARCH_H
+#ifndef CAPI_CPU_FEATURES_H
+#define CAPI_CPU_FEATURES_H
 
+#include "classic/dlp_base_types.h"
+#include "classic/dlp_macros.h"
+
+DLP_BEGIN_EXTERN_C
+
+typedef enum
+{
+    DATAPATH_INVALID = -1,
+    DATAPATH_FP128,
+    DATAPATH_FP256,
+    DATAPATH_FP512
+} dlp_datapath_width;
+
+typedef enum
+{
+    DLP_ARCH_ERROR = 0,
+    DLP_ARCH_GENERIC,
+
+    // AMD
+    DLP_ARCH_ZEN5,
+    DLP_ARCH_ZEN4,
+    DLP_ARCH_ZEN3,
+    DLP_ARCH_ZEN2,
+    DLP_ARCH_ZEN,
+
+    DLP_NUM_ARCHS
+} dlp_arch_t;
+
+// API to check if AVX2 and FMA3 are supported or not on the current platform.
+bool
+dlp_cpuid_is_avx2fma3_supported(void);
+
+// API to check if AVX512 is supported or not on the current platform.
+bool
+dlp_cpuid_is_avx512_supported(void);
+
+// API to check if AVX512_VNNI is supported or not on the current platform.
+bool
+dlp_cpuid_is_avx512vnni_supported(void);
+
+// API to check if AVX512_bf16 is supported or not on the current platform.
+bool
+dlp_cpuid_is_avx512bf16_supported(void);
+
+// API to get FP/SIMD execition datapath width.
+uint32_t
+dlp_cpuid_query_fp_datapath(void);
+
+// API to check if cpu is zen5 arch.
+bool
+dlp_cpuid_is_zen5_arch();
+
+// API to check if cpu is zen4 arch.
+bool
+dlp_cpuid_is_zen4_arch();
+
+// API to check if cpu is zen arch.
+bool
+dlp_cpuid_is_zen_arch();
+
+// API to get
 dlp_arch_t
-dlp_get_arch(void);
+dlp_cpuid_query_arch_id(void);
 
-#endif // DLP_CPU_ARCH_H
+DLP_END_EXTERN_C
+
+#endif // CAPI_CPU_FEATURES_H

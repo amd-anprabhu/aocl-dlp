@@ -273,8 +273,12 @@ LPGEMM_TINY(float, float, float, f32f32f32of32)
         return;
     }
 
-    const md_t NR = lcntx->blksz.NR;
-    const md_t MR = lcntx->blksz.MR;
+    md_t NR = (lcntx->dlp_kernel_hndl.kernel_base != NULL)
+                  ? lcntx->dlp_kernel_hndl.nr
+                  : lcntx->blksz.NR;
+    md_t MR = (lcntx->dlp_kernel_hndl.kernel_base != NULL)
+                  ? lcntx->dlp_kernel_hndl.mr
+                  : lcntx->blksz.MR;
 
     // Strides are updated based on matrix packing/reordering.
     const float* a_use    = NULL;
@@ -358,10 +362,18 @@ LPGEMM_TINY(float, float, float, f32f32f32of32)
         post_ops_attr.post_op_c_j    = jr;
         post_ops_attr.rs_c_downscale = rs_c_downscale;
 
-        ((lpgemm_rowvar_f32)lcntx->kern_fun_ptr)(
-            m, nr0, k, (float*)a_use, rs_a_use, cs_a_use, ps_a_use,
-            (float*)(b_use + (jr * ps_b_use)), rs_b_use, cs_b_use, (c + jr),
-            rs_c, cs_c_use, alpha, beta, post_op_list, post_ops_attr);
+        if (lcntx->dlp_kernel_hndl.kernel_base != NULL) {
+            dlp_execute_kernel(lcntx->dlp_kernel_hndl, m, nr0, k, (float*)a_use,
+                               rs_a_use, cs_a_use, ps_a_use,
+                               (float*)(b_use + (jr * ps_b_use)), rs_b_use,
+                               cs_b_use, (c + jr), rs_c, cs_c_use,
+                               (void*)&alpha, (void*)&beta);
+        } else {
+            ((lpgemm_rowvar_f32)lcntx->kern_fun_ptr)(
+                m, nr0, k, (float*)a_use, rs_a_use, cs_a_use, ps_a_use,
+                (float*)(b_use + (jr * ps_b_use)), rs_b_use, cs_b_use, (c + jr),
+                rs_c, cs_c_use, alpha, beta, post_op_list, post_ops_attr);
+        }
     }
 
     if (pack_b_buffer_f32f32f32of32 != NULL) {

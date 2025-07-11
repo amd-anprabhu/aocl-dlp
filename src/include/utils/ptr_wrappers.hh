@@ -12,7 +12,7 @@
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS “AS IS”
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
  * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
@@ -26,10 +26,55 @@
  *
  */
 
-#ifndef DLP_CPU_ARCH_H
-#define DLP_CPU_ARCH_H
+#pragma once
 
-dlp_arch_t
-dlp_get_arch(void);
+namespace dlp::utils {
 
-#endif // DLP_CPU_ARCH_H
+template<typename T, typename PARAM_TYPE, typename ERROR_TYPE>
+class ptrWrapper
+{
+    T* kB;
+
+  public:
+    ptrWrapper(T* kB)
+        : kB(kB)
+    {
+    }
+    ~ptrWrapper() { kB = nullptr; }
+
+    ptrWrapper(const ptrWrapper& other)            = delete;
+    ptrWrapper& operator=(const ptrWrapper& other) = delete;
+
+    ptrWrapper(ptrWrapper&& other)
+        : kB(other.kB)
+    {
+        other.kB = nullptr;
+    }
+
+    ptrWrapper& operator=(ptrWrapper&& other)
+    {
+        auto temp = kB;
+        kB        = other.kB;
+        other.kB  = temp;
+        return *this;
+    }
+
+    void reset()
+    {
+        if (kB) {
+            kB = nullptr;
+        }
+    }
+
+    ERROR_TYPE operator()(PARAM_TYPE kP) { return kB->operator()(kP); }
+
+    [[nodiscard]] bool isValid() const { return kB != nullptr; }
+
+    [[nodiscard]] explicit operator bool() const { return isValid(); }
+
+    [[nodiscard]] T* operator->() const { return kB; }
+
+    T* getPtr() const { return kB; }
+};
+
+} // namespace dlp::utils

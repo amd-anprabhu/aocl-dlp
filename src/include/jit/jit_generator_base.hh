@@ -12,7 +12,7 @@
  *    may be used to endorse or promote products derived from this software
  *    without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS “AS IS”
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
  * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
@@ -26,10 +26,40 @@
  *
  */
 
-#ifndef DLP_CPU_ARCH_H
-#define DLP_CPU_ARCH_H
+#pragma once
 
-dlp_arch_t
-dlp_get_arch(void);
+#include <functional>
+#include <vector>
 
-#endif // DLP_CPU_ARCH_H
+#include "cpu_utils/cpu_features.hh"
+#include "kernels/kernel_base.hh"
+
+namespace dlp::jit {
+
+enum class jitGeneratorError
+{
+    success = 0,
+    notSupported,
+    error
+};
+
+class jitGeneratorBase
+{
+  public:
+    virtual ~jitGeneratorBase() {}
+
+    virtual std::vector<cpu_utils::isaFeature>& getIsaFeaturesRequired()    = 0;
+    virtual std::vector<kernel_frame::kernelDatatype>& getKernelDatatypes() = 0;
+    virtual jitGeneratorError                          operator()(
+        const kernel_frame::kernelInfo& kI) = 0;
+    virtual jitGeneratorBase* clone()                                = 0;
+
+    // TODO: Remove this once the JIT generator and execution code are
+    // separated.
+    virtual kernels::kernelError executeKernel(kernels::kernelParams* _params)
+    {
+        return kernels::kernelError::error;
+    }
+};
+
+} // namespace dlp::jit

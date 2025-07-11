@@ -10457,11 +10457,11 @@ les(const Reg& reg, const Address& addr)
 }
 #endif
 #ifndef XBYAK_NO_OP_NAMES
-void and(const Operand& op1, const Operand& op2)
+void and (const Operand& op1, const Operand& op2)
 {
     and_(op1, op2);
 }
-void and(const Operand& op, uint32_t imm)
+void and (const Operand& op, uint32_t imm)
 {
     and_(op, imm);
 }

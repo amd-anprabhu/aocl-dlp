@@ -24,47 +24,10 @@
 # EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #
 
-# Get all source files in the current directory
-dlp_glob_sources(CLASSIC_SOURCES)
+# Get all source files in the frame directory recursively
+dlp_glob_sources_recursive(DLP_PLUS_JIT_SOURCES ${CMAKE_CURRENT_SOURCE_DIR})
 
-set(CLASSIC_INCLUDES ${CLASSIC_INCLUDES} ${CMAKE_CURRENT_SOURCE_DIR}/include ${KERNELS_INCLUDES})
-# DLP Plus dependencies.
-set(CLASSIC_INCLUDES ${CLASSIC_INCLUDES} ${PROJECT_SOURCE_DIR}/src/include)
+set(DLP_PLUS_INCLUDES ${DLP_PLUS_INCLUDES} ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/xbyak PARENT_SCOPE)
 
-# Add the frame subdirectory
-add_subdirectory(frame)
-add_subdirectory(JIT)
-add_subdirectory(kernels)
-add_subdirectory(config)
-
-# Output the found sources (optional, for debugging)
-# message(STATUS "Classic sources: ${CLASSIC_SOURCES}")
-# message(STATUS "Combined sources (without kernels): ${CLASSIC_SOURCES} ${FRAME_SOURCES}")
-
-# Create the classic library without kernel sources (they're in the object libraries)
-add_library(aocl_dlp_classic OBJECT ${CLASSIC_SOURCES} ${FRAME_SOURCES} ${CONFIG_SOURCES})
-
-# Enable position-independent code for the object library
-set_property(TARGET aocl_dlp_classic PROPERTY POSITION_INDEPENDENT_CODE ON)
-
-# Set include directories for the target
-target_include_directories(aocl_dlp_classic
-    PUBLIC
-        ${CLASSIC_INCLUDES}
-        $<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/include> # For aocl_dlp_config.h
-)
-
-# Link with OpenMP for threading support
-target_link_libraries(aocl_dlp_classic PRIVATE dlp::openmp)
-
-set(CLASSIC_TARGETS
-    aocl_dlp_classic
-    ${KERNEL_TARGETS}
-    PARENT_SCOPE
-)
-
-# Apply centralized compiler flags
-dlp_set_global_compile_flags(aocl_dlp_classic)
-
-# Install the classic library
-# dlp_install(aocl_dlp_classic)
+# Add the sources to the parent scope
+set(DLP_PLUS_JIT_SOURCES ${DLP_PLUS_JIT_SOURCES} PARENT_SCOPE)
