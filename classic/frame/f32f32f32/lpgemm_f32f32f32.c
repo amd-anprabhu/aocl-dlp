@@ -600,7 +600,10 @@ LPGEMM_5LOOP(float, float, float, f32f32f32of32)
                     post_ops_attr.rs_c_downscale = rs_c_downscale;
 
                     // Call the micro-kernel
-                    if (lcntx->dlp_kernel_hndl.kernel_base != NULL) {
+                    // TODO: Remove this once the generation of rd kernels
+                    // is supported in JIT.
+                    if ((lcntx->dlp_kernel_hndl.kernel_base != NULL)
+                        && (!invoke_rd)) {
                         dlp_execute_kernel(
                             lcntx->dlp_kernel_hndl, mc0, nr0, kc0,
                             (float*)a_use, rs_a_use, cs_a_use, ps_a_use,

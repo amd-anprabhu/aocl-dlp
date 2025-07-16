@@ -40,6 +40,8 @@ enum class jitGeneratorError
 {
     success = 0,
     notSupported,
+    errorAllocatingMemory,
+    badKernelInfo,
     error
 };
 

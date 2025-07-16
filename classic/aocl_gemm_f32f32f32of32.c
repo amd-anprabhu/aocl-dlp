@@ -145,11 +145,13 @@ AOCL_GEMM_MATMUL(float, float, float, float, f32f32f32of32)
     // By default enable packing for B matrix. Before the 5 loop, based on
     // the input dimensions, the smart threading logic will adjust it
     // (disable/enable) accordingly.
-    if ((is_row_major == TRUE) && (mtag_b == UNPACKED)) {
+    if ((is_row_major == TRUE) && (dlp_is_trans(dlp_transb))
+        && (mtag_b == UNPACKED)) {
         mtag_b = PACK;
     }
     // Inputs swapped in column major, A becomes B from kernel point of view.
-    else if ((is_column_major == TRUE) && (mtag_a == UNPACKED)) {
+    else if ((is_column_major == TRUE) && (dlp_is_trans(dlp_transa))
+             && (mtag_a == UNPACKED)) {
         mtag_a = PACK;
     }
 

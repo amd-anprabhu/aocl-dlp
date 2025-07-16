@@ -68,7 +68,9 @@ getKernelInfoForJitIntelligence(kernel_datatype_t k_dtype,
 
     // TODO: Only supports non post-ops kernels for now.
     if (post_ops == nullptr) {
-        kernelInfo kI{ mr, nr, k_unroll, nullptr, 0, anyKOpsOrder };
+        kernelInfo kI{
+            mr, nr, k_unroll, false, false, nullptr, 0, anyKOpsOrder
+        };
         return std::make_optional(kI);
     } else {
         return std::nullopt;

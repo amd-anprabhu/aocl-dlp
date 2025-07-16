@@ -192,6 +192,8 @@ struct kernelInfo
     md_t               mr;
     md_t               nr;
     md_t               k_unroll;
+    bool               is_beta_zero;
+    bool               is_alpha_one;
     kernelOpsMetaData* kOpsArr;
     std::size_t        kOpsArrSize;
     bool               anyKOpsOrder;
@@ -199,12 +201,16 @@ struct kernelInfo
     kernelInfo(md_t                               mr,
                md_t                               nr,
                md_t                               k_unroll,
+               bool                               is_beta_zero,
+               bool                               is_alpha_one,
                std::unique_ptr<kernelOpsMetaData> kOpsArr,
                std::size_t                        kOpsArrSize,
                bool                               anyKOpsOrder)
         : mr(mr)
         , nr(nr)
         , k_unroll(k_unroll)
+        , is_beta_zero(is_beta_zero)
+        , is_alpha_one(is_alpha_one)
         , kOpsArr(((kOpsArr != nullptr) && (kOpsArrSize > 0))
                       ? kOpsArr.release()
                       : nullptr)
@@ -218,6 +224,8 @@ struct kernelInfo
         : mr(other.mr)
         , nr(other.nr)
         , k_unroll(other.k_unroll)
+        , is_beta_zero(other.is_beta_zero)
+        , is_alpha_one(other.is_alpha_one)
         , kOpsArr(nullptr)
         , kOpsArrSize(((other.kOpsArr != nullptr) && (other.kOpsArrSize > 0))
                           ? other.kOpsArrSize
@@ -238,6 +246,8 @@ struct kernelInfo
         : mr(other->mr)
         , nr(other->nr)
         , k_unroll(other->k_unroll)
+        , is_beta_zero(other->is_beta_zero)
+        , is_alpha_one(other->is_alpha_one)
         , kOpsArr(((other->kOpsArr != nullptr) && (other->kOpsArrSize > 0))
                       ? other->kOpsArr
                       : nullptr)
@@ -256,6 +266,8 @@ struct kernelInfo
         : mr(other.mr)
         , nr(other.nr)
         , k_unroll(other.k_unroll)
+        , is_beta_zero(other.is_beta_zero)
+        , is_alpha_one(other.is_alpha_one)
         , kOpsArr(((other.kOpsArr != nullptr) && (other.kOpsArrSize > 0))
                       ? other.kOpsArr
                       : nullptr)
@@ -273,9 +285,11 @@ struct kernelInfo
     kernelInfo& operator=(const kernelInfo& other)
     {
         if (this != &other) {
-            this->mr       = other.mr;
-            this->nr       = other.nr;
-            this->k_unroll = other.k_unroll;
+            this->mr           = other.mr;
+            this->nr           = other.nr;
+            this->k_unroll     = other.k_unroll;
+            this->is_beta_zero = other.is_beta_zero;
+            this->is_alpha_one = other.is_alpha_one;
             if (this->kOpsArr != nullptr) {
                 delete[] this->kOpsArr;
             }
@@ -295,9 +309,11 @@ struct kernelInfo
     kernelInfo& operator=(kernelInfo&& other)
     {
         if (this != &other) {
-            this->mr       = other.mr;
-            this->nr       = other.nr;
-            this->k_unroll = other.k_unroll;
+            this->mr           = other.mr;
+            this->nr           = other.nr;
+            this->k_unroll     = other.k_unroll;
+            this->is_beta_zero = other.is_beta_zero;
+            this->is_alpha_one = other.is_alpha_one;
             if (this->kOpsArr != nullptr) {
                 delete[] this->kOpsArr;
             }
@@ -327,6 +343,8 @@ struct kernelInfo
         }
         return ((this->mr == rhs.mr) && (this->nr == rhs.nr)
                 && (this->k_unroll == rhs.k_unroll)
+                && (this->is_beta_zero == rhs.is_beta_zero)
+                && (this->is_alpha_one == rhs.is_alpha_one)
                 && (this->kOpsArrSize == rhs.kOpsArrSize) && isKOpsArrEqual
                 && (this->anyKOpsOrder == rhs.anyKOpsOrder));
     }
