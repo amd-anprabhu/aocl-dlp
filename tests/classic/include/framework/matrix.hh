@@ -454,10 +454,15 @@ namespace dlp { namespace testing {
                     for (size_t i = 0; i < count; ++i) {
                         float floatVal = static_cast<float>(source[i]);
                         // Convert float to BF16 by truncating mantissa
-                        uint32_t floatBits =
-                            *reinterpret_cast<const uint32_t*>(&floatVal);
+                        // Use union to avoid strict-aliasing issues
+                        union
+                        {
+                            float    f;
+                            uint32_t u;
+                        } float_bits;
+                        float_bits.f = floatVal;
                         data[startIndex + i] =
-                            static_cast<uint16_t>(floatBits >> 16);
+                            static_cast<uint16_t>(float_bits.u >> 16);
                     }
                     break;
                 }

@@ -34,6 +34,7 @@
 #include "utils/yaml_parser.hh"
 #include <algorithm>
 #include <gtest/gtest.h>
+#include <iomanip>
 #include <iostream>
 #include <memory>
 #include <sstream>
@@ -293,6 +294,103 @@ PrintTo(const GemmTestConfig& config, std::ostream* os)
     *os << ")";
 }
 
+// Helper function to extract operation names from PostOps
+std::string
+extractPostOpsDescription(const std::shared_ptr<IOperation>& postops)
+{
+    if (!postops) {
+        return "";
+    }
+
+    std::ostringstream       postops_desc;
+    std::vector<std::string> op_names;
+
+    // Get the operation parameters
+    const auto& params = postops->getParams();
+
+    for (const auto& param : params) {
+        switch (param->getType()) {
+            case OperationType::ElementWise: {
+                const auto& ew_param =
+                    static_cast<const ElementWiseParam&>(*param);
+                std::string op_name;
+                switch (ew_param.getOperation()) {
+                    case ElementWiseOperation::Relu:
+                        op_name = "Relu";
+                        break;
+                    case ElementWiseOperation::Prelu:
+                        op_name = "Prelu";
+                        break;
+                    case ElementWiseOperation::Gelu_Tanh:
+                        op_name = "GeluTanh";
+                        break;
+                    case ElementWiseOperation::Gelu_Erf:
+                        op_name = "GeluErf";
+                        break;
+                    case ElementWiseOperation::Clip:
+                        op_name = "Clip";
+                        break;
+                    case ElementWiseOperation::Swish:
+                        op_name = "Swish";
+                        break;
+                    case ElementWiseOperation::Tanh:
+                        op_name = "Tanh";
+                        break;
+                    case ElementWiseOperation::Sigmoid:
+                        op_name = "Sigmoid";
+                        break;
+                    default:
+                        op_name = "UnknownEltwise";
+                        break;
+                }
+                op_names.push_back(op_name);
+                break;
+            }
+            case OperationType::Sum: {
+                const auto& sum_param = static_cast<const SumParam&>(*param);
+                std::string op_name;
+                switch (sum_param.getOperation()) {
+                    case SumOperation::Sum:
+                        op_name = "Sum";
+                        break;
+                    case SumOperation::Scale:
+                        op_name = "Scale";
+                        break;
+                    default:
+                        op_name = "UnknownSum";
+                        break;
+                }
+                op_names.push_back(op_name);
+                break;
+            }
+            case OperationType::Bias:
+                op_names.push_back("Bias");
+                break;
+            case OperationType::MatAdd:
+                op_names.push_back("MatAdd");
+                break;
+            case OperationType::MatMul:
+                op_names.push_back("MatMul");
+                break;
+            case OperationType::Scale:
+                op_names.push_back("Scale");
+                break;
+            default:
+                op_names.push_back("UnknownOp");
+                break;
+        }
+    }
+
+    if (!op_names.empty()) {
+        postops_desc << "_PostOps";
+        for (size_t i = 0; i < op_names.size(); ++i) {
+            postops_desc << "_" << op_names[i];
+        }
+    }
+
+    return postops_desc.str();
+}
+
 // Helper function to generate meaningful test names
 std::string
 generateTestName(const MicroTest& microTest,
@@ -300,17 +398,83 @@ generateTestName(const MicroTest& microTest,
                  size_t           configIndex)
 {
     std::ostringstream name;
+
+    // Start with base information
     name << "yaml_" << testSetIndex << "_M" << microTest.getM() << "_N"
          << microTest.getN() << "_K" << microTest.getK();
+
+    // Add data type information if not default f32
+    if (microTest.getAType() != MatrixType::f32
+        || microTest.getBType() != MatrixType::f32
+        || microTest.getCType() != MatrixType::f32) {
+        name << "_" << microTest.getAType() << microTest.getBType()
+             << microTest.getCType();
+    }
+
+    // Add storage format if not row-major (which is typically default)
+    if (microTest.getStorageFormat() == MatrixLayout::COLUMN_MAJOR) {
+        name << "_ColMajor";
+    }
+
+    // Add transposition information
     if (microTest.getTransA())
         name << "_transA";
     if (microTest.getTransB())
         name << "_transB";
+
+    // Add reordering information
     if (microTest.getReorderA())
         name << "_reorderA";
     if (microTest.getReorderB())
         name << "_reorderB";
+
+    // Add packing information
+    if (microTest.getPackA())
+        name << "_packA";
+    if (microTest.getPackB())
+        name << "_packB";
+
+    // Add alpha/beta information if non-standard values
+    if (microTest.getAlpha() != 1.0) {
+        // Convert decimal to GoogleTest-friendly format (replace . with p)
+        std::ostringstream alpha_stream;
+        alpha_stream << std::fixed << std::setprecision(1)
+                     << microTest.getAlpha();
+        std::string alpha_str = alpha_stream.str();
+        std::replace(alpha_str.begin(), alpha_str.end(), '.', 'p');
+        std::replace(alpha_str.begin(), alpha_str.end(), '-',
+                     'n'); // negative sign
+        name << "_alpha" << alpha_str;
+    }
+    if (microTest.getBeta() != 0.0) {
+        // Convert decimal to GoogleTest-friendly format (replace . with p)
+        std::ostringstream beta_stream;
+        beta_stream << std::fixed << std::setprecision(1)
+                    << microTest.getBeta();
+        std::string beta_str = beta_stream.str();
+        std::replace(beta_str.begin(), beta_str.end(), '.', 'p');
+        std::replace(beta_str.begin(), beta_str.end(), '-',
+                     'n'); // negative sign
+        name << "_beta" << beta_str;
+    }
+
+    auto postops_dlp = microTest.getPostOp(UALType::DLP);
+    auto postops_ref = microTest.getPostOp(UALType::REF);
+
+    std::string postops_desc;
+    if (postops_dlp) {
+        postops_desc = extractPostOpsDescription(postops_dlp);
+    } else if (postops_ref) {
+        postops_desc = extractPostOpsDescription(postops_ref);
+    }
+
+    if (!postops_desc.empty()) {
+        name << postops_desc;
+    }
+
+    // Add config index for uniqueness
     name << "_" << configIndex;
+
     return name.str();
 }
 
