@@ -97,37 +97,44 @@ class UalRef : public IUal
      */
     bool reorder(const Matrix& in, Matrix& out, MatrixType accType) override;
 
-    // Deprecated function
     /**
-     * @brief Perform general matrix multiplication: C = A * B
+     * @brief Perform general matrix multiplication: C = alpha*A*B + beta*C
      *
      * @param A First input matrix
      * @param B Second input matrix
      * @param C Output matrix
      * @param accType Accumulation type
+     * @param alpha Scaling factor for A*B (default: 1.0)
+     * @param beta Scaling factor for C (default: 0.0)
      * @return true on success
      */
     bool gemm(const Matrix& A,
               const Matrix& B,
               Matrix&       C,
-              MatrixType    accType) override;
+              MatrixType    accType,
+              double        alpha = 1.0,
+              double        beta  = 0.0) override;
 
     /**
-     * @brief Perform general matrix multiplication with post-operations: C = A
-     * * B + PostOps
+     * @brief Perform general matrix multiplication with post-operations: C =
+     * alpha*A*B + beta*C + PostOps
      *
      * @param A First input matrix
      * @param B Second input matrix
      * @param C Output matrix
      * @param accType Accumulation type
      * @param postOps Post-operations to apply (nullptr for no post-ops)
+     * @param alpha Scaling factor for A*B (default: 1.0)
+     * @param beta Scaling factor for C (default: 0.0)
      * @return true on success
      */
     bool gemm(const Matrix&                      A,
               const Matrix&                      B,
               Matrix&                            C,
               MatrixType                         accType,
-              const std::shared_ptr<IOperation>& postOps) override;
+              const std::shared_ptr<IOperation>& postOps,
+              double                             alpha = 1.0,
+              double                             beta  = 0.0) override;
 
   private:
     /**

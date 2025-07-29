@@ -41,6 +41,16 @@ set(DLP_RELEASE_FLAGS -O3
                     #   -Werror
 )
 
+set(DLP_COVERAGE_FLAGS -g
+                       -O0
+                       -fprofile-arcs
+                       -ftest-coverage
+                       -fprofile-abs-path
+)
+
+set(DLP_COVERAGE_LINK_FLAGS --coverage
+)
+
 # Function to check support for ZnVer flags (znver1 through znver5)
 # Sets variables:
 #   DLP_ZNVER1_SUPPORTED, DLP_ZNVER2_SUPPORTED, etc. - Whether each flag is supported
@@ -192,6 +202,7 @@ dlp_get_znver_flags("znver4" DLP_ARCH_ZEN4_FLAGS)
 add_library(dlp_compiler_flags INTERFACE)
 add_library(dlp_compiler_flags_release INTERFACE)
 add_library(dlp_compiler_flags_debug INTERFACE)
+add_library(dlp_compiler_flags_coverage INTERFACE)
 
 # Set default compiler flags
 target_compile_options(dlp_compiler_flags INTERFACE ${DLP_GENERIC_FLAGS})
@@ -199,8 +210,26 @@ target_compile_options(dlp_compiler_flags INTERFACE ${DLP_GENERIC_FLAGS})
 # Set release-specific compiler flags
 target_compile_options(dlp_compiler_flags_release INTERFACE ${DLP_RELEASE_FLAGS})
 
+# Set coverage-specific compiler and link flags
+target_compile_options(dlp_compiler_flags_coverage INTERFACE ${DLP_COVERAGE_FLAGS})
+target_link_options(dlp_compiler_flags_coverage INTERFACE ${DLP_COVERAGE_LINK_FLAGS})
+
 # No additional debug-specific flags, but we could add them here
 # target_compile_options(dlp_compiler_flags_debug INTERFACE -g)
+
+# Define Coverage build type with proper CMAKE variables
+string(JOIN " " CMAKE_C_FLAGS_COVERAGE_STRING ${DLP_COVERAGE_FLAGS})
+string(JOIN " " CMAKE_CXX_FLAGS_COVERAGE_STRING ${DLP_COVERAGE_FLAGS})
+string(JOIN " " CMAKE_EXE_LINKER_FLAGS_COVERAGE_STRING ${DLP_COVERAGE_LINK_FLAGS})
+string(JOIN " " CMAKE_SHARED_LINKER_FLAGS_COVERAGE_STRING ${DLP_COVERAGE_LINK_FLAGS})
+
+set(CMAKE_C_FLAGS_COVERAGE "${CMAKE_C_FLAGS_COVERAGE_STRING}" CACHE STRING "C flags for Coverage build type" FORCE)
+set(CMAKE_CXX_FLAGS_COVERAGE "${CMAKE_CXX_FLAGS_COVERAGE_STRING}" CACHE STRING "CXX flags for Coverage build type" FORCE)
+set(CMAKE_EXE_LINKER_FLAGS_COVERAGE "${CMAKE_EXE_LINKER_FLAGS_COVERAGE_STRING}" CACHE STRING "Linker flags for Coverage build type" FORCE)
+set(CMAKE_SHARED_LINKER_FLAGS_COVERAGE "${CMAKE_SHARED_LINKER_FLAGS_COVERAGE_STRING}" CACHE STRING "Shared linker flags for Coverage build type" FORCE)
+
+# Mark Coverage as a valid build type
+set(CMAKE_CONFIGURATION_TYPES "${CMAKE_CONFIGURATION_TYPES};Coverage" CACHE STRING "Available build types" FORCE)
 
 # Function to apply global compiler flags to a target
 # Parameters:
@@ -224,6 +253,7 @@ function(dlp_set_global_compile_flags target)
         $<$<CONFIG:Release>:dlp_compiler_flags_release>
         $<$<CONFIG:RelWithDebInfo>:dlp_compiler_flags_release>
         $<$<CONFIG:Debug>:dlp_compiler_flags_debug>
+        $<$<CONFIG:Coverage>:dlp_compiler_flags_coverage>
     )
 endfunction()
 

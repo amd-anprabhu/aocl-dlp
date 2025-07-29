@@ -26,13 +26,19 @@
  *
  */
 
-#include "aocl_dlp.h"
+// ============================================================================
+// INCLUDES AND DEPENDENCIES
+// ============================================================================
+
 #include "framework/operation.hh"
 #include "framework/ual.hh"
 #include "framework/ual_factory.hh"
 #include "test_config.hh"
+#include "utils/arg_parser.hh"
 #include "utils/yaml_parser.hh"
+
 #include <algorithm>
+#include <filesystem>
 #include <gtest/gtest.h>
 #include <iomanip>
 #include <iostream>
@@ -44,6 +50,19 @@
 using namespace dlp::testing;
 using dlp::testing::IUal;
 using dlp::testing::UalFactory;
+
+// ============================================================================
+// GLOBAL CONFIGURATION VARIABLES
+// ============================================================================
+
+// Global variable to store configurable YAML file path
+// This can be set via command line arguments or defaults to the built-in config
+static std::string g_yaml_config_file = TEST_CONFIG_DIR
+    "/gemm_test_config.yaml";
+
+// ============================================================================
+// CONFIGURATION STRUCTURES AND TYPES
+// ============================================================================
 
 // Configuration structure for YAML-driven tests
 struct GemmTestConfig
@@ -150,6 +169,10 @@ struct GemmTestConfig
     }
 };
 
+// ============================================================================
+// HELPER FUNCTIONS - VALIDATION
+// ============================================================================
+
 bool
 check_valid_params(const GemmTestConfig& config)
 {
@@ -219,6 +242,10 @@ check_valid_params(const GemmTestConfig& config)
 
     return true;
 }
+
+// ============================================================================
+// HELPER FUNCTIONS - PRINTING AND OUTPUT
+// ============================================================================
 
 // Helper function to print detailed configuration parameters
 std::string
@@ -293,6 +320,10 @@ PrintTo(const GemmTestConfig& config, std::ostream* os)
     }
     *os << ")";
 }
+
+// ============================================================================
+// HELPER FUNCTIONS - POSTOPS UTILITIES
+// ============================================================================
 
 // Helper function to extract operation names from PostOps
 std::string
@@ -391,6 +422,10 @@ extractPostOpsDescription(const std::shared_ptr<IOperation>& postops)
     return postops_desc.str();
 }
 
+// ============================================================================
+// HELPER FUNCTIONS - TEST CONFIGURATION GENERATION
+// ============================================================================
+
 // Helper function to generate meaningful test names
 std::string
 generateTestName(const MicroTest& microTest,
@@ -477,6 +512,10 @@ generateTestName(const MicroTest& microTest,
 
     return name.str();
 }
+
+// ============================================================================
+// HELPER FUNCTIONS - CONFIGURATION LOADING
+// ============================================================================
 
 // Function to load test configurations from YAML
 std::vector<GemmTestConfig>
@@ -648,6 +687,10 @@ createAdditionalTestConfigs()
     return configs;
 }
 
+// ============================================================================
+// GLOBAL INITIALIZATION
+// ============================================================================
+
 // Static initialization of test configurations
 // This runs before main() and loads all configurations for parameterized tests
 static std::vector<GemmTestConfig>
@@ -656,8 +699,7 @@ initializeTestConfigurations()
     std::vector<GemmTestConfig> all_configs;
 
     // Load YAML configurations
-    std::string config_file  = TEST_CONFIG_DIR "/gemm_test_config.yaml";
-    auto        yaml_configs = loadTestConfigurations(config_file);
+    auto yaml_configs = loadTestConfigurations(g_yaml_config_file);
 
     // Load programmatic configurations
     auto prog_configs = createAdditionalTestConfigs();
@@ -675,9 +717,18 @@ initializeTestConfigurations()
     return all_configs;
 }
 
-// Global configurations - initialized once at startup
-static const std::vector<GemmTestConfig> g_all_test_configs =
-    initializeTestConfigurations();
+// Function to get test configurations (initialized on first call)
+static const std::vector<GemmTestConfig>&
+getTestConfigurations()
+{
+    static std::vector<GemmTestConfig> all_test_configs =
+        initializeTestConfigurations();
+    return all_test_configs;
+}
+
+// ============================================================================
+// TEST FIXTURE CLASSES
+// ============================================================================
 
 // PARAMETERIZED TEST FIXTURE
 class GemmParameterizedTest : public ::testing::TestWithParam<GemmTestConfig>
@@ -721,7 +772,7 @@ class GemmParameterizedTest : public ::testing::TestWithParam<GemmTestConfig>
                      config_.ldc, false);
 
 // Initialize matrices with deterministic random values
-#if 0
+#if 1
         A.fillRandom(42 + config_.m); // Use configuration to vary seed
         B.fillRandom(43 + config_.n);
         C.fillRandom(44 + config_.k);
@@ -773,14 +824,16 @@ class GemmParameterizedTest : public ::testing::TestWithParam<GemmTestConfig>
         ASSERT_TRUE(ual_dlp != nullptr) << "Failed to create DLP UAL";
 
         bool dlp_result =
-            ual_dlp->gemm(A, B, C, config_.acc_type, config_.postops_dlp);
+            ual_dlp->gemm(A, B, C, config_.acc_type, config_.postops_dlp,
+                          config_.alpha, config_.beta);
 
         // Perform GEMM with reference implementation
         std::unique_ptr<IUal> ual_ref = UalFactory::createUal(UALType::REF);
         ASSERT_TRUE(ual_ref != nullptr) << "Failed to create REF UAL";
 
-        bool ref_result = ual_ref->gemm(A_ref, B_ref, C_ref, config_.acc_type,
-                                        config_.postops_ref);
+        bool ref_result =
+            ual_ref->gemm(A_ref, B_ref, C_ref, config_.acc_type,
+                          config_.postops_ref, config_.alpha, config_.beta);
 
         // Check if parameters are valid
         bool params_valid = check_valid_params(config_);
@@ -820,6 +873,10 @@ class GemmParameterizedTest : public ::testing::TestWithParam<GemmTestConfig>
     GemmTestConfig config_;
 };
 
+// ============================================================================
+// PARAMETERIZED TESTS
+// ============================================================================
+
 // The actual parameterized test - each configuration becomes a separate test
 // case
 TEST_P(GemmParameterizedTest, CompareImplementations)
@@ -831,12 +888,15 @@ TEST_P(GemmParameterizedTest, CompareImplementations)
 INSTANTIATE_TEST_SUITE_P(
     YamlConfigurations,
     GemmParameterizedTest,
-    ::testing::ValuesIn(g_all_test_configs),
+    ::testing::ValuesIn(getTestConfigurations()),
     [](const ::testing::TestParamInfo<GemmTestConfig>& info) {
         return info.param.name;
     });
 
-// ADDITIONAL NON-PARAMETERIZED TESTS
+// ============================================================================
+// BASIC TESTS
+// ============================================================================
+
 // Original basic test - kept as an example
 TEST(GEMMTest, Basic)
 {
@@ -872,6 +932,10 @@ TEST(GEMMTest, Basic)
     EXPECT_EQ(C, C_ref);
 }
 
+// ============================================================================
+// EDGE CASE TESTS
+// ============================================================================
+
 // Separate test for matrix creation edge cases
 TEST(GEMMTest, EdgeCases)
 {
@@ -899,6 +963,10 @@ TEST(GEMMTest, EdgeCases)
     EXPECT_EQ(C_small, C_small_ref);
 }
 
+// ============================================================================
+// DEBUG TESTS
+// ============================================================================
+
 // Test for debugging double-free issue
 TEST(GEMMTest, DebugDoubleFree)
 {
@@ -923,6 +991,10 @@ TEST(GEMMTest, DebugDoubleFree)
 
     // Objects will be destroyed here - this is where double-free might occur
 }
+
+// ============================================================================
+// POSTOPS TESTS
+// ============================================================================
 
 // Test for PostOps integration
 TEST(GEMMTest, PostOpsIntegration)
@@ -1383,4 +1455,59 @@ TEST(GEMMTest, PostOpsUALTypeValidation)
         << "REF UAL with DLP PostOps should fail due to type mismatch";
 
     std::cout << "UAL type validation test completed!" << std::endl;
+}
+
+// ============================================================================
+// MAIN FUNCTION WITH ARGUMENT PARSING
+// ============================================================================
+
+int
+main(int argc, char** argv)
+{
+    // Parse custom arguments before GoogleTest processes them
+    auto parser = dlp::testing::ArgParser::parseTestArgs(argc, argv);
+
+    // Handle help request - show our custom help first, then let GoogleTest
+    // show its help
+    if (parser.helpRequested()) {
+        parser.printUsage(argv[0]);
+        std::cout << "\n" << std::string(60, '=') << std::endl;
+        std::cout << "GoogleTest Help:" << std::endl;
+        std::cout << std::string(60, '=') << std::endl;
+        // Don't return here - let GoogleTest handle --help naturally below
+    }
+
+    // Update global YAML configuration file path if specified
+    std::string yaml_file = parser.getYamlFile();
+    if (!yaml_file.empty()) {
+        g_yaml_config_file = yaml_file;
+        std::cout << "Using YAML configuration file: " << g_yaml_config_file
+                  << std::endl;
+    } else {
+        std::cout << "Using default YAML configuration file: "
+                  << g_yaml_config_file << std::endl;
+    }
+
+    // Check if specified file exists (if custom file was provided)
+    if (parser.getYamlFile().empty() == false
+        && !std::filesystem::exists(g_yaml_config_file)) {
+        std::cerr << "Error: YAML configuration file '" << g_yaml_config_file
+                  << "' does not exist!" << std::endl;
+        std::cerr << "Please check the file path or run with -h for usage "
+                     "information."
+                  << std::endl;
+        return 1;
+    }
+
+    // Initialize GoogleTest with remaining arguments
+    ::testing::InitGoogleTest(&argc, argv);
+
+    // If help was requested, GoogleTest has already shown its help, so we can
+    // exit
+    if (parser.helpRequested()) {
+        return 0;
+    }
+
+    // Run all tests
+    return RUN_ALL_TESTS();
 }

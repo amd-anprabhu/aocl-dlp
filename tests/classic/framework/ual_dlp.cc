@@ -243,10 +243,17 @@ UalDlp::checkValidGemmParams(const Matrix& A, const Matrix& B, const Matrix& C)
  * @param B Second input matrix
  * @param C Output matrix
  * @param accType Accumulation type
+ * @param alpha Scaling factor for A*B
+ * @param beta Scaling factor for C
  * @return bool Success status
  */
 bool
-UalDlp::gemm(const Matrix& A, const Matrix& B, Matrix& C, MatrixType accType)
+UalDlp::gemm(const Matrix& A,
+             const Matrix& B,
+             Matrix&       C,
+             MatrixType    accType,
+             double        alpha,
+             double        beta)
 {
 
     // Validate parameters first
@@ -285,19 +292,23 @@ UalDlp::gemm(const Matrix& A, const Matrix& B, Matrix& C, MatrixType accType)
 
     switch (type) {
         case encode_types<MatrixType::f32, MatrixType::f32, MatrixType::f32,
-                          MatrixType::f32>():
+                          MatrixType::f32>(): {
+            // For f32 operations, alpha/beta are float type
+            float alpha_f32 = static_cast<float>(alpha);
+            float beta_f32  = static_cast<float>(beta);
 
             aocl_gemm_f32f32f32of32(
                 layoutA, transA, transB, A.getEffectiveRows(),
-                B.getEffectiveCols(), A.getEffectiveCols(), 1.0,
+                B.getEffectiveCols(), A.getEffectiveCols(), alpha_f32,
                 reinterpret_cast<float*>(A.getMatrixData().getMatrixPtr()),
                 A.getLeadingDimension(), isAReordered,
                 reinterpret_cast<float*>(B.getMatrixData().getMatrixPtr()),
-                B.getLeadingDimension(), isBReordered, 1.0,
+                B.getLeadingDimension(), isBReordered, beta_f32,
                 reinterpret_cast<float*>(C.getMatrixData().getMatrixPtr()),
                 C.getLeadingDimension(), nullptr);
 
             return true;
+        }
 
         default:
             return false;
@@ -305,14 +316,16 @@ UalDlp::gemm(const Matrix& A, const Matrix& B, Matrix& C, MatrixType accType)
 }
 
 /**
- * @brief Perform general matrix multiplication with post-operations: C = A * B
- * + PostOps
+ * @brief Perform general matrix multiplication with post-operations: C =
+ * alpha*A*B + beta*C + PostOps
  *
  * @param A First input matrix
  * @param B Second input matrix
  * @param C Output matrix
  * @param accType Accumulation type
  * @param postOps Post-operations to apply (nullptr for no post-ops)
+ * @param alpha Scaling factor for A*B
+ * @param beta Scaling factor for C
  * @return bool Success status
  */
 bool
@@ -320,11 +333,13 @@ UalDlp::gemm(const Matrix&                      A,
              const Matrix&                      B,
              Matrix&                            C,
              MatrixType                         accType,
-             const std::shared_ptr<IOperation>& postOps)
+             const std::shared_ptr<IOperation>& postOps,
+             double                             alpha,
+             double                             beta)
 {
     // For now, if no postOps are provided, delegate to the original gemm method
     if (!postOps) {
-        return gemm(A, B, C, accType);
+        return gemm(A, B, C, accType, alpha, beta);
     }
 
     // Validate that the postOps are for DLP backend
@@ -371,19 +386,23 @@ UalDlp::gemm(const Matrix&                      A,
 
     switch (type) {
         case encode_types<MatrixType::f32, MatrixType::f32, MatrixType::f32,
-                          MatrixType::f32>():
+                          MatrixType::f32>(): {
+            // For f32 operations, alpha/beta are float type
+            float alpha_f32 = static_cast<float>(alpha);
+            float beta_f32  = static_cast<float>(beta);
 
             aocl_gemm_f32f32f32of32(
                 layoutA, transA, transB, A.getEffectiveRows(),
-                B.getEffectiveCols(), A.getEffectiveCols(), 1.0,
+                B.getEffectiveCols(), A.getEffectiveCols(), alpha_f32,
                 reinterpret_cast<float*>(A.getMatrixData().getMatrixPtr()),
                 A.getLeadingDimension(), isAReordered,
                 reinterpret_cast<float*>(B.getMatrixData().getMatrixPtr()),
-                B.getLeadingDimension(), isBReordered, 1.0,
+                B.getLeadingDimension(), isBReordered, beta_f32,
                 reinterpret_cast<float*>(C.getMatrixData().getMatrixPtr()),
                 C.getLeadingDimension(), aocl_postops);
 
             return true;
+        }
 
         default:
             return false;

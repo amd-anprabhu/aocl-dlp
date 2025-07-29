@@ -61,4 +61,5 @@ foreach(test_source ${TEST_SOURCES})
         INCLUDE_DIRS ${TEST_INCLUDE_DIRS}
         DEPENDS yaml-cpp
     )
+    dlp_set_global_compile_flags(${test_name} VISIBILITY PUBLIC)
 endforeach()

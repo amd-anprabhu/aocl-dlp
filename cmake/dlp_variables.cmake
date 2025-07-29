@@ -40,7 +40,7 @@ set(PROJECT_VERSION "5.1.0")
 
 # Set default build type to Release if not specified
 if(NOT CMAKE_BUILD_TYPE)
-set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build type" FORCE)
+    set(CMAKE_BUILD_TYPE "Release" CACHE STRING "Build type" FORCE)
 endif()
 
 # Project Dependant Variables

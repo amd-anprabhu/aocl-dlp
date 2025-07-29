@@ -87,41 +87,44 @@ class IUal
      */
     virtual bool reorder(const Matrix& in, Matrix& out, MatrixType accType) = 0;
 
-    // Deprecated function
-    // FIXME: Need alpha and beta propagation, currently omitted due to
-    // datatype issues.
     /**
-     * @brief Perform general matrix multiplication: C = A * B
+     * @brief Perform general matrix multiplication: C = alpha*A*B + beta*C
      *
      * @param A First input matrix
      * @param B Second input matrix
      * @param C Output matrix
      * @param accType Accumulation type
+     * @param alpha Scaling factor for A*B (default: 1.0)
+     * @param beta Scaling factor for C (default: 0.0)
      * @return true on success
      */
     virtual bool gemm(const Matrix& A,
                       const Matrix& B,
                       Matrix&       C,
-                      MatrixType    accType) = 0;
+                      MatrixType    accType,
+                      double        alpha = 1.0,
+                      double        beta  = 0.0) = 0;
 
-    // FIXME: Need alpha and beta propagation, currently omitted due to
-    // datatype issues.
     /**
-     * @brief Perform general matrix multiplication with post-operations: C = A
-     * * B + PostOps
+     * @brief Perform general matrix multiplication with post-operations: C =
+     * alpha*A*B + beta*C + PostOps
      *
      * @param A First input matrix
      * @param B Second input matrix
      * @param C Output matrix
      * @param accType Accumulation type
      * @param postOps Post-operations to apply (nullptr for no post-ops)
+     * @param alpha Scaling factor for A*B (default: 1.0)
+     * @param beta Scaling factor for C (default: 0.0)
      * @return true on success
      */
     virtual bool gemm(const Matrix&                      A,
                       const Matrix&                      B,
                       Matrix&                            C,
                       MatrixType                         accType,
-                      const std::shared_ptr<IOperation>& postOps) = 0;
+                      const std::shared_ptr<IOperation>& postOps,
+                      double                             alpha = 1.0,
+                      double                             beta  = 0.0) = 0;
 
     /**
      * @brief Get string representation of UAL type
