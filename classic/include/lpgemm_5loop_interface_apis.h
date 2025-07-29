@@ -140,4 +140,16 @@ LPGEMV(bfloat16, bfloat16, float, bf16bf16f32of32);
 LPGEMV(uint8_t, int8_t, int32_t, u8s8s32os32);
 LPGEMV(int8_t, int8_t, int32_t, s8s8s32os32);
 
+#define LPGEMV_AVX2(A_type, B_type, C_type, LP_SFX)                            \
+    void lpgemv_rowvar_avx2_##LP_SFX(                                          \
+        const md_t m, const md_t n, const md_t k, const A_type* a,             \
+        const md_t rs_a, const md_t cs_a, const AOCL_MEMORY_TAG mtag_a,        \
+        const B_type* b, const md_t rs_b, const md_t cs_b,                     \
+        const AOCL_MEMORY_TAG mtag_b, C_type* c, const md_t rs_c,              \
+        const md_t cs_c, const C_type alpha, const C_type beta,                \
+        dlp_rntm_t* rntm, lpgemm_thrinfo_t* thread, lpgemm_cntx_t* lcntx,      \
+        lpgemm_post_op* post_op_list, AOCL_STORAGE_TYPE c_downscale)
+
+LPGEMV_AVX2(bfloat16, bfloat16, float, bf16bf16f32of32);
+
 #endif // LPGEMM_5LOOP_INTF_H

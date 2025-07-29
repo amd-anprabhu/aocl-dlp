@@ -84,6 +84,8 @@ lpgemv_m_one_f32f32f32of32_avx2_LT16(const md_t            n0,
     md_t nr0   = n0;
     c_use      = c;
     __m256i k1 = masks[8], k2 = masks[8];
+    // n1, n2 holds the n_elems values.
+    md_t n1 = 0, n2 = 0;
 
     // Declare the registers
     __m256 ymm0, ymm1, ymm2, ymm3, ymm4, ymm5, ymm6, ymm7;
@@ -97,10 +99,14 @@ lpgemv_m_one_f32f32f32of32_avx2_LT16(const md_t            n0,
     md_t n_left = n0 % 8;
     if (nr0 < 8) {
         k1 = masks[n_left];
+        n1 = n_left;
         k2 = masks[0];
+        n2 = 0;
     } else {
         k1 = masks[8];
+        n1 = 8;
         k2 = masks[n_left];
+        n2 = n_left;
     }
 
     _mm_prefetch((c_use + 0 * rs_c), _MM_HINT_T0);
@@ -209,11 +215,16 @@ lpgemv_m_one_f32f32f32of32_avx2_LT16(const md_t            n0,
         // load c and multiply with beta and
         // add to accumulator and store back
         ymm3 = _mm256_set1_ps(beta);
-        ymm0 = _mm256_maskload_ps(_cbuf, k1);
-        ymm8 = _mm256_fmadd_ps(ymm0, ymm3, ymm8);
+        if (post_ops_attr.buf_downscale != NULL) {
+            BF16_F32_C_BNZ_GEMV_MASK(0, ymm0, ymm3, ymm8, n1)
+            BF16_F32_C_BNZ_GEMV_MASK(1, ymm1, ymm3, ymm12, n2)
+        } else {
+            ymm0 = _mm256_maskload_ps(_cbuf, k1);
+            ymm8 = _mm256_fmadd_ps(ymm0, ymm3, ymm8);
 
-        ymm1  = _mm256_maskload_ps(_cbuf + 8, k2);
-        ymm12 = _mm256_fmadd_ps(ymm1, ymm3, ymm12);
+            ymm1  = _mm256_maskload_ps(_cbuf + 8, k2);
+            ymm12 = _mm256_fmadd_ps(ymm1, ymm3, ymm12);
+        }
     }
 
     // Post Ops
@@ -225,8 +236,8 @@ POST_OPS_BIAS_1x16F: {
     if ((*(char*)post_ops_list_temp->op_args2 == 'r')
         || (*(char*)post_ops_list_temp->op_args2 == 'R')) {
         if (post_ops_list_temp->stor_type == BF16) {
-            BF16_F32_BIAS_LOAD_AVX2(ymm0, 0);
-            BF16_F32_BIAS_LOAD_AVX2(ymm1, 1);
+            BF16_F32_BIAS_AVX2_GEMV_MASK(0, ymm0, n1)
+            BF16_F32_BIAS_AVX2_GEMV_MASK(1, ymm1, n2)
         } else {
             ymm0 = _mm256_maskload_ps((float*)post_ops_list_temp->op_args1
                                           + post_ops_attr.post_op_c_j + (0 * 8),
@@ -560,8 +571,8 @@ POST_OPS_1x16F_DISABLE:;
 
     if ((post_ops_attr.buf_downscale != NULL)
         && (post_ops_attr.is_last_k == TRUE)) {
-        STORE_F32_BF16_YMM(ymm8, 0, 0, 8);
-        STORE_F32_BF16_YMM(ymm12, 0, 1, 8);
+        MASK_STORE_F32_BF16_YMM(ymm8, 0, 0, k1);
+        MASK_STORE_F32_BF16_YMM(ymm12, 0, 1, k2);
     } else {
         _mm256_maskstore_ps(c_use, k1, ymm8);
         _mm256_maskstore_ps(c_use + 8, k2, ymm12);

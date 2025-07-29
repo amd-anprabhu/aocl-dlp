@@ -219,7 +219,21 @@ multiply with Beta, and add to alpha*A*B*/
         _mm256_set1_epi32(16));                                                \
     ymm2 = _mm256_fmadd_ps(ymm0, beta, ymm2);
 
-/*Load C from buf_downscale and convert to F32,
+#define BF16_F32_C_BNZ_GEMV_MASK(n_ind, ymm0, beta, ymm2, n_elems)             \
+    {                                                                          \
+        int16_t   data_feeder[8] = { 0 };                                      \
+        bfloat16* post_op_ptr    = (bfloat16*)(post_ops_attr.buf_downscale)    \
+                                + (post_ops_attr.post_op_c_j + (n_ind * 8));   \
+        for (md_t i = 0; i < n_elems; i++)                                     \
+            data_feeder[i] = *(post_op_ptr + i);                               \
+        ymm0 =                                                                 \
+            (__m256)_mm256_sllv_epi32(_mm256_cvtepi16_epi32(_mm_loadu_si128(   \
+                                          (__m128i const*)(data_feeder))),     \
+                                      _mm256_set1_epi32(16));                  \
+        ymm2 = _mm256_fmadd_ps(ymm0, beta, ymm2);                              \
+    }
+
+/*Load C from buf_downscale and convert to F32,                                \
 multiply with Beta, and add to alpha*A*B*/
 #define BF16_F32_C_BNZ_4(m_ind, n_ind, xmm0, beta, xmm2)                       \
     xmm0 = (__m128)_mm_sllv_epi32(                                             \
@@ -667,6 +681,13 @@ multiply with Beta, and add to alpha*A*B*/
             _mm_set1_epi32(16));                                               \
     }
 
+#define BF16_F32_BIAS_LOAD_AVX2_GEMV(scr, n_ind)                               \
+    scr = (__m256)(_mm256_sllv_epi32(                                          \
+        _mm256_cvtepi16_epi32(_mm_loadu_si128(                                 \
+            (__m128i const*)(((bfloat16*)post_ops_list_temp->op_args1)         \
+                             + post_ops_attr.post_op_c_i + (n_ind * 8)))),     \
+        _mm256_set1_epi32(16)));
+
 #define BF16_F32_BIAS_BCAST_LT4BF16_AVX2(scr, m_ind)                           \
     {                                                                          \
         scr = (__m128)_mm_sllv_epi32(                                          \
@@ -676,9 +697,64 @@ multiply with Beta, and add to alpha*A*B*/
             _mm_set1_epi32(16));                                               \
     }
 
+#define BF16_F32_BIAS_AVX2_GEMV_MASK(n_ind, ymm0, n_elems)                     \
+    {                                                                          \
+        int16_t   data_feeder[8] = { 0 };                                      \
+        bfloat16* post_op_ptr    = (bfloat16*)(post_ops_attr.buf_downscale)    \
+                                + post_ops_attr.post_op_c_i                    \
+                                + (post_ops_attr.post_op_c_j + (n_ind * 8));   \
+        for (md_t i = 0; i < n_elems; i++)                                     \
+            data_feeder[i] = *(post_op_ptr + i);                               \
+        ymm0 =                                                                 \
+            (__m256)_mm256_sllv_epi32(_mm256_cvtepi16_epi32(_mm_loadu_si128(   \
+                                          (__m128i const*)(data_feeder))),     \
+                                      _mm256_set1_epi32(16));                  \
+    }
+
+#define BF16_F32_BIAS_BCAST_AVX2_GEMV(scr)                                     \
+    scr = (__m256)(_mm256_sllv_epi32(                                          \
+        _mm256_cvtepi16_epi32(                                                 \
+            _mm_set1_epi16(*((bfloat16*)post_ops_list_temp->op_args1))),       \
+        _mm256_set1_epi32(16)));
+
 #define STORE_F32_BF16_YMM(reg, m_ind, n_ind, n_elems)                         \
     {                                                                          \
         _mm256_storeu_ps((float*)temp, reg);                                   \
+        dest = (bfloat16*)post_ops_attr.buf_downscale                          \
+               + (post_ops_attr.rs_c_downscale                                 \
+                  * (post_ops_attr.post_op_c_i + m_ind))                       \
+               + post_ops_attr.post_op_c_j + (n_ind * 8);                      \
+        for (i = 0; i < n_elems; i++) {                                        \
+            tlsb    = (temp[i] & (uint32_t)0x00010000) > 16;                   \
+            rounded = temp[i] + (uint32_t)0x00007FFF + tlsb;                   \
+            memcpy((dest + i), ((char*)(&rounded)) + 2, sizeof(bfloat16));     \
+        }                                                                      \
+    }
+
+#define STORE_F32_BF16_N_ONE_YMM(temp, m_ele)                                  \
+    {                                                                          \
+        dest = (bfloat16*)post_ops_attr.buf_downscale                          \
+               + (post_ops_attr.rs_c_downscale * (post_ops_attr.post_op_c_i)); \
+        for (i = 0; i < m_ele; i++) {                                          \
+            tlsb    = (temp[i] & (uint32_t)0x00010000) > 16;                   \
+            rounded = temp[i] + (uint32_t)0x00007FFF + tlsb;                   \
+            memcpy((dest + i * rs_c), ((char*)(&rounded)) + 2,                 \
+                   sizeof(bfloat16));                                          \
+        }                                                                      \
+    }
+
+#define MASK_STORE_F32_BF16_YMM(reg, m_ind, n_ind, mask)                       \
+    {                                                                          \
+        uint32_t temp[8] = { 0 };                                              \
+        int32_t  ele[8]  = { 0 };                                              \
+        int      n_elems = 0;                                                  \
+        _mm256_storeu_ps((float*)temp, reg);                                   \
+        _mm256_storeu_si256((__m256i*)ele, mask);                              \
+        for (md_t i = 0; i < 8; i++) {                                         \
+            if (ele[i] == -1) {                                                \
+                n_elems++;                                                     \
+            }                                                                  \
+        }                                                                      \
         dest = (bfloat16*)post_ops_attr.buf_downscale                          \
                + (post_ops_attr.rs_c_downscale                                 \
                   * (post_ops_attr.post_op_c_i + m_ind))                       \
@@ -747,6 +823,12 @@ multiply with Beta, and add to alpha*A*B*/
 
 #define BF16_F32_ZP_VECTOR_LOAD_AVX2_MASK(scr, n_ind, mask)                    \
     BF16_F32_BIAS_LOAD_AVX2_MASK(scr, n_ind, mask)
+
+#define BF16_F32_ZP_VECTOR_LOAD_AVX2_GEMV(scr, n_ind)                          \
+    BF16_F32_BIAS_LOAD_AVX2_GEMV(scr, n_ind)
+
+#define BF16_F32_ZP_VECTOR_AVX2_GEMV_MASK(n_ind, ymm0, n_elems)                \
+    BF16_F32_BIAS_AVX2_GEMV_MASK(n_ind, ymm0, n_elems)
 
 #define BF16_F32_ZP_SCALAR_BCAST_SSE(scr)                                      \
     scr = (__m128)_mm_sllv_epi32(                                              \

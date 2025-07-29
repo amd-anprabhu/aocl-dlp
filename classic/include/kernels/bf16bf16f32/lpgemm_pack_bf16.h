@@ -148,10 +148,11 @@ unpackb_nr64_bf16bf16f32of32(const bfloat16* unpack_b_buffer_bf16bf16f32of32,
 void
 unpackb_nr64_bf16_f32(const bfloat16* b,
                       float*          unpack_b_buffer,
-                      const md_t      NC,
                       const md_t      KC,
+                      const md_t      NC,
                       md_t            rs_b,
-                      md_t            cs_b);
+                      md_t            cs_b,
+                      bool            is_n_one);
 
 void
 cvt_bf16_f32(float*          cvt_buffer,
