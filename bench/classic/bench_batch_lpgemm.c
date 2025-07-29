@@ -1028,6 +1028,7 @@ GEN_GET_BIAS_POST_OP_VAL_f32(bf16bf16f32obf16) GEN_GET_BIAS_POST_OP_VAL_f32(
 
     // ToDo: Alignment issues due to clang formating
     GEN_MAT_MUL_BENCH_MAIN_FUNC(bfloat16,
+                                bfloat16,
                                 float,
                                 float,
                                 bf16bf16f32of32,
