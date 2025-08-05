@@ -53,9 +53,10 @@ class ptrWrapper
 
     ptrWrapper& operator=(ptrWrapper&& other)
     {
-        auto temp = kB;
-        kB        = other.kB;
-        other.kB  = temp;
+        if (this != &other) {
+            kB       = other.kB;
+            other.kB = nullptr;
+        }
         return *this;
     }
 

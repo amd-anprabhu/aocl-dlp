@@ -269,15 +269,13 @@ UalDlp::gemm(const Matrix& A,
 
     char transA = A.isTransposed() ? 't' : 'n';
     char transB = B.isReordered() ? 'n' : (B.isTransposed() ? 't' : 'n');
-    // char transC = C.isTransposed() ? 't' : 'n';
 
     char layoutA = A.getLayout() == MatrixLayout::ROW_MAJOR ? 'r' : 'c';
-    // char layoutB = B.getLayout() == MatrixLayout::ROW_MAJOR ? 'r' : 'c';
-    // char layoutC = C.getLayout() == MatrixLayout::ROW_MAJOR ? 'r' : 'c';
 
-    // Might have 'p' for packed
-    char isAReordered = A.isReordered() ? 'r' : 'n';
-    char isBReordered = B.isReordered() ? 'r' : 'n';
+    // Determine memory format for matrices A and B
+    // Pack takes precedence over reorder since it includes optimization
+    char memFormatA = A.isPacked() ? 'p' : (A.isReordered() ? 'r' : 'n');
+    char memFormatB = B.isPacked() ? 'p' : (B.isReordered() ? 'r' : 'n');
 
     // Validate leading dimensions
     if (C.getLayout() == MatrixLayout::ROW_MAJOR) {
@@ -301,9 +299,9 @@ UalDlp::gemm(const Matrix& A,
                 layoutA, transA, transB, A.getEffectiveRows(),
                 B.getEffectiveCols(), A.getEffectiveCols(), alpha_f32,
                 reinterpret_cast<float*>(A.getMatrixData().getMatrixPtr()),
-                A.getLeadingDimension(), isAReordered,
+                A.getLeadingDimension(), memFormatA,
                 reinterpret_cast<float*>(B.getMatrixData().getMatrixPtr()),
-                B.getLeadingDimension(), isBReordered, beta_f32,
+                B.getLeadingDimension(), memFormatB, beta_f32,
                 reinterpret_cast<float*>(C.getMatrixData().getMatrixPtr()),
                 C.getLeadingDimension(), nullptr);
 
@@ -370,8 +368,10 @@ UalDlp::gemm(const Matrix&                      A,
 
     char layoutA = A.getLayout() == MatrixLayout::ROW_MAJOR ? 'r' : 'c';
 
-    char isAReordered = A.isReordered() ? 'r' : 'n';
-    char isBReordered = B.isReordered() ? 'r' : 'n';
+    // Determine memory format for matrices A and B
+    // Pack takes precedence over reorder since it includes optimization
+    char memFormatA = A.isPacked() ? 'p' : (A.isReordered() ? 'r' : 'n');
+    char memFormatB = B.isPacked() ? 'p' : (B.isReordered() ? 'r' : 'n');
 
     // Validate leading dimensions
     if (C.getLayout() == MatrixLayout::ROW_MAJOR) {
@@ -395,9 +395,9 @@ UalDlp::gemm(const Matrix&                      A,
                 layoutA, transA, transB, A.getEffectiveRows(),
                 B.getEffectiveCols(), A.getEffectiveCols(), alpha_f32,
                 reinterpret_cast<float*>(A.getMatrixData().getMatrixPtr()),
-                A.getLeadingDimension(), isAReordered,
+                A.getLeadingDimension(), memFormatA,
                 reinterpret_cast<float*>(B.getMatrixData().getMatrixPtr()),
-                B.getLeadingDimension(), isBReordered, beta_f32,
+                B.getLeadingDimension(), memFormatB, beta_f32,
                 reinterpret_cast<float*>(C.getMatrixData().getMatrixPtr()),
                 C.getLeadingDimension(), aocl_postops);
 

@@ -323,21 +323,14 @@ namespace dlp { namespace testing { namespace utils {
                                     ? get_value<bool>(node["transB"])
                                     : ValueIterable<bool>(false).begin();
 
-            // New MatrixTag-based parsing - replaces
-            // reorderA/reorderB/packA/packB
-            iterators.reorder_a =
+            // New MatrixTag-based parsing
+            // Simplified design: single MatrixTag per matrix
+            // Both reorder and pack getters check the same MatrixTag value
+            iterators.mtag_a =
                 node["mtagA"]
                     ? get_value<MatrixTag>(node["mtagA"])
                     : ValueIterable<MatrixTag>(MatrixTag::NONE).begin();
-            iterators.reorder_b =
-                node["mtagB"]
-                    ? get_value<MatrixTag>(node["mtagB"])
-                    : ValueIterable<MatrixTag>(MatrixTag::NONE).begin();
-            iterators.pack_a =
-                node["mtagA"]
-                    ? get_value<MatrixTag>(node["mtagA"])
-                    : ValueIterable<MatrixTag>(MatrixTag::NONE).begin();
-            iterators.pack_b =
+            iterators.mtag_b =
                 node["mtagB"]
                     ? get_value<MatrixTag>(node["mtagB"])
                     : ValueIterable<MatrixTag>(MatrixTag::NONE).begin();

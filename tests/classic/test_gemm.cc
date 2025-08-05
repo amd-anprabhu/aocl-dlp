@@ -321,6 +321,45 @@ PrintTo(const GemmTestConfig& config, std::ostream* os)
     *os << ")";
 }
 
+// Custom Google Test printer for Matrix class to show actual values instead of
+// memory dumps
+void
+PrintTo(const Matrix& matrix, std::ostream* os)
+{
+    *os << "Matrix(" << matrix.getRows() << "x" << matrix.getCols()
+        << ", type=" << matrix.getMatrixType()
+        << ", layout=" << matrix.getLayout()
+        << ", ld=" << matrix.getLeadingDimension();
+
+    if (matrix.isTransposed())
+        *os << ", transposed";
+    if (matrix.isReordered())
+        *os << ", reordered";
+    if (matrix.isPacked())
+        *os << ", packed";
+
+    *os << ")";
+
+    // Show actual matrix values if it's f32 and not too large
+    if (matrix.getMatrixType() == MatrixType::f32 && matrix.getRows() <= 10
+        && matrix.getCols() <= 10) {
+
+        const float* data = reinterpret_cast<const float*>(matrix.getData());
+        *os << "\nValues:\n";
+
+        for (md_t i = 0; i < matrix.getRows(); ++i) {
+            for (md_t j = 0; j < matrix.getCols(); ++j) {
+                size_t index = i * matrix.getLeadingDimension() + j;
+                *os << std::fixed << std::setprecision(6) << data[index]
+                    << "\t";
+            }
+            *os << "\n";
+        }
+    } else {
+        *os << " [values not shown - too large or not f32]";
+    }
+}
+
 // ============================================================================
 // HELPER FUNCTIONS - POSTOPS UTILITIES
 // ============================================================================
@@ -749,7 +788,7 @@ class GemmParameterizedTest : public ::testing::TestWithParam<GemmTestConfig>
     // Helper method to run the actual GEMM test
     void RunGemmTest()
     {
-        // Create matrices based on configuration
+        // Create test matrices
         MatrixLayout layout = config_.storage_format;
 
         // Determine effective dimensions considering transposition
@@ -779,6 +818,11 @@ class GemmParameterizedTest : public ::testing::TestWithParam<GemmTestConfig>
         A_ref = A;
         B_ref = B;
         C_ref = C;
+        // Reset packing state for reference matrices since reference
+        // implementation doesn't support packing optimizations
+        A_ref.setPacked(false);
+        B_ref.setPacked(false);
+        C_ref.setPacked(false);
 #else
         A.fillValue(0.5f);
         B.fillValue(0.2f);
@@ -790,6 +834,8 @@ class GemmParameterizedTest : public ::testing::TestWithParam<GemmTestConfig>
 
         // Make a copy of C for reference computation
         C_ref = C;
+        // Reset packing state after all matrix copies
+        C_ref.setPacked(false);
 
         // TODO: The current UAL interface doesn't support alpha/beta parameters
         // Future enhancement: Add alpha/beta support to the GEMM interface
@@ -819,6 +865,23 @@ class GemmParameterizedTest : public ::testing::TestWithParam<GemmTestConfig>
             ual_ref_for_reorder->reorder(B_ref, B_ref_reordered,
                                          config_.acc_type);
             B_ref = B_ref_reordered;
+            // Reset packing state after reordering assignment
+            B_ref.setPacked(false);
+        }
+
+        // Apply packing if specified
+        // Note: Pack parameters are DLP optimization and are handled
+        // via mem_format parameters in the DLP GEMM call.
+        // Reference implementation ignores pack parameters completely as
+        // pack is an on-the-fly optimization that doesn't change mathematical
+        // results.
+        if (config_.packA) {
+            A.setPacked(true);
+            // Reference implementation: pack is no-op, A_ref remains unchanged
+        }
+        if (config_.packB) {
+            B.setPacked(true);
+            // Reference implementation: pack is no-op, B_ref remains unchanged
         }
 
         ASSERT_TRUE(ual_dlp != nullptr) << "Failed to create DLP UAL";
@@ -849,6 +912,10 @@ class GemmParameterizedTest : public ::testing::TestWithParam<GemmTestConfig>
 
             // And produce the same results
             C.setK(config_.k);
+            // Ensure both result matrices have the same packing state for
+            // comparison Since packing is an optimization hint that shouldn't
+            // affect results
+            C_ref.setPacked(C.isPacked());
             EXPECT_EQ(C, C_ref) << "DLP and Reference results should match for "
                                    "valid parameters:"
                                 << printConfigDetails(config_);

@@ -196,6 +196,13 @@ namespace dlp { namespace testing { namespace framework {
         bool isReordered() const;
 
         /**
+         * @brief Check if the matrix is packed
+         *
+         * @return bool True if the matrix is packed, false otherwise
+         */
+        bool isPacked() const;
+
+        /**
          * @brief Get the leading dimension of the matrix
          *
          * The leading dimension is the stride between consecutive rows (for
@@ -248,6 +255,13 @@ namespace dlp { namespace testing { namespace framework {
          * @param reordered Whether the matrix is reordered
          */
         void setReordered(bool reordered);
+
+        /**
+         * @brief Set the packing flag
+         *
+         * @param packed Whether the matrix is packed
+         */
+        void setPacked(bool packed);
 
         /**
          * @brief Set the k dimension for tolerance calculation
@@ -556,6 +570,7 @@ namespace dlp { namespace testing { namespace framework {
         md_t         m_leadingDim;    ///< Leading dimension (stride)
         bool m_transposed; ///< Whether the matrix is logically transposed
         bool m_reordered;  ///< Whether the matrix is reordered
+        bool m_packed;     ///< Whether the matrix is packed
     };
 
     // Template specializations for default type mapping (must be outside class)

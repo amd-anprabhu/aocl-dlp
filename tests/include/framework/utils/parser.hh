@@ -91,10 +91,8 @@ struct TestCaseIterators
     TypeErasedIterator beta;    ///< Iterator for scaling factor beta (double)
     TypeErasedIterator trans_a; ///< Iterator for transpose flag of A (bool)
     TypeErasedIterator trans_b; ///< Iterator for transpose flag of B (bool)
-    TypeErasedIterator reorder_a; ///< Iterator for matrix tag of A (MatrixTag)
-    TypeErasedIterator reorder_b; ///< Iterator for matrix tag of B (MatrixTag)
-    TypeErasedIterator pack_a;    ///< Iterator for matrix tag of A (MatrixTag)
-    TypeErasedIterator pack_b;    ///< Iterator for matrix tag of B (MatrixTag)
+    TypeErasedIterator mtag_a;  ///< Iterator for matrix tag of A (MatrixTag)
+    TypeErasedIterator mtag_b;  ///< Iterator for matrix tag of B (MatrixTag)
 
     /**
      * @brief Default constructor - creates default-constructed
@@ -193,7 +191,8 @@ class MicroTest
         m_test_case_iterators = test_case_iterators;
 
         // Build the iterators vector
-        m_iterators.reserve(19); // Pre-allocate for efficiency
+        m_iterators.reserve(
+            17); // Pre-allocate for efficiency (reduced from 19)
         m_iterators.push_back(m_test_case_iterators.a_type);
         m_iterators.push_back(m_test_case_iterators.b_type);
         m_iterators.push_back(m_test_case_iterators.c_type);
@@ -209,10 +208,8 @@ class MicroTest
         m_iterators.push_back(m_test_case_iterators.beta);
         m_iterators.push_back(m_test_case_iterators.trans_a);
         m_iterators.push_back(m_test_case_iterators.trans_b);
-        m_iterators.push_back(m_test_case_iterators.reorder_a);
-        m_iterators.push_back(m_test_case_iterators.reorder_b);
-        m_iterators.push_back(m_test_case_iterators.pack_a);
-        m_iterators.push_back(m_test_case_iterators.pack_b);
+        m_iterators.push_back(m_test_case_iterators.mtag_a);
+        m_iterators.push_back(m_test_case_iterators.mtag_b);
 
         // Initialize the appropriate product
         if (is_cartesian_product == YieldType::CARTESIAN_PRODUCT) {
@@ -250,7 +247,8 @@ class MicroTest
         m_test_case_iterators = test_case_iterators;
 
         // Build the iterators vector
-        m_iterators.reserve(19); // Pre-allocate for efficiency
+        m_iterators.reserve(
+            17); // Pre-allocate for efficiency (reduced from 19)
         m_iterators.push_back(m_test_case_iterators.a_type);
         m_iterators.push_back(m_test_case_iterators.b_type);
         m_iterators.push_back(m_test_case_iterators.c_type);
@@ -266,10 +264,8 @@ class MicroTest
         m_iterators.push_back(m_test_case_iterators.beta);
         m_iterators.push_back(m_test_case_iterators.trans_a);
         m_iterators.push_back(m_test_case_iterators.trans_b);
-        m_iterators.push_back(m_test_case_iterators.reorder_a);
-        m_iterators.push_back(m_test_case_iterators.reorder_b);
-        m_iterators.push_back(m_test_case_iterators.pack_a);
-        m_iterators.push_back(m_test_case_iterators.pack_b);
+        m_iterators.push_back(m_test_case_iterators.mtag_a);
+        m_iterators.push_back(m_test_case_iterators.mtag_b);
 
         // Initialize the appropriate product
         if (is_cartesian_product == YieldType::CARTESIAN_PRODUCT) {
@@ -523,7 +519,8 @@ class MicroTest
     bool getReorderA() const
     {
         try {
-            auto tag = std::any_cast<MatrixTag>(m_current_mt[15]);
+            auto tag =
+                std::any_cast<MatrixTag>(m_current_mt[15]); // mtag_a index
             return tag == MatrixTag::REORDER;
         } catch (const std::bad_any_cast& e) {
             throw std::runtime_error("Failed to cast ReorderA: "
@@ -539,7 +536,8 @@ class MicroTest
     bool getReorderB() const
     {
         try {
-            auto tag = std::any_cast<MatrixTag>(m_current_mt[16]);
+            auto tag =
+                std::any_cast<MatrixTag>(m_current_mt[16]); // mtag_b index
             return tag == MatrixTag::REORDER;
         } catch (const std::bad_any_cast& e) {
             throw std::runtime_error("Failed to cast ReorderB: "
@@ -555,7 +553,8 @@ class MicroTest
     bool getPackA() const
     {
         try {
-            auto tag = std::any_cast<MatrixTag>(m_current_mt[17]);
+            auto tag = std::any_cast<MatrixTag>(
+                m_current_mt[15]); // mtag_a index (same as reorderA)
             return tag == MatrixTag::PACK;
         } catch (const std::bad_any_cast& e) {
             throw std::runtime_error("Failed to cast PackA: "
@@ -571,7 +570,8 @@ class MicroTest
     bool getPackB() const
     {
         try {
-            auto tag = std::any_cast<MatrixTag>(m_current_mt[18]);
+            auto tag = std::any_cast<MatrixTag>(
+                m_current_mt[16]); // mtag_b index (same as reorderB)
             return tag == MatrixTag::PACK;
         } catch (const std::bad_any_cast& e) {
             throw std::runtime_error("Failed to cast PackB: "
@@ -815,10 +815,13 @@ class MicroTest
      * 12    | beta          | double       | Scaling factor beta
      * 13    | trans_a       | bool         | Transpose flag for A
      * 14    | trans_b       | bool         | Transpose flag for B
-     * 15    | reorder_a     | bool         | Reorder flag for A
-     * 16    | reorder_b     | bool         | Reorder flag for B
-     * 17    | pack_a        | bool         | Packing flag for A
-     * 18    | pack_b        | bool         | Packing flag for B
+     * 15    | mtag_a        | MatrixTag    | Matrix tag for A
+     * (reorder/pack/none) 16    | mtag_b        | MatrixTag    | Matrix tag for
+     * B (reorder/pack/none)
+     *
+     * Note: getReorderA()/getPackA() both check index 15 for different
+     * MatrixTag values getReorderB()/getPackB() both check index 16 for
+     * different MatrixTag values
      *
      * WARNING: This mapping is used by all getter methods. If the order
      * changes, all getXXX() methods must be updated to use the new indices.
@@ -910,8 +913,8 @@ class IParser
  * - Multiple values for m, n, k, lda, ldb, ldc.
  * - Multiple values for alpha, beta.
  * - Multiple values for trans_a, trans_b.
- * - Multiple values for reorder_a, reorder_b.
- * - Multiple values for pack_a, pack_b.
+ * - Multiple values for mtag_a, mtag_b (each providing reorder/pack/none
+ choices).
  *
  *
  * In Elementwise operation all sets should be equal, or only one element

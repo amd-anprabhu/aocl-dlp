@@ -1,6 +1,7 @@
 # Ignore VSCode
 .vscode
 .cache
+.cline_storage
 
 # Python Virtual environment
 venv

@@ -43,22 +43,33 @@ DlpOperation::DlpOperation()
 
 DlpOperation::~DlpOperation()
 {
-    // Clean up manually allocated memory for zero points in SUM operations
-    if (m_postops && m_postops->sum) {
-        for (size_t i = 0; i < m_sum_ops.size(); ++i) {
-            // Check if this is a dynamically allocated zero point
-            // (for SCALE operations where we allocated it ourselves)
-            if (m_postops->sum[i].zero_point
-                && m_postops->sum[i].zero_point_len == 1
-                && m_postops->sum[i].zp_stor_type == AOCL_GEMM_INT8) {
-                // Check if this was allocated by us (no zero point provided
-                // originally)
-                if (i < m_sum_ops.size() && !m_sum_ops[i]->hasZeroPoint()) {
-                    // This was our dynamically allocated zero point
-                    delete static_cast<int8_t*>(m_postops->sum[i].zero_point);
+    if (m_postops) {
+        // Clean up manually allocated memory for zero points in SUM operations
+        if (m_postops->sum) {
+            for (size_t i = 0; i < m_sum_ops.size(); ++i) {
+                // Check if this is a dynamically allocated zero point
+                // (for SCALE operations where we allocated it ourselves)
+                if (m_postops->sum[i].zero_point
+                    && m_postops->sum[i].zero_point_len == 1
+                    && m_postops->sum[i].zp_stor_type == AOCL_GEMM_INT8) {
+                    // Check if this was allocated by us (no zero point provided
+                    // originally)
+                    if (i < m_sum_ops.size() && !m_sum_ops[i]->hasZeroPoint()) {
+                        // This was our dynamically allocated zero point
+                        delete static_cast<int8_t*>(
+                            m_postops->sum[i].zero_point);
+                    }
                 }
             }
         }
+
+        // Clean up all allocated arrays
+        delete[] m_postops->eltwise;
+        delete[] m_postops->sum;
+        delete[] m_postops->bias;
+        delete[] m_postops->matrix_add;
+        delete[] m_postops->matrix_mul;
+        delete[] m_postops->seq_vector;
     }
 }
 

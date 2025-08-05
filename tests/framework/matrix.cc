@@ -64,6 +64,7 @@ namespace dlp { namespace testing { namespace framework {
         , m_leadingDim(0)
         , m_transposed(false)
         , m_reordered(false)
+        , m_packed(false)
     {
     }
 
@@ -91,6 +92,7 @@ namespace dlp { namespace testing { namespace framework {
         , m_layout(layout)
         , m_transposed(transposed)
         , m_reordered(reordered)
+        , m_packed(false)
     {
         // Calculate leading dimension if not specified
         if (leadingDim == 0) {
@@ -129,6 +131,7 @@ namespace dlp { namespace testing { namespace framework {
         , m_layout(layout)
         , m_transposed(transposed)
         , m_reordered(reordered)
+        , m_packed(false)
     {
         // Calculate leading dimension if not specified
         if (leadingDim == 0) {
@@ -158,6 +161,7 @@ namespace dlp { namespace testing { namespace framework {
         , m_leadingDim(other.m_leadingDim)
         , m_transposed(other.m_transposed)
         , m_reordered(other.m_reordered)
+        , m_packed(other.m_packed)
     {
         // Allocate new memory
         m_data = MatrixMemory::allocateBytes(m_dataSizeBytes);
@@ -184,6 +188,7 @@ namespace dlp { namespace testing { namespace framework {
         , m_leadingDim(other.m_leadingDim)
         , m_transposed(other.m_transposed)
         , m_reordered(other.m_reordered)
+        , m_packed(other.m_packed)
     {
         // Reset other matrix
         other.m_rows          = 0;
@@ -192,6 +197,7 @@ namespace dlp { namespace testing { namespace framework {
         other.m_leadingDim    = 0;
         other.m_transposed    = false;
         other.m_reordered     = false;
+        other.m_packed        = false;
     }
 
     /**
@@ -216,6 +222,7 @@ namespace dlp { namespace testing { namespace framework {
         m_leadingDim    = other.m_leadingDim;
         m_transposed    = other.m_transposed;
         m_reordered     = other.m_reordered;
+        m_packed        = other.m_packed;
 
         // Allocate new memory
         m_data = MatrixMemory::allocateBytes(m_dataSizeBytes);
@@ -251,6 +258,7 @@ namespace dlp { namespace testing { namespace framework {
         m_leadingDim    = other.m_leadingDim;
         m_transposed    = other.m_transposed;
         m_reordered     = other.m_reordered;
+        m_packed        = other.m_packed;
 
         // Reset other matrix
         other.m_rows          = 0;
@@ -259,6 +267,7 @@ namespace dlp { namespace testing { namespace framework {
         other.m_leadingDim    = 0;
         other.m_transposed    = false;
         other.m_reordered     = false;
+        other.m_packed        = false;
 
         return *this;
     }
@@ -369,6 +378,22 @@ namespace dlp { namespace testing { namespace framework {
     }
 
     /**
+     * @brief Check if the matrix is packed
+     */
+    bool Matrix::isPacked() const
+    {
+        return m_packed;
+    }
+
+    /**
+     * @brief Set the packing flag
+     */
+    void Matrix::setPacked(bool packed)
+    {
+        m_packed = packed;
+    }
+
+    /**
      * @brief Set the k dimension for tolerance calculation
      */
     void Matrix::setK(md_t k)
@@ -394,7 +419,7 @@ namespace dlp { namespace testing { namespace framework {
             || m_type != other.m_type || m_layout != other.m_layout
             || m_leadingDim != other.m_leadingDim
             || m_transposed != other.m_transposed
-            || m_reordered != other.m_reordered) {
+            || m_reordered != other.m_reordered || m_packed != other.m_packed) {
             return false;
         }
 
