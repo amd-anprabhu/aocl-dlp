@@ -83,27 +83,7 @@ struct GemmTestConfig
     bool                        has_postops;
 
     // Default constructor (required by GoogleTest)
-    GemmTestConfig()
-        : name("default")
-        , m(1)
-        , n(1)
-        , k(1)
-        , lda(1)
-        , ldb(1)
-        , ldc(1)
-        , alpha(1.0)
-        , beta(0.0)
-        , transA(false)
-        , transB(false)
-        , reorderA(false)
-        , reorderB(false)
-        , packA(false)
-        , packB(false)
-        , postops_dlp(nullptr)
-        , postops_ref(nullptr)
-        , has_postops(false)
-    {
-    }
+    GemmTestConfig() = default;
 
     // Constructor for easy initialization
     GemmTestConfig(const std::string&          test_name,
