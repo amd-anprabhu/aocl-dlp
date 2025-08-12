@@ -345,15 +345,15 @@ UalDlp::gemm(const Matrix&                      A,
         return false;
     }
 
-    // Cast to DlpOperation and access the serialized aocl_post_op structure
+    // Cast to DlpOperation and access the serialized dlp_metadata_t structure
     // using friend access
     const auto* dlpOp = dynamic_cast<const DlpOperation*>(postOps.get());
     if (!dlpOp) {
         return false;
     }
 
-    // Get the serialized aocl_post_op structure using friend access
-    aocl_post_op* aocl_postops = dlpOp->toAoclPostOp();
+    // Get the serialized dlp_metadata_t structure using friend access
+    dlp_metadata_t* aocl_postops = dlpOp->toAoclPostOp();
 
     // Validate parameters first
     if (!checkValidGemmParams(A, B, C)) {

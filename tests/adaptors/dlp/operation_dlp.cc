@@ -37,35 +37,39 @@ namespace dlp::testing::classic {
 DlpOperation::DlpOperation()
 {
     m_ual_type = dlp::testing::framework::UALType::DLP;
-    m_postops  = std::make_unique<aocl_post_op>();
-    std::memset(m_postops.get(), 0, sizeof(aocl_post_op));
+    m_postops  = std::make_unique<dlp_metadata_t>();
+    std::memset(m_postops.get(), 0, sizeof(dlp_metadata_t));
 }
 
 DlpOperation::~DlpOperation()
 {
     if (m_postops) {
         // Clean up manually allocated memory for zero points in SUM operations
-        if (m_postops->sum) {
+        if (m_postops->scale) {
             for (size_t i = 0; i < m_sum_ops.size(); ++i) {
                 // Check if this is a dynamically allocated zero point
                 // (for SCALE operations where we allocated it ourselves)
-                if (m_postops->sum[i].zero_point
-                    && m_postops->sum[i].zero_point_len == 1
-                    && m_postops->sum[i].zp_stor_type == AOCL_GEMM_INT8) {
+                if (m_postops->scale[i].zp
+                    && m_postops->scale[i].zp->zero_point_len == 1
+                    && m_postops->scale[i].zp->zero_point_type == DLP_S8) {
                     // Check if this was allocated by us (no zero point provided
                     // originally)
                     if (i < m_sum_ops.size() && !m_sum_ops[i]->hasZeroPoint()) {
                         // This was our dynamically allocated zero point
                         delete static_cast<int8_t*>(
-                            m_postops->sum[i].zero_point);
+                            m_postops->scale[i].zp->zero_point);
                     }
                 }
+
+                // Clean up the dlp_sf_t and dlp_zp_t structures themselves
+                delete m_postops->scale[i].sf;
+                delete m_postops->scale[i].zp;
             }
         }
 
         // Clean up all allocated arrays
         delete[] m_postops->eltwise;
-        delete[] m_postops->sum;
+        delete[] m_postops->scale;
         delete[] m_postops->bias;
         delete[] m_postops->matrix_add;
         delete[] m_postops->matrix_mul;
@@ -197,8 +201,8 @@ DlpOperation::convertElementWiseOperations()
         return;
 
     // Allocate array once with exact size
-    m_postops->eltwise = new aocl_post_op_eltwise[count];
-    std::memset(m_postops->eltwise, 0, count * sizeof(aocl_post_op_eltwise));
+    m_postops->eltwise = new dlp_post_op_eltwise[count];
+    std::memset(m_postops->eltwise, 0, count * sizeof(dlp_post_op_eltwise));
     m_postops->num_eltwise = count;
 
     // Fill the array
@@ -228,54 +232,47 @@ DlpOperation::convertSumOperations()
         return;
 
     // Allocate array once with exact size
-    m_postops->sum = new aocl_post_op_sum[count];
-    std::memset(m_postops->sum, 0, count * sizeof(aocl_post_op_sum));
+    m_postops->scale = new dlp_scale_t[count];
+    std::memset(m_postops->scale, 0, count * sizeof(dlp_scale_t));
 
     // Fill the array
     for (size_t i = 0; i < count; ++i) {
         const auto& param = *m_sum_ops[i];
 
-        m_postops->sum[i].is_power_of_2 = param.getIsPowerOf2();
-
         // Initialize all fields to safe defaults
-        m_postops->sum[i].scale_factor     = nullptr;
-        m_postops->sum[i].scale_factor_len = 0;
-        m_postops->sum[i].sf_stor_type = AOCL_PARAMS_STORAGE_TYPES::NULLTYPE;
-
-        m_postops->sum[i].zero_point     = nullptr;
-        m_postops->sum[i].zero_point_len = 0;
-        m_postops->sum[i].zp_stor_type   = AOCL_PARAMS_STORAGE_TYPES::NULLTYPE;
-
-        m_postops->sum[i].buff = nullptr;
+        m_postops->scale[i].sf = nullptr;
+        m_postops->scale[i].zp = nullptr;
 
         // Set scale factor if provided
         if (param.hasScaleFactor()) {
-            m_postops->sum[i].scale_factor =
+            m_postops->scale[i].sf = new dlp_sf_t;
+            m_postops->scale[i].sf->scale_factor =
                 convertMatrixToPtr(*param.getScaleFactor());
-            m_postops->sum[i].scale_factor_len =
+            m_postops->scale[i].sf->scale_factor_len =
                 param.getScaleFactor()->getCols();
-            // For SCALE operations, we need to set storage types
-            m_postops->sum[i].sf_stor_type =
+            m_postops->scale[i].sf->scale_factor_type =
                 getStorageType(param.getScaleFactor()->getMatrixType());
         }
 
         // Set zero point if provided
         if (param.hasZeroPoint()) {
-            m_postops->sum[i].zero_point =
+            m_postops->scale[i].zp = new dlp_zp_t;
+            m_postops->scale[i].zp->zero_point =
                 convertMatrixToPtr(*param.getZeroPoint());
-            m_postops->sum[i].zero_point_len = param.getZeroPoint()->getCols();
-            // For SCALE operations, we need to set storage types
-            m_postops->sum[i].zp_stor_type =
+            m_postops->scale[i].zp->zero_point_len =
+                param.getZeroPoint()->getCols();
+            m_postops->scale[i].zp->zero_point_type =
                 getStorageType(param.getZeroPoint()->getMatrixType());
         } else {
             // Based on DLP library validation, if we have a scale factor, we
             // need zero point
             if (param.hasScaleFactor()) {
                 // Allocate and set default zero point for SCALE operations
-                int8_t* zero_point_data          = new int8_t(0);
-                m_postops->sum[i].zero_point     = zero_point_data;
-                m_postops->sum[i].zero_point_len = 1;
-                m_postops->sum[i].zp_stor_type   = AOCL_GEMM_INT8;
+                int8_t* zero_point_data                 = new int8_t(0);
+                m_postops->scale[i].zp                  = new dlp_zp_t;
+                m_postops->scale[i].zp->zero_point      = zero_point_data;
+                m_postops->scale[i].zp->zero_point_len  = 1;
+                m_postops->scale[i].zp->zero_point_type = DLP_S8;
             } else {
                 // Regular SUM operations without scale factors need a buffer
                 // (tensor to add) Since we don't have a buffer, this operation
@@ -300,8 +297,8 @@ DlpOperation::convertBiasOperations()
         return;
 
     // Allocate array once with exact size
-    m_postops->bias = new aocl_post_op_bias[count];
-    std::memset(m_postops->bias, 0, count * sizeof(aocl_post_op_bias));
+    m_postops->bias = new dlp_post_op_bias[count];
+    std::memset(m_postops->bias, 0, count * sizeof(dlp_post_op_bias));
 
     // Fill the array
     for (size_t i = 0; i < count; ++i) {
@@ -321,13 +318,16 @@ DlpOperation::convertMatrixAddOperations()
         return;
 
     // Allocate array once with exact size
-    m_postops->matrix_add = new aocl_post_op_matrix_add[count];
+    m_postops->matrix_add = new dlp_post_op_matrix_add[count];
     std::memset(m_postops->matrix_add, 0,
-                count * sizeof(aocl_post_op_matrix_add));
+                count * sizeof(dlp_post_op_matrix_add));
 
     // Fill the array
     for (size_t i = 0; i < count; ++i) {
         const auto& param = *m_matrix_add_ops[i];
+
+        // Initialize sf pointer to null
+        m_postops->matrix_add[i].sf = nullptr;
 
         m_postops->matrix_add[i].matrix = convertMatrixToPtr(param.getMatrix());
         m_postops->matrix_add[i].ldm = param.getMatrix().getLeadingDimension();
@@ -335,10 +335,13 @@ DlpOperation::convertMatrixAddOperations()
             getStorageType(param.getMatrix().getMatrixType());
 
         if (param.hasScaleFactor()) {
-            m_postops->matrix_add[i].scale_factor =
+            m_postops->matrix_add[i].sf = new dlp_sf_t;
+            m_postops->matrix_add[i].sf->scale_factor =
                 convertMatrixToPtr(*param.getScaleFactor());
-            m_postops->matrix_add[i].scale_factor_len =
+            m_postops->matrix_add[i].sf->scale_factor_len =
                 param.getScaleFactor()->getCols();
+            m_postops->matrix_add[i].sf->scale_factor_type =
+                getStorageType(param.getScaleFactor()->getMatrixType());
         }
     }
 }
@@ -351,13 +354,16 @@ DlpOperation::convertMatrixMulOperations()
         return;
 
     // Allocate array once with exact size
-    m_postops->matrix_mul = new aocl_post_op_matrix_mul[count];
+    m_postops->matrix_mul = new dlp_post_op_matrix_mul[count];
     std::memset(m_postops->matrix_mul, 0,
-                count * sizeof(aocl_post_op_matrix_mul));
+                count * sizeof(dlp_post_op_matrix_mul));
 
     // Fill the array
     for (size_t i = 0; i < count; ++i) {
         const auto& param = *m_matrix_mul_ops[i];
+
+        // Initialize sf pointer to null
+        m_postops->matrix_mul[i].sf = nullptr;
 
         m_postops->matrix_mul[i].matrix = convertMatrixToPtr(param.getMatrix());
         m_postops->matrix_mul[i].ldm = param.getMatrix().getLeadingDimension();
@@ -365,10 +371,13 @@ DlpOperation::convertMatrixMulOperations()
             getStorageType(param.getMatrix().getMatrixType());
 
         if (param.hasScaleFactor()) {
-            m_postops->matrix_mul[i].scale_factor =
+            m_postops->matrix_mul[i].sf = new dlp_sf_t;
+            m_postops->matrix_mul[i].sf->scale_factor =
                 convertMatrixToPtr(*param.getScaleFactor());
-            m_postops->matrix_mul[i].scale_factor_len =
+            m_postops->matrix_mul[i].sf->scale_factor_len =
                 param.getScaleFactor()->getCols();
+            m_postops->matrix_mul[i].sf->scale_factor_type =
+                getStorageType(param.getScaleFactor()->getMatrixType());
         }
     }
 }
@@ -377,7 +386,7 @@ void
 DlpOperation::buildSequenceVector()
 {
     // Build sequence vector based on original operation order
-    std::vector<AOCL_POST_OP_TYPE> sequence;
+    std::vector<DLP_POST_OP_TYPE> sequence;
     sequence.reserve(m_operation_params.size());
 
     // Track array indices for each operation type
@@ -425,9 +434,9 @@ DlpOperation::buildSequenceVector()
     // Set sequence information
     m_postops->seq_length = sequence.size();
     if (!sequence.empty()) {
-        m_postops->seq_vector = new AOCL_POST_OP_TYPE[sequence.size()];
+        m_postops->seq_vector = new DLP_POST_OP_TYPE[sequence.size()];
         std::memcpy(m_postops->seq_vector, sequence.data(),
-                    sequence.size() * sizeof(AOCL_POST_OP_TYPE));
+                    sequence.size() * sizeof(DLP_POST_OP_TYPE));
     }
 }
 
@@ -437,26 +446,26 @@ DlpOperation::convertMatrixToPtr(const dlp::testing::framework::Matrix& matrix)
     return matrix.getData();
 }
 
-AOCL_PARAMS_STORAGE_TYPES
+DLP_TYPE
 DlpOperation::getStorageType(dlp::testing::framework::MatrixType type)
 {
     switch (type) {
         case dlp::testing::framework::MatrixType::f32:
-            return AOCL_GEMM_F32;
+            return DLP_F32;
         case dlp::testing::framework::MatrixType::bf16:
-            return AOCL_GEMM_BF16;
+            return DLP_BF16;
         case dlp::testing::framework::MatrixType::s8:
-            return AOCL_GEMM_INT8;
+            return DLP_S8;
         case dlp::testing::framework::MatrixType::u8:
-            return AOCL_GEMM_UINT8;
+            return DLP_U8;
         case dlp::testing::framework::MatrixType::s32:
-            return AOCL_GEMM_INT32;
+            return DLP_S32;
         default:
-            return NULLTYPE;
+            return DLP_INVALID;
     }
 }
 
-AOCL_ELT_ALGO_TYPE
+DLP_ELT_ALGO_TYPE
 DlpOperation::getElementWiseAlgoType(
     dlp::testing::framework::ElementWiseOperation op)
 {
@@ -482,7 +491,7 @@ DlpOperation::getElementWiseAlgoType(
     }
 }
 
-AOCL_POST_OP_TYPE
+DLP_POST_OP_TYPE
 DlpOperation::getPostOpType(dlp::testing::framework::OperationType type)
 {
     switch (type) {

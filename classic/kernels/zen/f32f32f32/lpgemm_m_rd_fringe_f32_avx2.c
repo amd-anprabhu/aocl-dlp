@@ -210,7 +210,7 @@ LPGEMM_M_RD_FRINGE_KERN(float, float, float, f32f32f32of32_2x16_rd)
         if ((*(char*)post_ops_list_temp->op_args2 == 'r')
             || (*(char*)post_ops_list_temp->op_args2 == 'R')) {
 
-            if (post_ops_list_temp->stor_type == BF16) {
+            if (post_ops_list_temp->stor_type == DLP_BF16) {
                 BF16_F32_BIAS_LOAD_4BF16_AVX2(xmm0, 0);
             } else {
                 xmm0 = _mm_loadu_ps((float*)post_ops_list_temp->op_args1
@@ -229,7 +229,7 @@ LPGEMM_M_RD_FRINGE_KERN(float, float, float, f32f32f32of32_2x16_rd)
             // the ic index, and each bias element corresponds to an
             // entire row of the transposed output array, instead of an
             // entire column.
-            if (post_ops_list_temp->stor_type == BF16) {
+            if (post_ops_list_temp->stor_type == DLP_BF16) {
                 BF16_F32_BIAS_BCAST_LT4BF16_AVX2(xmm0, 0);
                 BF16_F32_BIAS_BCAST_LT4BF16_AVX2(xmm1, 1);
             } else {
@@ -316,9 +316,9 @@ LPGEMM_M_RD_FRINGE_KERN(float, float, float, f32f32f32of32_2x16_rd)
         __m128 zero_point0 = _mm_setzero_ps();
         __m128 zero_point1 = _mm_setzero_ps();
 
-        bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                       || ((post_ops_list_temp->stor_type == NONE)
-                           && (post_ops_attr.c_stor_type == BF16));
+        bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                       || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                           && (post_ops_attr.c_stor_type == DLP_BF16));
 
         // Need to account for row vs column major swaps. For scalars
         // scale and zero point, no implications.
@@ -399,9 +399,9 @@ LPGEMM_M_RD_FRINGE_KERN(float, float, float, f32f32f32of32_2x16_rd)
     POST_OPS_MATRIX_ADD_2x16F: {
         md_t ldm = *(md_t*)post_ops_list_temp->op_args3;
 
-        bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                       || ((post_ops_list_temp->stor_type == NONE)
-                           && (post_ops_attr.c_stor_type == BF16));
+        bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                       || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                           && (post_ops_attr.c_stor_type == DLP_BF16));
 
         __m128 scl_fctr1 = _mm_setzero_ps();
         __m128 scl_fctr2 = _mm_setzero_ps();
@@ -469,9 +469,9 @@ LPGEMM_M_RD_FRINGE_KERN(float, float, float, f32f32f32of32_2x16_rd)
     POST_OPS_MATRIX_MUL_2x16F: {
         md_t ldm = *(md_t*)post_ops_list_temp->op_args3;
 
-        bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                       || ((post_ops_list_temp->stor_type == NONE)
-                           && (post_ops_attr.c_stor_type == BF16));
+        bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                       || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                           && (post_ops_attr.c_stor_type == DLP_BF16));
 
         __m128 scl_fctr1 = _mm_setzero_ps();
         __m128 scl_fctr2 = _mm_setzero_ps();
@@ -778,7 +778,7 @@ LPGEMM_M_RD_FRINGE_KERN(float, float, float, f32f32f32of32_1x16_rd)
         if ((*(char*)post_ops_list_temp->op_args2 == 'r')
             || (*(char*)post_ops_list_temp->op_args2 == 'R')) {
 
-            if (post_ops_list_temp->stor_type == BF16) {
+            if (post_ops_list_temp->stor_type == DLP_BF16) {
                 BF16_F32_BIAS_LOAD_4BF16_AVX2(xmm0, 0);
             } else {
                 xmm0 = _mm_loadu_ps((float*)post_ops_list_temp->op_args1
@@ -794,7 +794,7 @@ LPGEMM_M_RD_FRINGE_KERN(float, float, float, f32f32f32of32_1x16_rd)
             // the ic index, and each bias element corresponds to an
             // entire row of the transposed output array, instead of an
             // entire column.
-            if (post_ops_list_temp->stor_type == BF16) {
+            if (post_ops_list_temp->stor_type == DLP_BF16) {
                 BF16_F32_BIAS_BCAST_LT4BF16_AVX2(xmm0, 0);
             } else {
                 xmm0 = _mm_broadcast_ss((float*)post_ops_list_temp->op_args1
@@ -858,9 +858,9 @@ LPGEMM_M_RD_FRINGE_KERN(float, float, float, f32f32f32of32_1x16_rd)
 
         __m128 zero_point0 = _mm_setzero_ps();
 
-        bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                       || ((post_ops_list_temp->stor_type == NONE)
-                           && (post_ops_attr.c_stor_type == BF16));
+        bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                       || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                           && (post_ops_attr.c_stor_type == DLP_BF16));
 
         // Need to account for row vs column major swaps. For scalars
         // scale and zero point, no implications.
@@ -923,9 +923,9 @@ LPGEMM_M_RD_FRINGE_KERN(float, float, float, f32f32f32of32_1x16_rd)
     POST_OPS_MATRIX_ADD_1x16F: {
         md_t ldm = *(md_t*)post_ops_list_temp->op_args3;
 
-        bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                       || ((post_ops_list_temp->stor_type == NONE)
-                           && (post_ops_attr.c_stor_type == BF16));
+        bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                       || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                           && (post_ops_attr.c_stor_type == DLP_BF16));
 
         __m128 scl_fctr1 = _mm_setzero_ps();
 
@@ -975,9 +975,9 @@ LPGEMM_M_RD_FRINGE_KERN(float, float, float, f32f32f32of32_1x16_rd)
     POST_OPS_MATRIX_MUL_1x16F: {
         md_t ldm = *(md_t*)post_ops_list_temp->op_args3;
 
-        bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                       || ((post_ops_list_temp->stor_type == NONE)
-                           && (post_ops_attr.c_stor_type == BF16));
+        bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                       || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                           && (post_ops_attr.c_stor_type == DLP_BF16));
 
         __m128 scl_fctr1 = _mm_setzero_ps();
 
@@ -1254,7 +1254,7 @@ LPGEMM_M_RD_FRINGE_KERN(float, float, float, f32f32f32of32_2x8_rd)
         if ((*(char*)post_ops_list_temp->op_args2 == 'r')
             || (*(char*)post_ops_list_temp->op_args2 == 'R')) {
 
-            if (post_ops_list_temp->stor_type == BF16) {
+            if (post_ops_list_temp->stor_type == DLP_BF16) {
                 BF16_F32_BIAS_LOAD_4BF16_AVX2(xmm0, 0);
             } else {
                 xmm0 = _mm_loadu_ps((float*)post_ops_list_temp->op_args1
@@ -1273,7 +1273,7 @@ LPGEMM_M_RD_FRINGE_KERN(float, float, float, f32f32f32of32_2x8_rd)
             // the ic index, and each bias element corresponds to an
             // entire row of the transposed output array, instead of an
             // entire column.
-            if (post_ops_list_temp->stor_type == BF16) {
+            if (post_ops_list_temp->stor_type == DLP_BF16) {
                 BF16_F32_BIAS_BCAST_LT4BF16_AVX2(xmm0, 0);
                 BF16_F32_BIAS_BCAST_LT4BF16_AVX2(xmm1, 1);
             } else {
@@ -1360,9 +1360,9 @@ LPGEMM_M_RD_FRINGE_KERN(float, float, float, f32f32f32of32_2x8_rd)
         __m128 zero_point0 = _mm_setzero_ps();
         __m128 zero_point1 = _mm_setzero_ps();
 
-        bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                       || ((post_ops_list_temp->stor_type == NONE)
-                           && (post_ops_attr.c_stor_type == BF16));
+        bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                       || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                           && (post_ops_attr.c_stor_type == DLP_BF16));
 
         // Need to account for row vs column major swaps. For scalars
         // scale and zero point, no implications.
@@ -1443,9 +1443,9 @@ LPGEMM_M_RD_FRINGE_KERN(float, float, float, f32f32f32of32_2x8_rd)
     POST_OPS_MATRIX_ADD_2x8F: {
         md_t ldm = *(md_t*)post_ops_list_temp->op_args3;
 
-        bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                       || ((post_ops_list_temp->stor_type == NONE)
-                           && (post_ops_attr.c_stor_type == BF16));
+        bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                       || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                           && (post_ops_attr.c_stor_type == DLP_BF16));
 
         __m128 scl_fctr1 = _mm_setzero_ps();
         __m128 scl_fctr2 = _mm_setzero_ps();
@@ -1513,9 +1513,9 @@ LPGEMM_M_RD_FRINGE_KERN(float, float, float, f32f32f32of32_2x8_rd)
     POST_OPS_MATRIX_MUL_2x8F: {
         md_t ldm = *(md_t*)post_ops_list_temp->op_args3;
 
-        bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                       || ((post_ops_list_temp->stor_type == NONE)
-                           && (post_ops_attr.c_stor_type == BF16));
+        bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                       || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                           && (post_ops_attr.c_stor_type == DLP_BF16));
 
         __m128 scl_fctr1 = _mm_setzero_ps();
         __m128 scl_fctr2 = _mm_setzero_ps();
@@ -1822,7 +1822,7 @@ LPGEMM_M_RD_FRINGE_KERN(float, float, float, f32f32f32of32_1x8_rd)
         if ((*(char*)post_ops_list_temp->op_args2 == 'r')
             || (*(char*)post_ops_list_temp->op_args2 == 'R')) {
 
-            if (post_ops_list_temp->stor_type == BF16) {
+            if (post_ops_list_temp->stor_type == DLP_BF16) {
                 BF16_F32_BIAS_LOAD_4BF16_AVX2(xmm0, 0);
             } else {
                 xmm0 = _mm_loadu_ps((float*)post_ops_list_temp->op_args1
@@ -1838,7 +1838,7 @@ LPGEMM_M_RD_FRINGE_KERN(float, float, float, f32f32f32of32_1x8_rd)
             // the ic index, and each bias element corresponds to an
             // entire row of the transposed output array, instead of an
             // entire column.
-            if (post_ops_list_temp->stor_type == BF16) {
+            if (post_ops_list_temp->stor_type == DLP_BF16) {
                 BF16_F32_BIAS_BCAST_LT4BF16_AVX2(xmm0, 0);
             } else {
                 xmm0 = _mm_broadcast_ss((float*)post_ops_list_temp->op_args1
@@ -1902,9 +1902,9 @@ LPGEMM_M_RD_FRINGE_KERN(float, float, float, f32f32f32of32_1x8_rd)
 
         __m128 zero_point0 = _mm_setzero_ps();
 
-        bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                       || ((post_ops_list_temp->stor_type == NONE)
-                           && (post_ops_attr.c_stor_type == BF16));
+        bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                       || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                           && (post_ops_attr.c_stor_type == DLP_BF16));
 
         // Need to account for row vs column major swaps. For scalars
         // scale and zero point, no implications.
@@ -1967,9 +1967,9 @@ LPGEMM_M_RD_FRINGE_KERN(float, float, float, f32f32f32of32_1x8_rd)
     POST_OPS_MATRIX_ADD_1x8F: {
         md_t ldm = *(md_t*)post_ops_list_temp->op_args3;
 
-        bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                       || ((post_ops_list_temp->stor_type == NONE)
-                           && (post_ops_attr.c_stor_type == BF16));
+        bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                       || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                           && (post_ops_attr.c_stor_type == DLP_BF16));
 
         __m128 scl_fctr1 = _mm_setzero_ps();
 
@@ -2019,9 +2019,9 @@ LPGEMM_M_RD_FRINGE_KERN(float, float, float, f32f32f32of32_1x8_rd)
     POST_OPS_MATRIX_MUL_1x8F: {
         md_t ldm = *(md_t*)post_ops_list_temp->op_args3;
 
-        bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                       || ((post_ops_list_temp->stor_type == NONE)
-                           && (post_ops_attr.c_stor_type == BF16));
+        bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                       || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                           && (post_ops_attr.c_stor_type == DLP_BF16));
 
         __m128 scl_fctr1 = _mm_setzero_ps();
 
@@ -2298,7 +2298,7 @@ LPGEMM_M_RD_FRINGE_KERN(float, float, float, f32f32f32of32_2x4_rd)
         if ((*(char*)post_ops_list_temp->op_args2 == 'r')
             || (*(char*)post_ops_list_temp->op_args2 == 'R')) {
 
-            if (post_ops_list_temp->stor_type == BF16) {
+            if (post_ops_list_temp->stor_type == DLP_BF16) {
                 BF16_F32_BIAS_LOAD_4BF16_AVX2(xmm0, 0);
             } else {
                 xmm0 = _mm_loadu_ps((float*)post_ops_list_temp->op_args1
@@ -2317,7 +2317,7 @@ LPGEMM_M_RD_FRINGE_KERN(float, float, float, f32f32f32of32_2x4_rd)
             // the ic index, and each bias element corresponds to an
             // entire row of the transposed output array, instead of an
             // entire column.
-            if (post_ops_list_temp->stor_type == BF16) {
+            if (post_ops_list_temp->stor_type == DLP_BF16) {
                 BF16_F32_BIAS_BCAST_LT4BF16_AVX2(xmm0, 0);
                 BF16_F32_BIAS_BCAST_LT4BF16_AVX2(xmm1, 1);
             } else {
@@ -2404,9 +2404,9 @@ LPGEMM_M_RD_FRINGE_KERN(float, float, float, f32f32f32of32_2x4_rd)
         __m128 zero_point0 = _mm_setzero_ps();
         __m128 zero_point1 = _mm_setzero_ps();
 
-        bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                       || ((post_ops_list_temp->stor_type == NONE)
-                           && (post_ops_attr.c_stor_type == BF16));
+        bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                       || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                           && (post_ops_attr.c_stor_type == DLP_BF16));
 
         // Need to account for row vs column major swaps. For scalars
         // scale and zero point, no implications.
@@ -2487,9 +2487,9 @@ LPGEMM_M_RD_FRINGE_KERN(float, float, float, f32f32f32of32_2x4_rd)
     POST_OPS_MATRIX_ADD_2x4F: {
         md_t ldm = *(md_t*)post_ops_list_temp->op_args3;
 
-        bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                       || ((post_ops_list_temp->stor_type == NONE)
-                           && (post_ops_attr.c_stor_type == BF16));
+        bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                       || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                           && (post_ops_attr.c_stor_type == DLP_BF16));
 
         __m128 scl_fctr1 = _mm_setzero_ps();
         __m128 scl_fctr2 = _mm_setzero_ps();
@@ -2557,9 +2557,9 @@ LPGEMM_M_RD_FRINGE_KERN(float, float, float, f32f32f32of32_2x4_rd)
     POST_OPS_MATRIX_MUL_2x4F: {
         md_t ldm = *(md_t*)post_ops_list_temp->op_args3;
 
-        bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                       || ((post_ops_list_temp->stor_type == NONE)
-                           && (post_ops_attr.c_stor_type == BF16));
+        bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                       || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                           && (post_ops_attr.c_stor_type == DLP_BF16));
 
         __m128 scl_fctr1 = _mm_setzero_ps();
         __m128 scl_fctr2 = _mm_setzero_ps();
@@ -2866,7 +2866,7 @@ LPGEMM_M_RD_FRINGE_KERN(float, float, float, f32f32f32of32_1x4_rd)
         if ((*(char*)post_ops_list_temp->op_args2 == 'r')
             || (*(char*)post_ops_list_temp->op_args2 == 'R')) {
 
-            if (post_ops_list_temp->stor_type == BF16) {
+            if (post_ops_list_temp->stor_type == DLP_BF16) {
                 BF16_F32_BIAS_LOAD_4BF16_AVX2(xmm0, 0);
             } else {
                 xmm0 = _mm_loadu_ps((float*)post_ops_list_temp->op_args1
@@ -2882,7 +2882,7 @@ LPGEMM_M_RD_FRINGE_KERN(float, float, float, f32f32f32of32_1x4_rd)
             // the ic index, and each bias element corresponds to an
             // entire row of the transposed output array, instead of an
             // entire column.
-            if (post_ops_list_temp->stor_type == BF16) {
+            if (post_ops_list_temp->stor_type == DLP_BF16) {
                 BF16_F32_BIAS_BCAST_LT4BF16_AVX2(xmm0, 0);
             } else {
                 xmm0 = _mm_broadcast_ss((float*)post_ops_list_temp->op_args1
@@ -2946,9 +2946,9 @@ LPGEMM_M_RD_FRINGE_KERN(float, float, float, f32f32f32of32_1x4_rd)
 
         __m128 zero_point0 = _mm_setzero_ps();
 
-        bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                       || ((post_ops_list_temp->stor_type == NONE)
-                           && (post_ops_attr.c_stor_type == BF16));
+        bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                       || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                           && (post_ops_attr.c_stor_type == DLP_BF16));
 
         // Need to account for row vs column major swaps. For scalars
         // scale and zero point, no implications.
@@ -3011,9 +3011,9 @@ LPGEMM_M_RD_FRINGE_KERN(float, float, float, f32f32f32of32_1x4_rd)
     POST_OPS_MATRIX_ADD_1x4F: {
         md_t ldm = *(md_t*)post_ops_list_temp->op_args3;
 
-        bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                       || ((post_ops_list_temp->stor_type == NONE)
-                           && (post_ops_attr.c_stor_type == BF16));
+        bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                       || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                           && (post_ops_attr.c_stor_type == DLP_BF16));
 
         __m128 scl_fctr1 = _mm_setzero_ps();
 
@@ -3063,9 +3063,9 @@ LPGEMM_M_RD_FRINGE_KERN(float, float, float, f32f32f32of32_1x4_rd)
     POST_OPS_MATRIX_MUL_1x4F: {
         md_t ldm = *(md_t*)post_ops_list_temp->op_args3;
 
-        bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                       || ((post_ops_list_temp->stor_type == NONE)
-                           && (post_ops_attr.c_stor_type == BF16));
+        bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                       || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                           && (post_ops_attr.c_stor_type == DLP_BF16));
 
         __m128 scl_fctr1 = _mm_setzero_ps();
 
@@ -3307,7 +3307,7 @@ POST_OPS_BIAS_2x2F: {
     if ((*(char*)post_ops_list_temp->op_args2 == 'r')
         || (*(char*)post_ops_list_temp->op_args2 == 'R')) {
 
-        if (post_ops_list_temp->stor_type == BF16) {
+        if (post_ops_list_temp->stor_type == DLP_BF16) {
             BF16_F32_BIAS_LOAD_4BF16_AVX2(xmm0, 0);
         } else {
             xmm0 = _mm_loadu_ps((float*)post_ops_list_temp->op_args1
@@ -3326,7 +3326,7 @@ POST_OPS_BIAS_2x2F: {
         // the ic index, and each bias element corresponds to an
         // entire row of the transposed output array, instead of an
         // entire column.
-        if (post_ops_list_temp->stor_type == BF16) {
+        if (post_ops_list_temp->stor_type == DLP_BF16) {
             BF16_F32_BIAS_BCAST_LT4BF16_AVX2(xmm0, 0);
             BF16_F32_BIAS_BCAST_LT4BF16_AVX2(xmm1, 1);
         } else {
@@ -3413,9 +3413,9 @@ POST_OPS_DOWNSCALE_2x2F: {
     __m128 zero_point0 = _mm_setzero_ps();
     __m128 zero_point1 = _mm_setzero_ps();
 
-    bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                   || ((post_ops_list_temp->stor_type == NONE)
-                       && (post_ops_attr.c_stor_type == BF16));
+    bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                   || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                       && (post_ops_attr.c_stor_type == DLP_BF16));
 
     // Need to account for row vs column major swaps. For scalars
     // scale and zero point, no implications.
@@ -3487,9 +3487,9 @@ POST_OPS_DOWNSCALE_2x2F: {
 POST_OPS_MATRIX_ADD_2x2F: {
     md_t ldm = *(md_t*)post_ops_list_temp->op_args3;
 
-    bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                   || ((post_ops_list_temp->stor_type == NONE)
-                       && (post_ops_attr.c_stor_type == BF16));
+    bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                   || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                       && (post_ops_attr.c_stor_type == DLP_BF16));
 
     __m128 scl_fctr1 = _mm_setzero_ps();
     __m128 scl_fctr2 = _mm_setzero_ps();
@@ -3552,9 +3552,9 @@ POST_OPS_MATRIX_ADD_2x2F: {
 POST_OPS_MATRIX_MUL_2x2F: {
     md_t ldm = *(md_t*)post_ops_list_temp->op_args3;
 
-    bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                   || ((post_ops_list_temp->stor_type == NONE)
-                       && (post_ops_attr.c_stor_type == BF16));
+    bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                   || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                       && (post_ops_attr.c_stor_type == DLP_BF16));
 
     __m128 scl_fctr1 = _mm_setzero_ps();
     __m128 scl_fctr2 = _mm_setzero_ps();
@@ -3794,7 +3794,7 @@ LPGEMM_M_RD_FRINGE_KERN(float, float, float, f32f32f32of32_1x2_rd)
 POST_OPS_BIAS_1x2F: {
     if ((*(char*)post_ops_list_temp->op_args2 == 'r')
         || (*(char*)post_ops_list_temp->op_args2 == 'R')) {
-        if (post_ops_list_temp->stor_type == BF16) {
+        if (post_ops_list_temp->stor_type == DLP_BF16) {
             BF16_F32_BIAS_LOAD_4BF16_AVX2(xmm0, 0);
         } else {
             xmm0 = _mm_loadu_ps((float*)post_ops_list_temp->op_args1
@@ -3810,7 +3810,7 @@ POST_OPS_BIAS_1x2F: {
         // the ic index, and each bias element corresponds to an
         // entire row of the transposed output array, instead of an
         // entire column.
-        if (post_ops_list_temp->stor_type == BF16) {
+        if (post_ops_list_temp->stor_type == DLP_BF16) {
             BF16_F32_BIAS_BCAST_LT4BF16_AVX2(xmm0, 0);
         } else {
             xmm0 = _mm_broadcast_ss((float*)post_ops_list_temp->op_args1
@@ -3874,9 +3874,9 @@ POST_OPS_DOWNSCALE_1x2F: {
 
     __m128 zero_point0 = _mm_setzero_ps();
 
-    bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                   || ((post_ops_list_temp->stor_type == NONE)
-                       && (post_ops_attr.c_stor_type == BF16));
+    bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                   || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                       && (post_ops_attr.c_stor_type == DLP_BF16));
 
     // Need to account for row vs column major swaps. For scalars
     // scale and zero point, no implications.
@@ -3934,9 +3934,9 @@ POST_OPS_DOWNSCALE_1x2F: {
 POST_OPS_MATRIX_ADD_1x2F: {
     md_t ldm = *(md_t*)post_ops_list_temp->op_args3;
 
-    bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                   || ((post_ops_list_temp->stor_type == NONE)
-                       && (post_ops_attr.c_stor_type == BF16));
+    bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                   || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                       && (post_ops_attr.c_stor_type == DLP_BF16));
 
     __m128 scl_fctr1 = _mm_setzero_ps();
 
@@ -3983,9 +3983,9 @@ POST_OPS_MATRIX_ADD_1x2F: {
 POST_OPS_MATRIX_MUL_1x2F: {
     md_t ldm = *(md_t*)post_ops_list_temp->op_args3;
 
-    bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                   || ((post_ops_list_temp->stor_type == NONE)
-                       && (post_ops_attr.c_stor_type == BF16));
+    bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                   || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                       && (post_ops_attr.c_stor_type == DLP_BF16));
 
     __m128 scl_fctr1 = _mm_setzero_ps();
 
@@ -4204,7 +4204,7 @@ POST_OPS_BIAS_2x1F: {
     if ((*(char*)post_ops_list_temp->op_args2 == 'r')
         || (*(char*)post_ops_list_temp->op_args2 == 'R')) {
 
-        if (post_ops_list_temp->stor_type == BF16) {
+        if (post_ops_list_temp->stor_type == DLP_BF16) {
             BF16_F32_BIAS_LOAD_4BF16_AVX2(xmm0, 0);
         } else {
             xmm0 = _mm_loadu_ps((float*)post_ops_list_temp->op_args1
@@ -4223,7 +4223,7 @@ POST_OPS_BIAS_2x1F: {
         // the ic index, and each bias element corresponds to an
         // entire row of the transposed output array, instead of an
         // entire column.
-        if (post_ops_list_temp->stor_type == BF16) {
+        if (post_ops_list_temp->stor_type == DLP_BF16) {
             BF16_F32_BIAS_BCAST_LT4BF16_AVX2(xmm0, 0);
             BF16_F32_BIAS_BCAST_LT4BF16_AVX2(xmm1, 1);
         } else {
@@ -4310,9 +4310,9 @@ POST_OPS_DOWNSCALE_2x1F: {
     __m128 zero_point0 = _mm_setzero_ps();
     __m128 zero_point1 = _mm_setzero_ps();
 
-    bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                   || ((post_ops_list_temp->stor_type == NONE)
-                       && (post_ops_attr.c_stor_type == BF16));
+    bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                   || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                       && (post_ops_attr.c_stor_type == DLP_BF16));
 
     // Need to account for row vs column major swaps. For scalars
     // scale and zero point, no implications.
@@ -4384,9 +4384,9 @@ POST_OPS_DOWNSCALE_2x1F: {
 POST_OPS_MATRIX_ADD_2x1F: {
     md_t ldm = *(md_t*)post_ops_list_temp->op_args3;
 
-    bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                   || ((post_ops_list_temp->stor_type == NONE)
-                       && (post_ops_attr.c_stor_type == BF16));
+    bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                   || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                       && (post_ops_attr.c_stor_type == DLP_BF16));
 
     __m128 scl_fctr1 = _mm_setzero_ps();
     __m128 scl_fctr2 = _mm_setzero_ps();
@@ -4449,9 +4449,9 @@ POST_OPS_MATRIX_ADD_2x1F: {
 POST_OPS_MATRIX_MUL_2x1F: {
     md_t ldm = *(md_t*)post_ops_list_temp->op_args3;
 
-    bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                   || ((post_ops_list_temp->stor_type == NONE)
-                       && (post_ops_attr.c_stor_type == BF16));
+    bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                   || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                       && (post_ops_attr.c_stor_type == DLP_BF16));
 
     __m128 scl_fctr1 = _mm_setzero_ps();
     __m128 scl_fctr2 = _mm_setzero_ps();
@@ -4682,7 +4682,7 @@ POST_OPS_BIAS_1x1F: {
     if ((*(char*)post_ops_list_temp->op_args2 == 'r')
         || (*(char*)post_ops_list_temp->op_args2 == 'R')) {
 
-        if (post_ops_list_temp->stor_type == BF16) {
+        if (post_ops_list_temp->stor_type == DLP_BF16) {
             BF16_F32_BIAS_LOAD_4BF16_AVX2(xmm0, 0);
         } else {
             xmm0 = _mm_loadu_ps((float*)post_ops_list_temp->op_args1
@@ -4698,7 +4698,7 @@ POST_OPS_BIAS_1x1F: {
         // the ic index, and each bias element corresponds to an
         // entire row of the transposed output array, instead of an
         // entire column.
-        if (post_ops_list_temp->stor_type == BF16) {
+        if (post_ops_list_temp->stor_type == DLP_BF16) {
             BF16_F32_BIAS_BCAST_LT4BF16_AVX2(xmm0, 0);
         } else {
             xmm0 = _mm_broadcast_ss((float*)post_ops_list_temp->op_args1
@@ -4762,9 +4762,9 @@ POST_OPS_DOWNSCALE_1x1F: {
 
     __m128 zero_point0 = _mm_setzero_ps();
 
-    bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                   || ((post_ops_list_temp->stor_type == NONE)
-                       && (post_ops_attr.c_stor_type == BF16));
+    bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                   || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                       && (post_ops_attr.c_stor_type == DLP_BF16));
 
     // Need to account for row vs column major swaps. For scalars
     // scale and zero point, no implications.
@@ -4822,9 +4822,9 @@ POST_OPS_DOWNSCALE_1x1F: {
 POST_OPS_MATRIX_ADD_1x1F: {
     md_t ldm = *(md_t*)post_ops_list_temp->op_args3;
 
-    bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                   || ((post_ops_list_temp->stor_type == NONE)
-                       && (post_ops_attr.c_stor_type == BF16));
+    bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                   || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                       && (post_ops_attr.c_stor_type == DLP_BF16));
 
     __m128 scl_fctr1 = _mm_setzero_ps();
 
@@ -4871,9 +4871,9 @@ POST_OPS_MATRIX_ADD_1x1F: {
 POST_OPS_MATRIX_MUL_1x1F: {
     md_t ldm = *(md_t*)post_ops_list_temp->op_args3;
 
-    bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                   || ((post_ops_list_temp->stor_type == NONE)
-                       && (post_ops_attr.c_stor_type == BF16));
+    bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                   || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                       && (post_ops_attr.c_stor_type == DLP_BF16));
 
     __m128 scl_fctr1 = _mm_setzero_ps();
 

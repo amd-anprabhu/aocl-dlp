@@ -36,17 +36,17 @@
 #include "threading/lpgemm_thread_decor_openmp.h"
 
 DLP_INLINE void
-aocl_eltwise_ops_bf16of32_base(const char        order,
-                               const char        transa,
-                               const char        transb,
-                               const md_t        m,
-                               const md_t        n,
-                               const bfloat16*   a,
-                               const md_t        lda,
-                               float*            b,
-                               const md_t        ldb,
-                               aocl_post_op*     post_op_unparsed,
-                               AOCL_STORAGE_TYPE c_downscale)
+aocl_eltwise_ops_bf16of32_base(const char      order,
+                               const char      transa,
+                               const char      transb,
+                               const md_t      m,
+                               const md_t      n,
+                               const bfloat16* a,
+                               const md_t      lda,
+                               float*          b,
+                               const md_t      ldb,
+                               dlp_metadata_t* metadata,
+                               DLP_TYPE        c_downscale)
 {
     dlp_trans_t dlp_transa;
     dlp_trans_t dlp_transb;
@@ -86,7 +86,7 @@ aocl_eltwise_ops_bf16of32_base(const char        order,
     // Convert post op struct to post op linked list format.
     lpgemm_post_op post_op_list[AOCL_MAX_POST_OPS];
     dlp_clsc_err_t err = lpgemm_translate_to_post_ops_list(
-        post_op_unparsed, post_op_list, NULL, (void*)(&order), m, n);
+        metadata, post_op_list, NULL, (void*)(&order), m, n);
     if (err != DLP_CLSC_SUCCESS)
         return;
 
@@ -116,7 +116,7 @@ AOCL_UTIL_ELTWISE_OPS(bfloat16, float, bf16of32)
                                 b, ldb);
 
     aocl_eltwise_ops_bf16of32_base(order, transa, transb, m, n, a, lda, b, ldb,
-                                   post_op_unparsed, F32);
+                                   metadata, DLP_F32);
 }
 
 AOCL_UTIL_ELTWISE_OPS(bfloat16, bfloat16, bf16obf16)
@@ -134,21 +134,21 @@ AOCL_UTIL_ELTWISE_OPS(bfloat16, bfloat16, bf16obf16)
     // and matrix traversal will happen as bfloat16* type. This typecast
     // is only to ensure code is reused.
     aocl_eltwise_ops_bf16of32_base(order, transa, transb, m, n, a, lda,
-                                   (float*)b, ldb, post_op_unparsed, BF16);
+                                   (float*)b, ldb, metadata, DLP_BF16);
 }
 
 DLP_INLINE void
-aocl_eltwise_ops_f32of32_base(const char        order,
-                              const char        transa,
-                              const char        transb,
-                              const md_t        m,
-                              const md_t        n,
-                              const float*      a,
-                              const md_t        lda,
-                              float*            b,
-                              const md_t        ldb,
-                              aocl_post_op*     post_op_unparsed,
-                              AOCL_STORAGE_TYPE c_downscale)
+aocl_eltwise_ops_f32of32_base(const char      order,
+                              const char      transa,
+                              const char      transb,
+                              const md_t      m,
+                              const md_t      n,
+                              const float*    a,
+                              const md_t      lda,
+                              float*          b,
+                              const md_t      ldb,
+                              dlp_metadata_t* metadata,
+                              DLP_TYPE        c_downscale)
 {
     dlp_trans_t dlp_transa;
     dlp_trans_t dlp_transb;
@@ -188,7 +188,7 @@ aocl_eltwise_ops_f32of32_base(const char        order,
     // Convert post op struct to post op linked list format.
     lpgemm_post_op post_op_list[AOCL_MAX_POST_OPS];
     dlp_clsc_err_t err = lpgemm_translate_to_post_ops_list(
-        post_op_unparsed, post_op_list, NULL, (void*)(&order), m, n);
+        metadata, post_op_list, NULL, (void*)(&order), m, n);
     if (err != DLP_CLSC_SUCCESS)
         return;
 
@@ -218,7 +218,7 @@ AOCL_UTIL_ELTWISE_OPS(float, float, f32of32)
                                 b, ldb);
 
     aocl_eltwise_ops_f32of32_base(order, transa, transb, m, n, a, lda, b, ldb,
-                                  post_op_unparsed, F32);
+                                  metadata, DLP_F32);
 }
 
 AOCL_UTIL_ELTWISE_OPS(float, bfloat16, f32obf16)
@@ -233,7 +233,7 @@ AOCL_UTIL_ELTWISE_OPS(float, bfloat16, f32obf16)
 #endif
 
     aocl_eltwise_ops_f32of32_base(order, transa, transb, m, n, a, lda,
-                                  (float*)b, ldb, post_op_unparsed, BF16);
+                                  (float*)b, ldb, metadata, DLP_BF16);
 }
 
 AOCL_UTIL_ELTWISE_OPS(float, int32_t, f32os32)
@@ -242,7 +242,7 @@ AOCL_UTIL_ELTWISE_OPS(float, int32_t, f32os32)
                                 b, ldb);
 
     aocl_eltwise_ops_f32of32_base(order, transa, transb, m, n, a, lda,
-                                  (float*)b, ldb, post_op_unparsed, S32);
+                                  (float*)b, ldb, metadata, DLP_S32);
 }
 
 AOCL_UTIL_ELTWISE_OPS(float, int8_t, f32os8)
@@ -251,7 +251,7 @@ AOCL_UTIL_ELTWISE_OPS(float, int8_t, f32os8)
                                 b, ldb);
 
     aocl_eltwise_ops_f32of32_base(order, transa, transb, m, n, a, lda,
-                                  (float*)b, ldb, post_op_unparsed, S8);
+                                  (float*)b, ldb, metadata, DLP_S8);
 }
 
 AOCL_UTIL_ELTWISE_OPS(float, uint8_t, f32ou8)
@@ -260,5 +260,5 @@ AOCL_UTIL_ELTWISE_OPS(float, uint8_t, f32ou8)
                                 b, ldb);
 
     aocl_eltwise_ops_f32of32_base(order, transa, transb, m, n, a, lda,
-                                  (float*)b, ldb, post_op_unparsed, U8);
+                                  (float*)b, ldb, metadata, DLP_U8);
 }

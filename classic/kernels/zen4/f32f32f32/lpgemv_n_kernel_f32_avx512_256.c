@@ -489,7 +489,7 @@ LPGEMV_N_EQ1_KERN(float, float, float, f32f32f32of32_avx512_256)
     POST_OPS_BIAS_1x32F: {
         if ((*(char*)post_ops_list_temp->op_args2 == 'r')
             || (*(char*)post_ops_list_temp->op_args2 == 'R')) {
-            if (post_ops_list_temp->stor_type == BF16) {
+            if (post_ops_list_temp->stor_type == DLP_BF16) {
                 BF16_F32_BIAS_BCAST_AVX2_GEMV(ymm0)
                 BF16_F32_BIAS_BCAST_AVX2_GEMV(ymm1)
             } else {
@@ -503,7 +503,7 @@ LPGEMV_N_EQ1_KERN(float, float, float, f32f32f32of32_avx512_256)
             // the ic index, and each bias element corresponds to an
             // entire row of the transposed output array, instead of an
             // entire column.
-            if (post_ops_list_temp->stor_type == BF16) {
+            if (post_ops_list_temp->stor_type == DLP_BF16) {
                 BF16_F32_BIAS_AVX2_GEMV_MASK(0, ymm0, m1)
                 BF16_F32_BIAS_AVX2_GEMV_MASK(1, ymm1, m2)
             } else {
@@ -566,9 +566,9 @@ LPGEMV_N_EQ1_KERN(float, float, float, f32f32f32of32_avx512_256)
         __m256 selector1   = _mm256_setzero_ps();
         __m256 selector2   = _mm256_setzero_ps();
 
-        bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                       || ((post_ops_list_temp->stor_type == NONE)
-                           && (post_ops_attr.c_stor_type == BF16));
+        bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                       || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                           && (post_ops_attr.c_stor_type == DLP_BF16));
 
         // Need to account for row vs column major swaps. For scalars
         // scale and zero point, no implications.
@@ -652,9 +652,9 @@ LPGEMV_N_EQ1_KERN(float, float, float, f32f32f32of32_avx512_256)
         __m256 scl_fctr1 = _mm256_setzero_ps();
         __m256 scl_fctr2 = _mm256_setzero_ps();
 
-        bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                       || ((post_ops_list_temp->stor_type == NONE)
-                           && (post_ops_attr.c_stor_type == BF16));
+        bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                       || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                           && (post_ops_attr.c_stor_type == DLP_BF16));
 
         // Even though different registers are used for scalar in column and
         // row major case, all those registers will contain the same value.
@@ -760,9 +760,9 @@ LPGEMV_N_EQ1_KERN(float, float, float, f32f32f32of32_avx512_256)
         __m256 scl_fctr1 = _mm256_setzero_ps();
         __m256 scl_fctr2 = _mm256_setzero_ps();
 
-        bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                       || ((post_ops_list_temp->stor_type == NONE)
-                           && (post_ops_attr.c_stor_type == BF16));
+        bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                       || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                           && (post_ops_attr.c_stor_type == DLP_BF16));
 
         // Even though different registers are used for scalar in column and
         // row major case, all those registers will contain the same value.

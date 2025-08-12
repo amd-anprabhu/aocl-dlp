@@ -463,7 +463,7 @@ LPGEMM_MAIN_KERN(int8_t, int8_t, int32_t, s8s8s32os32_6x64)
             // to be upscaled to s32 to be used for beta scale.
             if ((post_ops_attr.buf_downscale != NULL)
                 && (post_ops_attr.is_first_k == TRUE)) {
-                if (post_ops_attr.c_stor_type == S8) {
+                if (post_ops_attr.c_stor_type == DLP_S8) {
                     // c[0:0-15,16-31,32-47,48-63]
                     S8_S32_BETA_OP4(ir, 0, selector1, selector2);
 
@@ -481,7 +481,7 @@ LPGEMM_MAIN_KERN(int8_t, int8_t, int32_t, s8s8s32os32_6x64)
 
                     // c[5:0-15,16-31,32-47,48-63]
                     S8_S32_BETA_OP4(ir, 5, selector1, selector2);
-                } else if (post_ops_attr.c_stor_type == U8) {
+                } else if (post_ops_attr.c_stor_type == DLP_U8) {
                     // c[0:0-15,16-31,32-47,48-63]
                     U8_S32_BETA_OP4(ir, 0, selector1, selector2);
 
@@ -499,7 +499,7 @@ LPGEMM_MAIN_KERN(int8_t, int8_t, int32_t, s8s8s32os32_6x64)
 
                     // c[5:0-15,16-31,32-47,48-63]
                     U8_S32_BETA_OP4(ir, 5, selector1, selector2);
-                } else if (post_ops_attr.c_stor_type == BF16) {
+                } else if (post_ops_attr.c_stor_type == DLP_BF16) {
                     // c[0:0-15,16-31,32-47,48-63]
                     BF16_S32_BETA_OP4(ir, 0, selector1, selector2);
 
@@ -517,7 +517,7 @@ LPGEMM_MAIN_KERN(int8_t, int8_t, int32_t, s8s8s32os32_6x64)
 
                     // c[5:0-15,16-31,32-47,48-63]
                     BF16_S32_BETA_OP4(ir, 5, selector1, selector2);
-                } else if (post_ops_attr.c_stor_type == F32) {
+                } else if (post_ops_attr.c_stor_type == DLP_F32) {
                     // c[0:0-15,16-31,32-47,48-63]
                     F32_S32_BETA_OP4(ir, 0, selector1, selector2);
 
@@ -565,27 +565,27 @@ LPGEMM_MAIN_KERN(int8_t, int8_t, int32_t, s8s8s32os32_6x64)
     POST_OPS_BIAS_6x64: {
         __m512    b0, b1, b2, b3;
         __mmask16 bias_mask = _cvtu32_mask16(0xFFFF);
-        if (post_ops_list_temp->stor_type == U8) {
+        if (post_ops_list_temp->stor_type == DLP_U8) {
             U8_F32_BIAS_LOAD(b0, bias_mask, 0);
             U8_F32_BIAS_LOAD(b1, bias_mask, 1);
             U8_F32_BIAS_LOAD(b2, bias_mask, 2);
             U8_F32_BIAS_LOAD(b3, bias_mask, 3);
-        } else if (post_ops_list_temp->stor_type == S8) {
+        } else if (post_ops_list_temp->stor_type == DLP_S8) {
             S8_F32_BIAS_LOAD(b0, bias_mask, 0);
             S8_F32_BIAS_LOAD(b1, bias_mask, 1);
             S8_F32_BIAS_LOAD(b2, bias_mask, 2);
             S8_F32_BIAS_LOAD(b3, bias_mask, 3);
-        } else if (post_ops_list_temp->stor_type == BF16) {
+        } else if (post_ops_list_temp->stor_type == DLP_BF16) {
             BF16_F32_BIAS_LOAD(b0, bias_mask, 0);
             BF16_F32_BIAS_LOAD(b1, bias_mask, 1);
             BF16_F32_BIAS_LOAD(b2, bias_mask, 2);
             BF16_F32_BIAS_LOAD(b3, bias_mask, 3);
-        } else if (post_ops_list_temp->stor_type == S32) {
+        } else if (post_ops_list_temp->stor_type == DLP_S32) {
             S32_F32_BIAS_LOAD(b0, bias_mask, 0);
             S32_F32_BIAS_LOAD(b1, bias_mask, 1);
             S32_F32_BIAS_LOAD(b2, bias_mask, 2);
             S32_F32_BIAS_LOAD(b3, bias_mask, 3);
-        } else /*(stor_type == F32 )*/
+        } else /*(stor_type == DLP_F32 )*/
         {
             b0 = _mm512_loadu_ps((int32_t*)post_ops_list_temp->op_args1
                                  + post_ops_attr.post_op_c_j + (0 * 16));
@@ -752,9 +752,9 @@ LPGEMM_MAIN_KERN(int8_t, int8_t, int32_t, s8s8s32os32_6x64)
         __m512 zero = _mm512_setzero_ps();
         __m512 scale;
 
-        if ((post_ops_attr.c_stor_type == S32)
-            || (post_ops_attr.c_stor_type == U8)
-            || (post_ops_attr.c_stor_type == S8)) {
+        if ((post_ops_attr.c_stor_type == DLP_S32)
+            || (post_ops_attr.c_stor_type == DLP_U8)
+            || (post_ops_attr.c_stor_type == DLP_S8)) {
             scale = _mm512_cvtepi32_ps(
                 _mm512_set1_epi32(*((int32_t*)post_ops_list_temp->op_args2)));
         } else {
@@ -996,8 +996,9 @@ LPGEMM_MAIN_KERN(int8_t, int8_t, int32_t, s8s8s32os32_6x64)
         __m512 min = _mm512_setzero_ps();
         __m512 max = _mm512_setzero_ps();
 
-        if (post_ops_attr.c_stor_type == S32 || post_ops_attr.c_stor_type == U8
-            || post_ops_attr.c_stor_type == S8) {
+        if (post_ops_attr.c_stor_type == DLP_S32
+            || post_ops_attr.c_stor_type == DLP_U8
+            || post_ops_attr.c_stor_type == DLP_S8) {
             min = _mm512_cvtepi32_ps(
                 _mm512_set1_epi32(*(int32_t*)post_ops_list_temp->op_args2));
             max = _mm512_cvtepi32_ps(
@@ -1085,22 +1086,22 @@ LPGEMM_MAIN_KERN(int8_t, int8_t, int32_t, s8s8s32os32_6x64)
         __m512    scale0, scale1, scale2, scale3;
         __mmask16 load_mask = _cvtu32_mask16(0xFFFF);
         if (post_ops_list_temp->scale_factor_len > 1) {
-            if (post_ops_list_temp->sf_stor_type == U8) {
+            if (post_ops_list_temp->sf_stor_type == DLP_U8) {
                 U8_F32_SCALE_LOAD(scale0, load_mask, 0)
                 U8_F32_SCALE_LOAD(scale1, load_mask, 1)
                 U8_F32_SCALE_LOAD(scale2, load_mask, 2)
                 U8_F32_SCALE_LOAD(scale3, load_mask, 3)
-            } else if (post_ops_list_temp->sf_stor_type == S8) {
+            } else if (post_ops_list_temp->sf_stor_type == DLP_S8) {
                 S8_F32_SCALE_LOAD(scale0, load_mask, 0)
                 S8_F32_SCALE_LOAD(scale1, load_mask, 1)
                 S8_F32_SCALE_LOAD(scale2, load_mask, 2)
                 S8_F32_SCALE_LOAD(scale3, load_mask, 3)
-            } else if (post_ops_list_temp->sf_stor_type == S32) {
+            } else if (post_ops_list_temp->sf_stor_type == DLP_S32) {
                 S32_F32_SCALE_LOAD(scale0, load_mask, 0)
                 S32_F32_SCALE_LOAD(scale1, load_mask, 1)
                 S32_F32_SCALE_LOAD(scale2, load_mask, 2)
                 S32_F32_SCALE_LOAD(scale3, load_mask, 3)
-            } else if (post_ops_list_temp->sf_stor_type == BF16) {
+            } else if (post_ops_list_temp->sf_stor_type == DLP_BF16) {
                 BF16_F32_SCALE_LOAD(scale0, load_mask, 0)
                 BF16_F32_SCALE_LOAD(scale1, load_mask, 1)
                 BF16_F32_SCALE_LOAD(scale2, load_mask, 2)
@@ -1121,22 +1122,22 @@ LPGEMM_MAIN_KERN(int8_t, int8_t, int32_t, s8s8s32os32_6x64)
             }
         } else /*if ( post_ops_list_temp->scale_factor_len == 1 )*/
         {
-            if (post_ops_list_temp->sf_stor_type == U8) {
+            if (post_ops_list_temp->sf_stor_type == DLP_U8) {
                 U8_F32_SCALE_BCST(scale0, 0)
                 U8_F32_SCALE_BCST(scale1, 1)
                 U8_F32_SCALE_BCST(scale2, 2)
                 U8_F32_SCALE_BCST(scale3, 3)
-            } else if (post_ops_list_temp->sf_stor_type == S8) {
+            } else if (post_ops_list_temp->sf_stor_type == DLP_S8) {
                 S8_F32_SCALE_BCST(scale0, 0)
                 S8_F32_SCALE_BCST(scale1, 1)
                 S8_F32_SCALE_BCST(scale2, 2)
                 S8_F32_SCALE_BCST(scale3, 3)
-            } else if (post_ops_list_temp->sf_stor_type == S32) {
+            } else if (post_ops_list_temp->sf_stor_type == DLP_S32) {
                 S32_F32_SCALE_BCST(scale0, 0)
                 S32_F32_SCALE_BCST(scale1, 1)
                 S32_F32_SCALE_BCST(scale2, 2)
                 S32_F32_SCALE_BCST(scale3, 3)
-            } else if (post_ops_list_temp->sf_stor_type == BF16) {
+            } else if (post_ops_list_temp->sf_stor_type == DLP_BF16) {
                 BF16_F32_SCALE_BCST(scale0, 0)
                 BF16_F32_SCALE_BCST(scale1, 1)
                 BF16_F32_SCALE_BCST(scale2, 2)
@@ -1160,22 +1161,22 @@ LPGEMM_MAIN_KERN(int8_t, int8_t, int32_t, s8s8s32os32_6x64)
 
         // int8_t zero point value.
         if (*((md_t*)post_ops_list_temp->op_args3) > 1) {
-            if (post_ops_list_temp->zp_stor_type == BF16) {
+            if (post_ops_list_temp->zp_stor_type == DLP_BF16) {
                 BF16_F32_ZP_LOAD(zero_point0, load_mask, 0)
                 BF16_F32_ZP_LOAD(zero_point1, load_mask, 1)
                 BF16_F32_ZP_LOAD(zero_point2, load_mask, 2)
                 BF16_F32_ZP_LOAD(zero_point3, load_mask, 3)
-            } else if (post_ops_list_temp->zp_stor_type == S32) {
+            } else if (post_ops_list_temp->zp_stor_type == DLP_S32) {
                 S32_F32_ZP_LOAD(zero_point0, load_mask, 0)
                 S32_F32_ZP_LOAD(zero_point1, load_mask, 1)
                 S32_F32_ZP_LOAD(zero_point2, load_mask, 2)
                 S32_F32_ZP_LOAD(zero_point3, load_mask, 3)
-            } else if (post_ops_list_temp->zp_stor_type == F32) {
+            } else if (post_ops_list_temp->zp_stor_type == DLP_F32) {
                 F32_ZP_LOAD(zero_point0, load_mask, 0)
                 F32_ZP_LOAD(zero_point1, load_mask, 1)
                 F32_ZP_LOAD(zero_point2, load_mask, 2)
                 F32_ZP_LOAD(zero_point3, load_mask, 3)
-            } else if (post_ops_list_temp->zp_stor_type == U8) {
+            } else if (post_ops_list_temp->zp_stor_type == DLP_U8) {
                 U8_F32_ZP_LOAD(zero_point0, load_mask, 0)
                 U8_F32_ZP_LOAD(zero_point1, load_mask, 1)
                 U8_F32_ZP_LOAD(zero_point2, load_mask, 2)
@@ -1187,22 +1188,22 @@ LPGEMM_MAIN_KERN(int8_t, int8_t, int32_t, s8s8s32os32_6x64)
                 S8_F32_ZP_LOAD(zero_point3, load_mask, 3)
             }
         } else if (*((md_t*)post_ops_list_temp->op_args3) == 1) {
-            if (post_ops_list_temp->zp_stor_type == BF16) {
+            if (post_ops_list_temp->zp_stor_type == DLP_BF16) {
                 BF16_F32_ZP_BCST(zero_point0)
                 BF16_F32_ZP_BCST(zero_point1)
                 BF16_F32_ZP_BCST(zero_point2)
                 BF16_F32_ZP_BCST(zero_point3)
-            } else if (post_ops_list_temp->zp_stor_type == F32) {
+            } else if (post_ops_list_temp->zp_stor_type == DLP_F32) {
                 F32_ZP_BCST(zero_point0)
                 F32_ZP_BCST(zero_point1)
                 F32_ZP_BCST(zero_point2)
                 F32_ZP_BCST(zero_point3)
-            } else if (post_ops_list_temp->zp_stor_type == S32) {
+            } else if (post_ops_list_temp->zp_stor_type == DLP_S32) {
                 S32_F32_ZP_BCST(zero_point0)
                 S32_F32_ZP_BCST(zero_point1)
                 S32_F32_ZP_BCST(zero_point2)
                 S32_F32_ZP_BCST(zero_point3)
-            } else if (post_ops_list_temp->zp_stor_type == U8) {
+            } else if (post_ops_list_temp->zp_stor_type == DLP_U8) {
                 U8_F32_ZP_BCST(zero_point0)
                 U8_F32_ZP_BCST(zero_point1)
                 U8_F32_ZP_BCST(zero_point2)
@@ -1292,12 +1293,12 @@ LPGEMM_MAIN_KERN(int8_t, int8_t, int32_t, s8s8s32os32_6x64)
     POST_OPS_MATRIX_ADD_6x64: {
         md_t ldm = *(md_t*)post_ops_list_temp->op_args3;
 
-        bool is_s8 = (post_ops_list_temp->stor_type == S8)
-                     || ((post_ops_list_temp->stor_type == NONE)
-                         && (post_ops_attr.c_stor_type == S8));
-        bool is_bf16 = (post_ops_list_temp->stor_type == BF16);
-        bool is_f32  = (post_ops_list_temp->stor_type == F32);
-        bool is_u8   = (post_ops_list_temp->stor_type == U8);
+        bool is_s8 = (post_ops_list_temp->stor_type == DLP_S8)
+                     || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                         && (post_ops_attr.c_stor_type == DLP_S8));
+        bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16);
+        bool is_f32  = (post_ops_list_temp->stor_type == DLP_F32);
+        bool is_u8   = (post_ops_list_temp->stor_type == DLP_U8);
 
         __m512 scl_fctr1 = _mm512_setzero_ps();
         __m512 scl_fctr2 = _mm512_setzero_ps();
@@ -1631,12 +1632,12 @@ LPGEMM_MAIN_KERN(int8_t, int8_t, int32_t, s8s8s32os32_6x64)
     POST_OPS_MATRIX_MUL_6x64: {
         md_t ldm = *(md_t*)post_ops_list_temp->op_args3;
 
-        bool is_s8 = (post_ops_list_temp->stor_type == S8)
-                     || ((post_ops_list_temp->stor_type == NONE)
-                         && (post_ops_attr.c_stor_type == S8));
-        bool is_bf16 = (post_ops_list_temp->stor_type == BF16);
-        bool is_f32  = (post_ops_list_temp->stor_type == F32);
-        bool is_u8   = (post_ops_list_temp->stor_type == U8);
+        bool is_s8 = (post_ops_list_temp->stor_type == DLP_S8)
+                     || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                         && (post_ops_attr.c_stor_type == DLP_S8));
+        bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16);
+        bool is_f32  = (post_ops_list_temp->stor_type == DLP_F32);
+        bool is_u8   = (post_ops_list_temp->stor_type == DLP_U8);
 
         __m512 scl_fctr1 = _mm512_setzero_ps();
         __m512 scl_fctr2 = _mm512_setzero_ps();
@@ -1971,9 +1972,9 @@ LPGEMM_MAIN_KERN(int8_t, int8_t, int32_t, s8s8s32os32_6x64)
     POST_OPS_SWISH_6x64: {
         __m512 scale;
 
-        if ((post_ops_attr.c_stor_type == S32)
-            || (post_ops_attr.c_stor_type == U8)
-            || (post_ops_attr.c_stor_type == S8)) {
+        if ((post_ops_attr.c_stor_type == DLP_S32)
+            || (post_ops_attr.c_stor_type == DLP_U8)
+            || (post_ops_attr.c_stor_type == DLP_S8)) {
             scale = _mm512_cvtepi32_ps(
                 _mm512_set1_epi32(*((int32_t*)post_ops_list_temp->op_args2)));
         } else {
@@ -2224,7 +2225,7 @@ LPGEMM_MAIN_KERN(int8_t, int8_t, int32_t, s8s8s32os32_6x64)
             selector2           = _mm512_set1_epi32(10);
             __mmask16 mask_all1 = _mm512_cmplt_epi32_mask(selector1, selector2);
 
-            if (post_ops_attr.c_stor_type == S8) {
+            if (post_ops_attr.c_stor_type == DLP_S8) {
                 // Store the results in downscaled type (int8 instead of int32).
                 // c[0,0-15]
                 CVT_STORE_F32_S8(acc_00, 0, 0);
@@ -2297,7 +2298,7 @@ LPGEMM_MAIN_KERN(int8_t, int8_t, int32_t, s8s8s32os32_6x64)
 
                 // c[5,48-63]
                 CVT_STORE_F32_S8(acc_53, 5, 3);
-            } else if (post_ops_attr.c_stor_type == U8) {
+            } else if (post_ops_attr.c_stor_type == DLP_U8) {
                 // Store the results in downscaled type (int8 instead of int32).
                 // c[0,0-15]
                 CVT_STORE_F32_U8(acc_00, 0, 0);
@@ -2370,7 +2371,7 @@ LPGEMM_MAIN_KERN(int8_t, int8_t, int32_t, s8s8s32os32_6x64)
 
                 // c[5,48-63]
                 CVT_STORE_F32_U8(acc_53, 5, 3);
-            } else if (post_ops_attr.c_stor_type == BF16) {
+            } else if (post_ops_attr.c_stor_type == DLP_BF16) {
                 // Store the results in downscaled type (bfloat16 instead of
                 // int32). c[0,0-15]
                 CVT_STORE_F32_BF16(acc_00, 0, 0);
@@ -2443,7 +2444,7 @@ LPGEMM_MAIN_KERN(int8_t, int8_t, int32_t, s8s8s32os32_6x64)
 
                 // c[5,48-63]
                 CVT_STORE_F32_BF16(acc_53, 5, 3);
-            } else if (post_ops_attr.c_stor_type == F32) {
+            } else if (post_ops_attr.c_stor_type == DLP_F32) {
                 // Store the results in downscaled type (float instead of
                 // int32). c[0,0-15]
                 STORE_F32(acc_00, 0, 0);

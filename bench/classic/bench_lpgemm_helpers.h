@@ -334,11 +334,10 @@ fill_array_post_ops_bfloat16(void* arr, md_t size)
 /* Bias. */
 #define GEN_GET_BIAS_POST_OP_VAL_BF16(BLAS_SFX)                                \
     static inline float get_bias_post_op_val_##BLAS_SFX(                       \
-        void* post_op_bias_ptr, md_t j,                                        \
-        AOCL_PARAMS_STORAGE_TYPES bias_stor_type)                              \
+        void* post_op_bias_ptr, md_t j, DLP_TYPE bias_stor_type)               \
     {                                                                          \
         float ret_val = 0.0;                                                   \
-        if (bias_stor_type == AOCL_GEMM_F32) {                                 \
+        if (bias_stor_type == DLP_F32) {                                       \
             return *((float*)post_op_bias_ptr + j);                            \
         }                                                                      \
         bfloat16_to_float(*((bfloat16*)post_op_bias_ptr + j), &ret_val);       \
@@ -347,11 +346,10 @@ fill_array_post_ops_bfloat16(void* arr, md_t size)
 
 #define GEN_GET_BIAS_POST_OP_VAL_f32(BLAS_SFX)                                 \
     static inline float get_bias_post_op_val_##BLAS_SFX(                       \
-        void* post_op_bias_ptr, md_t j,                                        \
-        AOCL_PARAMS_STORAGE_TYPES bias_stor_type)                              \
+        void* post_op_bias_ptr, md_t j, DLP_TYPE bias_stor_type)               \
     {                                                                          \
         float ret_val = 0.0;                                                   \
-        if (bias_stor_type == AOCL_GEMM_BF16) {                                \
+        if (bias_stor_type == DLP_BF16) {                                      \
             bfloat16_to_float(*((bfloat16*)post_op_bias_ptr + j), &ret_val);   \
             return ret_val;                                                    \
         }                                                                      \
@@ -360,25 +358,24 @@ fill_array_post_ops_bfloat16(void* arr, md_t size)
 
 #define GEN_GET_BIAS_POST_OP_VAL(ACCUM_type, BLAS_SFX)                         \
     static inline ACCUM_type get_bias_post_op_val_##BLAS_SFX(                  \
-        void* post_op_bias_ptr, md_t j,                                        \
-        AOCL_PARAMS_STORAGE_TYPES bias_stor_type)                              \
+        void* post_op_bias_ptr, md_t j, DLP_TYPE bias_stor_type)               \
     {                                                                          \
-        if (bias_stor_type == AOCL_GEMM_BF16) {                                \
+        if (bias_stor_type == DLP_BF16) {                                      \
             float ret_val = 0.0;                                               \
             bfloat16_to_float(*((bfloat16*)post_op_bias_ptr + j), &ret_val);   \
             return ret_val;                                                    \
         }                                                                      \
-        if (bias_stor_type == AOCL_GEMM_INT8) {                                \
+        if (bias_stor_type == DLP_S8) {                                        \
             float ret_val = 0.0;                                               \
             int8_t_to_float(*((int8_t*)post_op_bias_ptr + j), &ret_val);       \
             return ret_val;                                                    \
         }                                                                      \
-        if (bias_stor_type == AOCL_GEMM_UINT8) {                               \
+        if (bias_stor_type == DLP_U8) {                                        \
             float ret_val = 0.0;                                               \
             uint8_t_to_float(*((uint8_t*)post_op_bias_ptr + j), &ret_val);     \
             return ret_val;                                                    \
         }                                                                      \
-        if (bias_stor_type == AOCL_GEMM_INT32) {                               \
+        if (bias_stor_type == DLP_S32) {                                       \
             float ret_val = 0.0;                                               \
             int32_t_to_float(*((int32_t*)post_op_bias_ptr + j), &ret_val);     \
             return ret_val;                                                    \
@@ -452,39 +449,38 @@ fill_array_post_ops_bfloat16(void* arr, md_t size)
 #define GEN_GET_MATRIX_ADD_POST_OP_VAL(ACCUM_type, BLAS_SFX)                   \
     static inline ACCUM_type get_matrix_add_post_op_val_##BLAS_SFX(            \
         void* mat_add_ptr, md_t i, md_t j, md_t rs_m, md_t cs_m,               \
-        float* scl_fctr, md_t scl_fctr_len,                                    \
-        AOCL_PARAMS_STORAGE_TYPES matadd_stor_type)                            \
+        float* scl_fctr, md_t scl_fctr_len, DLP_TYPE matadd_stor_type)         \
     {                                                                          \
         md_t j_scale = j;                                                      \
         if (scl_fctr_len == 1) {                                               \
             j_scale = 0;                                                       \
         }                                                                      \
-        if (matadd_stor_type == AOCL_GEMM_BF16) {                              \
+        if (matadd_stor_type == DLP_BF16) {                                    \
             float    ret_val = 0.0;                                            \
             bfloat16 val =                                                     \
                 *((bfloat16*)mat_add_ptr + (i * rs_m) + (j * cs_m));           \
             bfloat16_to_float(val, &ret_val);                                  \
             return ((float)ret_val * *(scl_fctr + j_scale));                   \
         }                                                                      \
-        if (matadd_stor_type == AOCL_GEMM_INT8) {                              \
+        if (matadd_stor_type == DLP_S8) {                                      \
             float ret_val = 0.0;                                               \
             int8_t_to_float(*((int8_t*)mat_add_ptr + (i * rs_m) + (j * cs_m)), \
                             &ret_val);                                         \
             return ((float)ret_val * *(scl_fctr + j_scale));                   \
         }                                                                      \
-        if (matadd_stor_type == AOCL_GEMM_UINT8) {                             \
+        if (matadd_stor_type == DLP_U8) {                                      \
             float ret_val = 0.0;                                               \
             uint8_t_to_float(                                                  \
                 *((uint8_t*)mat_add_ptr + (i * rs_m) + (j * cs_m)), &ret_val); \
             return ((float)ret_val * *(scl_fctr + j_scale));                   \
         }                                                                      \
-        if (matadd_stor_type == AOCL_GEMM_INT32) {                             \
+        if (matadd_stor_type == DLP_S32) {                                     \
             float ret_val = 0.0;                                               \
             int32_t_to_float(                                                  \
                 *((int32_t*)mat_add_ptr + (i * rs_m) + (j * cs_m)), &ret_val); \
             return ((float)ret_val * *(scl_fctr + j_scale));                   \
         }                                                                      \
-        if (matadd_stor_type == AOCL_GEMM_F32) {                               \
+        if (matadd_stor_type == DLP_F32) {                                     \
             float ret_val = 0.0;                                               \
             ret_val       = *((float*)mat_add_ptr + (i * rs_m) + (j * cs_m));  \
             return ((float)ret_val * *(scl_fctr + j_scale));                   \
@@ -519,8 +515,7 @@ fill_array_post_ops_bfloat16(void* arr, md_t size)
 #define GEN_GET_MATRIX_MUL_POST_OP_VAL_BF16(BLAS_SFX)                          \
     static inline float get_matrix_mul_post_op_val_##BLAS_SFX(                 \
         void* mat_add_ptr, md_t i, md_t j, md_t rs_m, md_t cs_m,               \
-        float* scl_fctr, md_t scl_fctr_len,                                    \
-        AOCL_PARAMS_STORAGE_TYPES matadd_stor_type)                            \
+        float* scl_fctr, md_t scl_fctr_len, DLP_TYPE matadd_stor_type)         \
     {                                                                          \
         return GEN_FUNC_NAME(get_matrix_add_post_op_val_, BLAS_SFX)(           \
             mat_add_ptr, i, j, rs_m, cs_m, scl_fctr, scl_fctr_len,             \
@@ -530,8 +525,7 @@ fill_array_post_ops_bfloat16(void* arr, md_t size)
 #define GEN_GET_MATRIX_MUL_POST_OP_VAL(ACCUM_type, BLAS_SFX)                   \
     static inline ACCUM_type get_matrix_mul_post_op_val_##BLAS_SFX(            \
         void* mat_add_ptr, md_t i, md_t j, md_t rs_m, md_t cs_m,               \
-        float* scl_fctr, md_t scl_fctr_len,                                    \
-        AOCL_PARAMS_STORAGE_TYPES matadd_stor_type)                            \
+        float* scl_fctr, md_t scl_fctr_len, DLP_TYPE matadd_stor_type)         \
     {                                                                          \
         return GEN_FUNC_NAME(get_matrix_add_post_op_val_, BLAS_SFX)(           \
             mat_add_ptr, i, j, rs_m, cs_m, scl_fctr, scl_fctr_len,             \
@@ -607,83 +601,89 @@ min(int a, int b)
 #endif
 
 static inline void
-lpgemm_destroy_post_ops_struct(aocl_post_op* post_ops)
+lpgemm_destroy_post_ops_struct(dlp_metadata_t* metadata)
 {
-    if (post_ops == NULL) {
+    if (metadata == NULL) {
         return;
     }
 
-    if (post_ops->eltwise != NULL) {
-        md_t num_eltwise = post_ops->num_eltwise;
+    if (metadata->eltwise != NULL) {
+        md_t num_eltwise = metadata->num_eltwise;
         for (md_t i = 0; i < num_eltwise; ++i) {
-            free((post_ops->eltwise + i)->algo.alpha);
-            free((post_ops->eltwise + i)->algo.beta);
+            free((metadata->eltwise + i)->algo.alpha);
+            free((metadata->eltwise + i)->algo.beta);
         }
     }
 
-    if (post_ops->matrix_add != NULL) {
-        free((post_ops->matrix_add)->matrix);
-        free((post_ops->matrix_add)->scale_factor);
-    }
-
-    if (post_ops->sum != NULL) {
-        free((post_ops->sum)->scale_factor);
-        free((post_ops->sum)->zero_point);
-    }
-
-    if (post_ops->matrix_mul != NULL) {
-        free((post_ops->matrix_mul)->matrix);
-        free((post_ops->matrix_mul)->scale_factor);
-    }
-
-    if (post_ops->bias != NULL) {
-        free((post_ops->bias)->bias);
-    }
-
-    if (post_ops->pre_ops != NULL) {
-        if ((post_ops->pre_ops)->b_zp != NULL) {
-            free(((post_ops->pre_ops)->b_zp)->zero_point);
-            free((post_ops->pre_ops)->b_zp);
-        }
-        if ((post_ops->pre_ops)->b_scl != NULL) {
-            free(((post_ops->pre_ops)->b_scl)->scale_factor);
-            free((post_ops->pre_ops)->b_scl);
+    if (metadata->matrix_add != NULL) {
+        free((metadata->matrix_add)->matrix);
+        if ((metadata->matrix_add)->sf != NULL) {
+            free((metadata->matrix_add)->sf->scale_factor);
+            free((metadata->matrix_add)->sf);
         }
     }
 
-    if ((post_ops->post_op_grp != NULL)) {
-        if ((post_ops->post_op_grp)->a_scl != NULL) {
-            free(((post_ops->post_op_grp)->a_scl)->scale_factor);
-            free((post_ops->post_op_grp)->a_scl);
+    if (metadata->scale != NULL) {
+        free((metadata->scale)->sf);
+        free((metadata->scale)->zp);
+    }
+
+    if (metadata->matrix_mul != NULL) {
+        free((metadata->matrix_mul)->matrix);
+        if ((metadata->matrix_mul)->sf != NULL) {
+            free((metadata->matrix_mul)->sf->scale_factor);
+            free((metadata->matrix_mul)->sf);
+        }
+    }
+
+    if (metadata->bias != NULL) {
+        free((metadata->bias)->bias);
+    }
+
+    if (metadata->pre_ops != NULL) {
+        if ((metadata->pre_ops)->b_zp != NULL) {
+            free(((metadata->pre_ops)->b_zp)->zero_point);
+            free((metadata->pre_ops)->b_zp);
+        }
+        if ((metadata->pre_ops)->b_scl != NULL) {
+            free(((metadata->pre_ops)->b_scl)->scale_factor);
+            free((metadata->pre_ops)->b_scl);
+        }
+    }
+
+    if ((metadata->post_op_grp != NULL)) {
+        if ((metadata->post_op_grp)->a_scl != NULL) {
+            free(((metadata->post_op_grp)->a_scl)->scale_factor);
+            free((metadata->post_op_grp)->a_scl);
         }
 
-        if ((post_ops->post_op_grp)->a_zp != NULL) {
-            free(((post_ops->post_op_grp)->a_zp)->zero_point);
-            free((post_ops->post_op_grp)->a_zp);
+        if ((metadata->post_op_grp)->a_zp != NULL) {
+            free(((metadata->post_op_grp)->a_zp)->zero_point);
+            free((metadata->post_op_grp)->a_zp);
         }
 
-        if ((post_ops->post_op_grp)->b_scl != NULL) {
-            free(((post_ops->post_op_grp)->b_scl)->scale_factor);
-            free((post_ops->post_op_grp)->b_scl);
+        if ((metadata->post_op_grp)->b_scl != NULL) {
+            free(((metadata->post_op_grp)->b_scl)->scale_factor);
+            free((metadata->post_op_grp)->b_scl);
         }
 
-        if ((post_ops->post_op_grp)->b_zp != NULL) {
-            free(((post_ops->post_op_grp)->b_zp)->zero_point);
-            free((post_ops->post_op_grp)->b_zp);
+        if ((metadata->post_op_grp)->b_zp != NULL) {
+            free(((metadata->post_op_grp)->b_zp)->zero_point);
+            free((metadata->post_op_grp)->b_zp);
         }
     }
 
     /* Freeing all the structs */
-    free(post_ops->eltwise);
-    free(post_ops->pre_ops);
-    free(post_ops->matrix_add);
-    free(post_ops->sum);
-    free(post_ops->matrix_mul);
-    free(post_ops->bias);
-    free(post_ops->post_op_grp);
+    free(metadata->eltwise);
+    free(metadata->pre_ops);
+    free(metadata->matrix_add);
+    free(metadata->scale);
+    free(metadata->matrix_mul);
+    free(metadata->bias);
+    free(metadata->post_op_grp);
 
-    free(post_ops->seq_vector);
-    free(post_ops);
+    free(metadata->seq_vector);
+    free(metadata);
 }
 
 #define PRINT_MATRIX(ctype)                                                    \
@@ -712,49 +712,53 @@ print_matrix_bfloat16(bfloat16* a, md_t m, md_t n, md_t rs_a, md_t cs_a)
 }
 
 float
-convert_scale_store_type_to_float(aocl_post_op*             post_op,
-                                  AOCL_PARAMS_STORAGE_TYPES sf_stor_type,
-                                  md_t                      j_scale)
+convert_scale_store_type_to_float(dlp_metadata_t* post_op,
+                                  DLP_TYPE        sf_stor_type,
+                                  md_t            j_scale)
 {
     float scale_float = 0.0;
-    if (sf_stor_type == AOCL_GEMM_BF16) {
-        bfloat16_to_float(*((bfloat16*)(post_op->sum)->scale_factor + j_scale),
-                          &scale_float);
-    } else if (sf_stor_type == AOCL_GEMM_INT32) {
-        int32_t_to_float(*((int32_t*)(post_op->sum)->scale_factor + j_scale),
-                         &scale_float);
-    } else if (sf_stor_type == AOCL_GEMM_INT8) {
-        int8_t_to_float(*((int8_t*)(post_op->sum)->scale_factor + j_scale),
-                        &scale_float);
-    } else if (sf_stor_type == AOCL_GEMM_UINT8) {
-        uint8_t_to_float(*((uint8_t*)(post_op->sum)->scale_factor + j_scale),
-                         &scale_float);
+    if (sf_stor_type == DLP_BF16) {
+        bfloat16_to_float(
+            *((bfloat16*)(post_op->scale)->sf->scale_factor + j_scale),
+            &scale_float);
+    } else if (sf_stor_type == DLP_S32) {
+        int32_t_to_float(
+            *((int32_t*)(post_op->scale)->sf->scale_factor + j_scale),
+            &scale_float);
+    } else if (sf_stor_type == DLP_S8) {
+        int8_t_to_float(
+            *((int8_t*)(post_op->scale)->sf->scale_factor + j_scale),
+            &scale_float);
+    } else if (sf_stor_type == DLP_U8) {
+        uint8_t_to_float(
+            *((uint8_t*)(post_op->scale)->sf->scale_factor + j_scale),
+            &scale_float);
     } else {
-        scale_float = *((float*)(post_op->sum)->scale_factor + j_scale);
+        scale_float = *((float*)(post_op->scale)->sf->scale_factor + j_scale);
     }
     return scale_float;
 }
 
 float
-convert_zp_store_type_to_float(aocl_post_op*             post_op,
-                               AOCL_PARAMS_STORAGE_TYPES zp_stor_type,
-                               md_t                      j_zp)
+convert_zp_store_type_to_float(dlp_metadata_t* post_op,
+                               DLP_TYPE        zp_stor_type,
+                               md_t            j_zp)
 {
     float zp_float = 0.0;
-    if (zp_stor_type == AOCL_GEMM_BF16) {
-        bfloat16_to_float(*((bfloat16*)(post_op->sum)->zero_point + j_zp),
-                          &zp_float);
-    } else if (zp_stor_type == AOCL_GEMM_INT32) {
-        int32_t_to_float(*((int32_t*)(post_op->sum)->zero_point + j_zp),
+    if (zp_stor_type == DLP_BF16) {
+        bfloat16_to_float(
+            *((bfloat16*)((post_op->scale)->zp->zero_point) + j_zp), &zp_float);
+    } else if (zp_stor_type == DLP_S32) {
+        int32_t_to_float(*((int32_t*)((post_op->scale)->zp->zero_point) + j_zp),
                          &zp_float);
-    } else if (zp_stor_type == AOCL_GEMM_INT8) {
-        int8_t_to_float(*((int8_t*)(post_op->sum)->zero_point + j_zp),
+    } else if (zp_stor_type == DLP_S8) {
+        int8_t_to_float(*((int8_t*)((post_op->scale)->zp->zero_point) + j_zp),
                         &zp_float);
-    } else if (zp_stor_type == AOCL_GEMM_UINT8) {
-        uint8_t_to_float(*((uint8_t*)(post_op->sum)->zero_point + j_zp),
+    } else if (zp_stor_type == DLP_U8) {
+        uint8_t_to_float(*((uint8_t*)((post_op->scale)->zp->zero_point) + j_zp),
                          &zp_float);
     } else {
-        zp_float = *((float*)(post_op->sum)->zero_point + j_zp);
+        zp_float = *((float*)((post_op->scale)->zp->zero_point) + j_zp);
     }
     return zp_float;
 }
@@ -763,28 +767,29 @@ convert_zp_store_type_to_float(aocl_post_op*             post_op,
                                       BLAS_DOWNSCALE_SFX)                      \
     static inline ACCUM_type                                                   \
         mat_mul_accuracy_check_downscale_##BLAS_DOWNSCALE_SFX(                 \
-            ACCUM_type temp_accum, aocl_post_op* post_op, md_t j,              \
-            AOCL_PARAMS_STORAGE_TYPES sf_stor_type,                            \
-            AOCL_PARAMS_STORAGE_TYPES zp_stor_type)                            \
+            ACCUM_type temp_accum, dlp_metadata_t* post_op, md_t j,            \
+            DLP_TYPE sf_stor_type, DLP_TYPE zp_stor_type)                      \
     {                                                                          \
         md_t j_scale = j;                                                      \
-        if ((post_op->sum)->scale_factor_len == 1) {                           \
+        if ((post_op->scale)->sf                                               \
+            && (post_op->scale)->sf->scale_factor_len == 1) {                  \
             j_scale = 0;                                                       \
         }                                                                      \
                                                                                \
         md_t j_zp = j;                                                         \
-        if ((post_op->sum)->zero_point_len == 1) {                             \
+        if ((post_op->scale)->zp                                               \
+            && (post_op->scale)->zp->zero_point_len == 1) {                    \
             j_zp = 0;                                                          \
         }                                                                      \
                                                                                \
         float temp_zp;                                                         \
         float temp_sf =                                                        \
             convert_scale_store_type_to_float(post_op, sf_stor_type, j_scale); \
-        if (zp_stor_type != NULLTYPE) {                                        \
+        if (zp_stor_type != DLP_INVALID) {                                     \
             temp_zp =                                                          \
                 convert_zp_store_type_to_float(post_op, zp_stor_type, j_zp);   \
         } else {                                                               \
-            temp_zp = *((ZP_type*)(post_op->sum)->zero_point + j_zp);          \
+            temp_zp = *((ZP_type*)((post_op->scale)->zp->zero_point) + j_zp);  \
         }                                                                      \
         ACCUM_type out_temp_accum = (ACCUM_type)min(                           \
             max(nearbyintf((SCALE_type)(temp_accum) * (temp_sf)) + temp_zp,    \
@@ -794,53 +799,51 @@ convert_zp_store_type_to_float(aocl_post_op*             post_op,
     }
 
 static inline float
-mat_mul_accuracy_check_downscale_bf16bf16f32obf16(
-    float                     temp_accum,
-    aocl_post_op*             post_op,
-    md_t                      j,
-    AOCL_PARAMS_STORAGE_TYPES sf_stor_type,
-    AOCL_PARAMS_STORAGE_TYPES zp_stor_type)
+mat_mul_accuracy_check_downscale_bf16bf16f32obf16(float           temp_accum,
+                                                  dlp_metadata_t* post_op,
+                                                  md_t            j,
+                                                  DLP_TYPE        sf_stor_type,
+                                                  DLP_TYPE        zp_stor_type)
 {
     (void)sf_stor_type;
     md_t j_scale = j;
-    if ((post_op->sum)->scale_factor_len == 1) {
+    if ((post_op->scale)->sf && (post_op->scale)->sf->scale_factor_len == 1) {
         j_scale = 0;
     }
 
     md_t j_zp = j;
-    if ((post_op->sum)->zero_point_len == 1) {
+    if ((post_op->scale)->zp && (post_op->scale)->zp->zero_point_len == 1) {
         j_zp = 0;
     }
 
     float zp_float = 0.0;
-    bfloat16_to_float(*((bfloat16*)(post_op->sum)->zero_point + j_zp),
+    bfloat16_to_float(*((bfloat16*)(post_op->scale)->zp->zero_point + j_zp),
                       &zp_float);
     float out_temp_accum =
-        (temp_accum * (*((float*)(post_op->sum)->scale_factor + j_scale))
+        (temp_accum * (*((float*)(post_op->scale)->sf->scale_factor + j_scale))
          + zp_float);
     return out_temp_accum;
 }
 static inline float
-mat_mul_accuracy_check_downscale_f32f32f32of32(
-    float                     temp_accum,
-    aocl_post_op*             post_op,
-    md_t                      j,
-    AOCL_PARAMS_STORAGE_TYPES sf_stor_type,
-    AOCL_PARAMS_STORAGE_TYPES zp_stor_type)
+mat_mul_accuracy_check_downscale_f32f32f32of32(float           temp_accum,
+                                               dlp_metadata_t* post_op,
+                                               md_t            j,
+                                               DLP_TYPE        sf_stor_type,
+                                               DLP_TYPE        zp_stor_type)
 {
     (void)sf_stor_type;
     md_t j_scale = j;
-    if ((post_op->sum)->scale_factor_len == 1) {
+    if ((post_op->scale)->sf && (post_op->scale)->sf->scale_factor_len == 1) {
         j_scale = 0;
     }
 
     md_t j_zp = j;
-    if ((post_op->sum)->zero_point_len == 1) {
+    if ((post_op->scale)->zp && (post_op->scale)->zp->zero_point_len == 1) {
         j_zp = 0;
     }
     float out_temp_accum =
-        (temp_accum * (*((float*)(post_op->sum)->scale_factor + j_scale))
-         + *((float*)(post_op->sum)->zero_point + j_zp));
+        (temp_accum * (*((float*)(post_op->scale)->sf->scale_factor + j_scale))
+         + *((float*)(post_op->scale)->zp->zero_point + j_zp));
     return out_temp_accum;
 }
 
@@ -850,8 +853,8 @@ mat_mul_accuracy_check_downscale_f32f32f32of32(
         A_type* a, B_type* b, C_type* c_ref, ACCUM_type temp_accum,            \
         ACCUM_type alpha, ACCUM_type beta, md_t rs_a, md_t rs_b, md_t cs_a,    \
         md_t cs_b, md_t rs_c_ref, md_t cs_c_ref, md_t i, md_t j, md_t k,       \
-        md_t         pre_op_ld, /* Ignored */                                  \
-        aocl_pre_op* pre_op     /* Workaround to enable B pre-ops. */          \
+        md_t        pre_op_ld, /* Ignored */                                   \
+        dlp_pre_op* pre_op     /* Workaround to enable B pre-ops. */           \
     )                                                                          \
     {                                                                          \
         (void)pre_op;                                                          \
@@ -872,8 +875,8 @@ mat_mul_accuracy_check_downscale_f32f32f32of32(
         A_type* a, B_type* b, C_type* c_ref, ACCUM_type temp_accum,            \
         ACCUM_type alpha, ACCUM_type beta, md_t rs_a, md_t rs_b, md_t cs_a,    \
         md_t cs_b, md_t rs_c_ref, md_t cs_c_ref, md_t i, md_t j, md_t k,       \
-        md_t                n,                                                 \
-        aocl_group_post_op* grp_post_op /* Workaround to enable B pre-ops. */  \
+        md_t               n,                                                  \
+        dlp_group_post_op* grp_post_op /* Workaround to enable B pre-ops. */   \
     )                                                                          \
     {                                                                          \
         float temp_accum_float = (float)0;                                     \
@@ -884,7 +887,7 @@ mat_mul_accuracy_check_downscale_f32f32f32of32(
             md_t  gs        = dlp_min(group_size, k - p_g);                    \
             md_t  group_num = p_g / group_size;                                \
             float a_scl, b_scl;                                                \
-            if ((grp_post_op->a_scl)->scale_factor_type == AOCL_GEMM_BF16) {   \
+            if ((grp_post_op->a_scl)->scale_factor_type == DLP_BF16) {         \
                 bfloat16_to_float(                                             \
                     *((bfloat16*)((grp_post_op->a_scl)->scale_factor)          \
                       + (i * num_groups) + group_num),                         \
@@ -893,7 +896,7 @@ mat_mul_accuracy_check_downscale_f32f32f32of32(
                 a_scl = *((float*)((grp_post_op->a_scl)->scale_factor)         \
                           + (i * num_groups) + group_num);                     \
             }                                                                  \
-            if ((grp_post_op->b_scl)->scale_factor_type == AOCL_GEMM_BF16) {   \
+            if ((grp_post_op->b_scl)->scale_factor_type == DLP_BF16) {         \
                 bfloat16_to_float(                                             \
                     *((bfloat16*)((grp_post_op->b_scl)->scale_factor)          \
                       + (group_num * n) + j),                                  \
@@ -922,23 +925,23 @@ mat_mul_accuracy_check_downscale_f32f32f32of32(
 
 static inline int32_t
 mat_mul_accuracy_check_accum_u8s8s32obf16(
-    uint8_t*     a,
-    int8_t*      b,
-    bfloat16*    c_ref,
-    int32_t      temp_accum,
-    int32_t      alpha,
-    int32_t      beta,
-    md_t         rs_a,
-    md_t         rs_b,
-    md_t         cs_a,
-    md_t         cs_b,
-    md_t         rs_c_ref,
-    md_t         cs_c_ref,
-    md_t         i,
-    md_t         j,
-    md_t         k,
-    md_t         pre_op_ld, /* Ignored */
-    aocl_pre_op* pre_op     /* Workaround to enable B pre-ops. */
+    uint8_t*    a,
+    int8_t*     b,
+    bfloat16*   c_ref,
+    int32_t     temp_accum,
+    int32_t     alpha,
+    int32_t     beta,
+    md_t        rs_a,
+    md_t        rs_b,
+    md_t        cs_a,
+    md_t        cs_b,
+    md_t        rs_c_ref,
+    md_t        cs_c_ref,
+    md_t        i,
+    md_t        j,
+    md_t        k,
+    md_t        pre_op_ld, /* Ignored */
+    dlp_pre_op* pre_op     /* Workaround to enable B pre-ops. */
 )
 {
     (void)pre_op;
@@ -955,23 +958,23 @@ mat_mul_accuracy_check_accum_u8s8s32obf16(
 }
 static inline int32_t
 mat_mul_accuracy_check_accum_s8s8s32obf16(
-    int8_t*      a,
-    int8_t*      b,
-    bfloat16*    c_ref,
-    int32_t      temp_accum,
-    int32_t      alpha,
-    int32_t      beta,
-    md_t         rs_a,
-    md_t         rs_b,
-    md_t         cs_a,
-    md_t         cs_b,
-    md_t         rs_c_ref,
-    md_t         cs_c_ref,
-    md_t         i,
-    md_t         j,
-    md_t         k,
-    md_t         pre_op_ld, /* Ignored */
-    aocl_pre_op* pre_op     /* Workaround to enable B pre-ops. */
+    int8_t*     a,
+    int8_t*     b,
+    bfloat16*   c_ref,
+    int32_t     temp_accum,
+    int32_t     alpha,
+    int32_t     beta,
+    md_t        rs_a,
+    md_t        rs_b,
+    md_t        cs_a,
+    md_t        cs_b,
+    md_t        rs_c_ref,
+    md_t        cs_c_ref,
+    md_t        i,
+    md_t        j,
+    md_t        k,
+    md_t        pre_op_ld, /* Ignored */
+    dlp_pre_op* pre_op     /* Workaround to enable B pre-ops. */
 )
 {
     (void)pre_op;
@@ -989,23 +992,23 @@ mat_mul_accuracy_check_accum_s8s8s32obf16(
 
 static inline int32_t
 mat_mul_accuracy_check_accum_u8s8s32of32(
-    uint8_t*     a,
-    int8_t*      b,
-    float*       c_ref,
-    int32_t      temp_accum,
-    int32_t      alpha,
-    int32_t      beta,
-    md_t         rs_a,
-    md_t         rs_b,
-    md_t         cs_a,
-    md_t         cs_b,
-    md_t         rs_c_ref,
-    md_t         cs_c_ref,
-    md_t         i,
-    md_t         j,
-    md_t         k,
-    md_t         pre_op_ld, /* Ignored */
-    aocl_pre_op* pre_op     /* Workaround to enable B pre-ops. */
+    uint8_t*    a,
+    int8_t*     b,
+    float*      c_ref,
+    int32_t     temp_accum,
+    int32_t     alpha,
+    int32_t     beta,
+    md_t        rs_a,
+    md_t        rs_b,
+    md_t        cs_a,
+    md_t        cs_b,
+    md_t        rs_c_ref,
+    md_t        cs_c_ref,
+    md_t        i,
+    md_t        j,
+    md_t        k,
+    md_t        pre_op_ld, /* Ignored */
+    dlp_pre_op* pre_op     /* Workaround to enable B pre-ops. */
 )
 {
     (void)pre_op;
@@ -1021,23 +1024,23 @@ mat_mul_accuracy_check_accum_u8s8s32of32(
 
 static inline int32_t
 mat_mul_accuracy_check_accum_s8s8s32of32(
-    int8_t*      a,
-    int8_t*      b,
-    float*       c_ref,
-    int32_t      temp_accum,
-    int32_t      alpha,
-    int32_t      beta,
-    md_t         rs_a,
-    md_t         rs_b,
-    md_t         cs_a,
-    md_t         cs_b,
-    md_t         rs_c_ref,
-    md_t         cs_c_ref,
-    md_t         i,
-    md_t         j,
-    md_t         k,
-    md_t         pre_op_ld, /* Ignored */
-    aocl_pre_op* pre_op     /* Workaround to enable B pre-ops. */
+    int8_t*     a,
+    int8_t*     b,
+    float*      c_ref,
+    int32_t     temp_accum,
+    int32_t     alpha,
+    int32_t     beta,
+    md_t        rs_a,
+    md_t        rs_b,
+    md_t        cs_a,
+    md_t        cs_b,
+    md_t        rs_c_ref,
+    md_t        cs_c_ref,
+    md_t        i,
+    md_t        j,
+    md_t        k,
+    md_t        pre_op_ld, /* Ignored */
+    dlp_pre_op* pre_op     /* Workaround to enable B pre-ops. */
 )
 {
     (void)pre_op;
@@ -1053,23 +1056,23 @@ mat_mul_accuracy_check_accum_s8s8s32of32(
 
 static inline float
 mat_mul_accuracy_check_accum_bf16bf16f32of32(
-    bfloat16*    a,
-    bfloat16*    b,
-    float*       c_ref,
-    float        temp_accum,
-    float        alpha,
-    float        beta,
-    md_t         rs_a,
-    md_t         rs_b,
-    md_t         cs_a,
-    md_t         cs_b,
-    md_t         rs_c_ref,
-    md_t         cs_c_ref,
-    md_t         i,
-    md_t         j,
-    md_t         k,
-    md_t         pre_op_ld, /* Ignored */
-    aocl_pre_op* pre_op     /* Workaround to enable B pre-ops. */
+    bfloat16*   a,
+    bfloat16*   b,
+    float*      c_ref,
+    float       temp_accum,
+    float       alpha,
+    float       beta,
+    md_t        rs_a,
+    md_t        rs_b,
+    md_t        cs_a,
+    md_t        cs_b,
+    md_t        rs_c_ref,
+    md_t        cs_c_ref,
+    md_t        i,
+    md_t        j,
+    md_t        k,
+    md_t        pre_op_ld, /* Ignored */
+    dlp_pre_op* pre_op     /* Workaround to enable B pre-ops. */
 )
 {
     (void)pre_op;
@@ -1086,23 +1089,23 @@ mat_mul_accuracy_check_accum_bf16bf16f32of32(
 
 static inline float
 mat_mul_accuracy_check_accum_bf16bf16f32obf16(
-    bfloat16*    a,
-    bfloat16*    b,
-    bfloat16*    c_ref,
-    float        temp_accum,
-    float        alpha,
-    float        beta,
-    md_t         rs_a,
-    md_t         rs_b,
-    md_t         cs_a,
-    md_t         cs_b,
-    md_t         rs_c_ref,
-    md_t         cs_c_ref,
-    md_t         i,
-    md_t         j,
-    md_t         k,
-    md_t         pre_op_ld, /* Ignored */
-    aocl_pre_op* pre_op     /* Workaround to enable B pre-ops. */
+    bfloat16*   a,
+    bfloat16*   b,
+    bfloat16*   c_ref,
+    float       temp_accum,
+    float       alpha,
+    float       beta,
+    md_t        rs_a,
+    md_t        rs_b,
+    md_t        cs_a,
+    md_t        cs_b,
+    md_t        rs_c_ref,
+    md_t        cs_c_ref,
+    md_t        i,
+    md_t        j,
+    md_t        k,
+    md_t        pre_op_ld, /* Ignored */
+    dlp_pre_op* pre_op     /* Workaround to enable B pre-ops. */
 )
 {
     (void)pre_op;
@@ -1121,7 +1124,7 @@ mat_mul_accuracy_check_accum_bf16bf16f32obf16(
 
 static inline float
 get_s4_to_f32_scale_val(
-    int8_t* b, md_t p, md_t j, md_t n, md_t b_inc, aocl_pre_op* pre_op)
+    int8_t* b, md_t p, md_t j, md_t n, md_t b_inc, dlp_pre_op* pre_op)
 {
     float  b_float = 0.0;
     int8_t b_val   = 0;
@@ -1167,7 +1170,7 @@ get_s4_to_f32_scale_val(
         float scale_factor = 1.0;
         if ((pre_op->b_scl != NULL)
             && ((pre_op->b_scl)->scale_factor != NULL)) {
-            if (pre_op->b_scl->scale_factor_type == AOCL_GEMM_F32) {
+            if (pre_op->b_scl->scale_factor_type == DLP_F32) {
                 scale_factor =
                     *((float*)(pre_op->b_scl)->scale_factor + j_scale);
             } else {
@@ -1186,23 +1189,23 @@ get_s4_to_f32_scale_val(
 
 static inline float
 mat_mul_accuracy_check_accum_bf16s4f32of32(
-    bfloat16*    a,
-    int8_t*      b,
-    float*       c_ref,
-    float        temp_accum,
-    float        alpha,
-    float        beta,
-    md_t         rs_a,
-    md_t         rs_b,
-    md_t         cs_a,
-    md_t         cs_b,
-    md_t         rs_c_ref,
-    md_t         cs_c_ref,
-    md_t         i,
-    md_t         j,
-    md_t         k,
-    md_t         pre_op_ld,
-    aocl_pre_op* pre_op /* Workaround to enable B pre-ops. */
+    bfloat16*   a,
+    int8_t*     b,
+    float*      c_ref,
+    float       temp_accum,
+    float       alpha,
+    float       beta,
+    md_t        rs_a,
+    md_t        rs_b,
+    md_t        cs_a,
+    md_t        cs_b,
+    md_t        rs_c_ref,
+    md_t        cs_c_ref,
+    md_t        i,
+    md_t        j,
+    md_t        k,
+    md_t        pre_op_ld,
+    dlp_pre_op* pre_op /* Workaround to enable B pre-ops. */
 )
 {
     for (md_t p = 0; p < k; ++p) {
@@ -1222,23 +1225,23 @@ mat_mul_accuracy_check_accum_bf16s4f32of32(
 
 static inline float
 mat_mul_accuracy_check_accum_bf16s4f32obf16(
-    bfloat16*    a,
-    int8_t*      b,
-    bfloat16*    c_ref,
-    float        temp_accum,
-    float        alpha,
-    float        beta,
-    md_t         rs_a,
-    md_t         rs_b,
-    md_t         cs_a,
-    md_t         cs_b,
-    md_t         rs_c_ref,
-    md_t         cs_c_ref,
-    md_t         i,
-    md_t         j,
-    md_t         k,
-    md_t         pre_op_ld,
-    aocl_pre_op* pre_op /* Workaround to enable B pre-ops. */
+    bfloat16*   a,
+    int8_t*     b,
+    bfloat16*   c_ref,
+    float       temp_accum,
+    float       alpha,
+    float       beta,
+    md_t        rs_a,
+    md_t        rs_b,
+    md_t        cs_a,
+    md_t        cs_b,
+    md_t        rs_c_ref,
+    md_t        cs_c_ref,
+    md_t        i,
+    md_t        j,
+    md_t        k,
+    md_t        pre_op_ld,
+    dlp_pre_op* pre_op /* Workaround to enable B pre-ops. */
 )
 {
     for (md_t p = 0; p < k; ++p) {
@@ -1260,7 +1263,7 @@ mat_mul_accuracy_check_accum_bf16s4f32obf16(
 
 #define GEN_MAT_MUL_POST_OPS_CREATOR(C_DSCALE_type, C_type, DSCALE_type,       \
                                      BIAS_type, BLAS_SFX)                      \
-    static inline aocl_post_op* lpgemm_create_post_ops_struct_##BLAS_SFX(      \
+    static inline dlp_metadata_t* lpgemm_create_post_ops_struct_##BLAS_SFX(    \
         md_t m, md_t n, md_t k, char* post_ops_str, char stor_order)           \
     {                                                                          \
         if (((post_ops_str == NULL) || (strcmp(post_ops_str, "none") == 0))    \
@@ -1268,26 +1271,26 @@ mat_mul_accuracy_check_accum_bf16s4f32obf16(
             return NULL;                                                       \
         }                                                                      \
                                                                                \
-        aocl_post_op* post_ops = NULL;                                         \
-        post_ops               = (aocl_post_op*)malloc(sizeof(aocl_post_op));  \
+        dlp_metadata_t* metadata = NULL;                                       \
+        metadata = (dlp_metadata_t*)malloc(sizeof(dlp_metadata_t));            \
                                                                                \
-        if (post_ops == NULL) {                                                \
+        if (metadata == NULL) {                                                \
             return NULL;                                                       \
         }                                                                      \
-        post_ops->eltwise     = NULL;                                          \
-        post_ops->bias        = NULL;                                          \
-        post_ops->sum         = NULL;                                          \
-        post_ops->matrix_add  = NULL;                                          \
-        post_ops->matrix_mul  = NULL;                                          \
-        post_ops->pre_ops     = NULL;                                          \
-        post_ops->post_op_grp = NULL;                                          \
+        metadata->eltwise     = NULL;                                          \
+        metadata->bias        = NULL;                                          \
+        metadata->scale       = NULL;                                          \
+        metadata->matrix_add  = NULL;                                          \
+        metadata->matrix_mul  = NULL;                                          \
+        metadata->pre_ops     = NULL;                                          \
+        metadata->post_op_grp = NULL;                                          \
                                                                                \
         /* Only supporting 8 post ops at max for now.*/                        \
         md_t max_post_ops_seq_length = 8;                                      \
-        post_ops->seq_vector         = (AOCL_POST_OP_TYPE*)malloc(             \
-            max_post_ops_seq_length * sizeof(AOCL_POST_OP_TYPE));      \
+        metadata->seq_vector         = (DLP_POST_OP_TYPE*)malloc(              \
+            max_post_ops_seq_length * sizeof(DLP_POST_OP_TYPE));       \
                                                                                \
-        if (post_ops->seq_vector == NULL) {                                    \
+        if (metadata->seq_vector == NULL) {                                    \
             goto err_handler;                                                  \
         }                                                                      \
                                                                                \
@@ -1337,31 +1340,31 @@ mat_mul_accuracy_check_accum_bf16s4f32obf16(
             while (ops_tok) {                                                  \
                 str_tolower(ops_tok);                                          \
                 if (strcmp(ops_tok, "bias") == 0) {                            \
-                    post_ops->seq_vector[cur_op_index] = BIAS;                 \
+                    metadata->seq_vector[cur_op_index] = BIAS;                 \
                     ops_tok                            = strtok(NULL, ", ");   \
                     if ((strcmp(ops_tok, "na") == 0)) {                        \
                         is_bias_stor_type = FALSE;                             \
                     } else if ((strcmp(ops_tok, "f32") == 0)) {                \
                         is_bias_stor_type = TRUE;                              \
-                        bias_stor_type    = "F32";                             \
+                        bias_stor_type    = "DLP_F32";                         \
                     } else if ((strcmp(ops_tok, "bf16") == 0)) {               \
                         is_bias_stor_type = TRUE;                              \
-                        bias_stor_type    = "BF16";                            \
+                        bias_stor_type    = "DLP_BF16";                        \
                     } else if ((strcmp(ops_tok, "s32") == 0)) {                \
                         is_bias_stor_type = TRUE;                              \
-                        bias_stor_type    = "S32";                             \
+                        bias_stor_type    = "DLP_S32";                         \
                     } else if ((strcmp(ops_tok, "s8") == 0)) {                 \
                         is_bias_stor_type = TRUE;                              \
-                        bias_stor_type    = "S8";                              \
+                        bias_stor_type    = "DLP_S8";                          \
                     } else if ((strcmp(ops_tok, "u8") == 0)) {                 \
                         is_bias_stor_type = TRUE;                              \
-                        bias_stor_type    = "U8";                              \
+                        bias_stor_type    = "DLP_U8";                          \
                     }                                                          \
                     is_bias = TRUE;                                            \
                     cur_op_index++;                                            \
                 } else if ((strcmp(ops_tok, "relu") == 0)                      \
                            && (is_activator_set == FALSE)) {                   \
-                    post_ops->seq_vector[cur_op_index] = ELTWISE;              \
+                    metadata->seq_vector[cur_op_index] = ELTWISE;              \
                     is_relu                            = TRUE;                 \
                     is_activator_set                   = TRUE;                 \
                     num_eltwise += 1;                                          \
@@ -1369,7 +1372,7 @@ mat_mul_accuracy_check_accum_bf16s4f32obf16(
                     cur_op_index++;                                            \
                 } else if ((strcmp(ops_tok, "prelu") == 0)                     \
                            && (is_activator_set == FALSE)) {                   \
-                    post_ops->seq_vector[cur_op_index] = ELTWISE;              \
+                    metadata->seq_vector[cur_op_index] = ELTWISE;              \
                     is_param_relu                      = TRUE;                 \
                     is_activator_set                   = TRUE;                 \
                     num_eltwise += 1;                                          \
@@ -1377,7 +1380,7 @@ mat_mul_accuracy_check_accum_bf16s4f32obf16(
                     cur_op_index++;                                            \
                 } else if ((strcmp(ops_tok, "swish") == 0)                     \
                            && (is_activator_set == FALSE)) {                   \
-                    post_ops->seq_vector[cur_op_index] = ELTWISE;              \
+                    metadata->seq_vector[cur_op_index] = ELTWISE;              \
                     is_swish                           = TRUE;                 \
                     is_activator_set                   = TRUE;                 \
                     num_eltwise += 1;                                          \
@@ -1385,7 +1388,7 @@ mat_mul_accuracy_check_accum_bf16s4f32obf16(
                     cur_op_index++;                                            \
                 } else if ((strcmp(ops_tok, "gelu_tanh") == 0)                 \
                            && (is_activator_set == FALSE)) {                   \
-                    post_ops->seq_vector[cur_op_index] = ELTWISE;              \
+                    metadata->seq_vector[cur_op_index] = ELTWISE;              \
                     is_gelu_tanh                       = TRUE;                 \
                     is_activator_set                   = TRUE;                 \
                     num_eltwise += 1;                                          \
@@ -1393,14 +1396,14 @@ mat_mul_accuracy_check_accum_bf16s4f32obf16(
                     cur_op_index++;                                            \
                 } else if ((strcmp(ops_tok, "gelu_erf") == 0)                  \
                            && (is_activator_set == FALSE)) {                   \
-                    post_ops->seq_vector[cur_op_index] = ELTWISE;              \
+                    metadata->seq_vector[cur_op_index] = ELTWISE;              \
                     is_gelu_erf                        = TRUE;                 \
                     is_activator_set                   = TRUE;                 \
                     num_eltwise += 1;                                          \
                     activator_idx = cur_op_index;                              \
                     cur_op_index++;                                            \
                 } else if (strcmp(ops_tok, "clip") == 0) {                     \
-                    post_ops->seq_vector[cur_op_index] = ELTWISE;              \
+                    metadata->seq_vector[cur_op_index] = ELTWISE;              \
                     is_clip                            = TRUE;                 \
                     num_eltwise += 1;                                          \
                     clip_idx = cur_op_index;                                   \
@@ -1418,19 +1421,19 @@ mat_mul_accuracy_check_accum_bf16s4f32obf16(
                         is_sf_stor_type = FALSE;                               \
                     } else if ((strcmp(ops_tok, "f32") == 0)) {                \
                         is_sf_stor_type = TRUE;                                \
-                        sf_stor_type    = "F32";                               \
+                        sf_stor_type    = "DLP_F32";                           \
                     } else if ((strcmp(ops_tok, "bf16") == 0)) {               \
                         is_sf_stor_type = TRUE;                                \
-                        sf_stor_type    = "BF16";                              \
+                        sf_stor_type    = "DLP_BF16";                          \
                     } else if ((strcmp(ops_tok, "s32") == 0)) {                \
                         is_sf_stor_type = TRUE;                                \
-                        sf_stor_type    = "S32";                               \
+                        sf_stor_type    = "DLP_S32";                           \
                     } else if ((strcmp(ops_tok, "s8") == 0)) {                 \
                         is_sf_stor_type = TRUE;                                \
-                        sf_stor_type    = "S8";                                \
+                        sf_stor_type    = "DLP_S8";                            \
                     } else if ((strcmp(ops_tok, "u8") == 0)) {                 \
                         is_sf_stor_type = TRUE;                                \
-                        sf_stor_type    = "U8";                                \
+                        sf_stor_type    = "DLP_U8";                            \
                     }                                                          \
                 } else if (strcmp(ops_tok, "zp") == 0) {                       \
                     ops_tok = strtok(NULL, ", ");                              \
@@ -1445,69 +1448,69 @@ mat_mul_accuracy_check_accum_bf16s4f32obf16(
                         is_zp_stor_type = FALSE;                               \
                     } else if ((strcmp(ops_tok, "f32") == 0)) {                \
                         is_zp_stor_type = TRUE;                                \
-                        zp_stor_type    = "F32";                               \
+                        zp_stor_type    = "DLP_F32";                           \
                     } else if ((strcmp(ops_tok, "bf16") == 0)) {               \
                         is_zp_stor_type = TRUE;                                \
-                        zp_stor_type    = "BF16";                              \
+                        zp_stor_type    = "DLP_BF16";                          \
                     } else if ((strcmp(ops_tok, "s32") == 0)) {                \
                         is_zp_stor_type = TRUE;                                \
-                        zp_stor_type    = "S32";                               \
+                        zp_stor_type    = "DLP_S32";                           \
                     } else if ((strcmp(ops_tok, "s8") == 0)) {                 \
                         is_zp_stor_type = TRUE;                                \
-                        zp_stor_type    = "S8";                                \
+                        zp_stor_type    = "DLP_S8";                            \
                     } else if ((strcmp(ops_tok, "u8") == 0)) {                 \
                         is_zp_stor_type = TRUE;                                \
-                        zp_stor_type    = "U8";                                \
+                        zp_stor_type    = "DLP_U8";                            \
                     }                                                          \
                 } else if (strcmp(ops_tok, "matrix_add") == 0) {               \
-                    post_ops->seq_vector[cur_op_index] = MATRIX_ADD;           \
+                    metadata->seq_vector[cur_op_index] = MATRIX_ADD;           \
                     ops_tok                            = strtok(NULL, ", ");   \
                     if ((strcmp(ops_tok, "na") == 0)) {                        \
                         is_matadd_stor_type = FALSE;                           \
                     } else if ((strcmp(ops_tok, "f32") == 0)) {                \
                         is_matadd_stor_type = TRUE;                            \
-                        matadd_stor_type    = "F32";                           \
+                        matadd_stor_type    = "DLP_F32";                       \
                     } else if ((strcmp(ops_tok, "bf16") == 0)) {               \
                         is_matadd_stor_type = TRUE;                            \
-                        matadd_stor_type    = "BF16";                          \
+                        matadd_stor_type    = "DLP_BF16";                      \
                     } else if ((strcmp(ops_tok, "s32") == 0)) {                \
                         is_matadd_stor_type = TRUE;                            \
-                        matadd_stor_type    = "S32";                           \
+                        matadd_stor_type    = "DLP_S32";                       \
                     } else if ((strcmp(ops_tok, "s8") == 0)) {                 \
                         is_matadd_stor_type = TRUE;                            \
-                        matadd_stor_type    = "S8";                            \
+                        matadd_stor_type    = "DLP_S8";                        \
                     } else if ((strcmp(ops_tok, "u8") == 0)) {                 \
                         is_matadd_stor_type = TRUE;                            \
-                        matadd_stor_type    = "U8";                            \
+                        matadd_stor_type    = "DLP_U8";                        \
                     }                                                          \
                     is_matrix_add = TRUE;                                      \
                     cur_op_index++;                                            \
                 } else if (strcmp(ops_tok, "matrix_mul") == 0) {               \
-                    post_ops->seq_vector[cur_op_index] = MATRIX_MUL;           \
+                    metadata->seq_vector[cur_op_index] = MATRIX_MUL;           \
                     ops_tok                            = strtok(NULL, ", ");   \
                     if ((strcmp(ops_tok, "na") == 0)) {                        \
                         is_matmul_stor_type = FALSE;                           \
                     } else if ((strcmp(ops_tok, "f32") == 0)) {                \
                         is_matmul_stor_type = TRUE;                            \
-                        matmul_stor_type    = "F32";                           \
+                        matmul_stor_type    = "DLP_F32";                       \
                     } else if ((strcmp(ops_tok, "bf16") == 0)) {               \
                         is_matmul_stor_type = TRUE;                            \
-                        matmul_stor_type    = "BF16";                          \
+                        matmul_stor_type    = "DLP_BF16";                      \
                     } else if ((strcmp(ops_tok, "s32") == 0)) {                \
                         is_matmul_stor_type = TRUE;                            \
-                        matmul_stor_type    = "S32";                           \
+                        matmul_stor_type    = "DLP_S32";                       \
                     } else if ((strcmp(ops_tok, "s8") == 0)) {                 \
                         is_matmul_stor_type = TRUE;                            \
-                        matmul_stor_type    = "S8";                            \
+                        matmul_stor_type    = "DLP_S8";                        \
                     } else if ((strcmp(ops_tok, "u8") == 0)) {                 \
                         is_matmul_stor_type = TRUE;                            \
-                        matmul_stor_type    = "U8";                            \
+                        matmul_stor_type    = "DLP_U8";                        \
                     }                                                          \
                     is_matrix_mul = TRUE;                                      \
                     cur_op_index++;                                            \
                 } else if ((strcmp(ops_tok, "tanh") == 0)                      \
                            && (is_activator_set == FALSE)) {                   \
-                    post_ops->seq_vector[cur_op_index] = ELTWISE;              \
+                    metadata->seq_vector[cur_op_index] = ELTWISE;              \
                     is_tanh                            = TRUE;                 \
                     is_activator_set                   = TRUE;                 \
                     num_eltwise += 1;                                          \
@@ -1515,7 +1518,7 @@ mat_mul_accuracy_check_accum_bf16s4f32obf16(
                     cur_op_index++;                                            \
                 } else if ((strcmp(ops_tok, "sigmoid") == 0)                   \
                            && (is_activator_set == FALSE)) {                   \
-                    post_ops->seq_vector[cur_op_index] = ELTWISE;              \
+                    metadata->seq_vector[cur_op_index] = ELTWISE;              \
                     is_sigmoid                         = TRUE;                 \
                     is_activator_set                   = TRUE;                 \
                     num_eltwise += 1;                                          \
@@ -1563,11 +1566,11 @@ mat_mul_accuracy_check_accum_bf16s4f32obf16(
                     if ((strcmp(ops_tok, "bf16") == 0)) {                      \
                         /* set bf16 scale */                                   \
                         is_sym_quant      = TRUE;                              \
-                        sym_quant_sf_type = "BF16";                            \
+                        sym_quant_sf_type = "DLP_BF16";                        \
                     } else if ((strcmp(ops_tok, "f32") == 0)) {                \
                         /* set f32 scale */                                    \
                         is_sym_quant      = TRUE;                              \
-                        sym_quant_sf_type = "F32";                             \
+                        sym_quant_sf_type = "DLP_F32";                         \
                     }                                                          \
                 } else {                                                       \
                 }                                                              \
@@ -1579,68 +1582,68 @@ mat_mul_accuracy_check_accum_bf16s4f32obf16(
         if (is_bias == TRUE) {                                                 \
             /* Bench limitation: can only support 1 bias, but LPGEMM can       \
              * support multiple bias post-ops. */                              \
-            post_ops->bias = malloc(sizeof(aocl_post_op_bias));                \
-            if (post_ops->bias == NULL) {                                      \
+            metadata->bias = malloc(sizeof(dlp_post_op_bias));                 \
+            if (metadata->bias == NULL) {                                      \
                 goto err_handler;                                              \
             }                                                                  \
                                                                                \
             if (is_bias_stor_type == TRUE) {                                   \
-                if ((strcmp(bias_stor_type, "BF16") == 0)) {                   \
-                    (post_ops->bias)->stor_type = AOCL_GEMM_BF16;              \
+                if ((strcmp(bias_stor_type, "DLP_BF16") == 0)) {               \
+                    (metadata->bias)->stor_type = DLP_BF16;                    \
                     /* Allocate bias buffer, return early if alloc fails.*/    \
-                    (post_ops->bias)->bias = malloc(n * sizeof(bfloat16));     \
-                    if ((post_ops->bias)->bias == NULL) {                      \
+                    (metadata->bias)->bias = malloc(n * sizeof(bfloat16));     \
+                    if ((metadata->bias)->bias == NULL) {                      \
                         goto err_handler;                                      \
                     }                                                          \
                     GEN_FUNC_NAME(fill_array_post_ops_, bfloat16)              \
-                    ((post_ops->bias)->bias, n);                               \
-                } else if ((strcmp(bias_stor_type, "F32") == 0)) {             \
-                    (post_ops->bias)->stor_type = AOCL_GEMM_F32;               \
+                    ((metadata->bias)->bias, n);                               \
+                } else if ((strcmp(bias_stor_type, "DLP_F32") == 0)) {         \
+                    (metadata->bias)->stor_type = DLP_F32;                     \
                     /* Allocate bias buffer, return early if alloc fails.*/    \
-                    (post_ops->bias)->bias = malloc(n * sizeof(float));        \
-                    if ((post_ops->bias)->bias == NULL) {                      \
+                    (metadata->bias)->bias = malloc(n * sizeof(float));        \
+                    if ((metadata->bias)->bias == NULL) {                      \
                         goto err_handler;                                      \
                     }                                                          \
                     GEN_FUNC_NAME(fill_array_post_ops_, float)                 \
-                    ((post_ops->bias)->bias, n);                               \
-                } else if ((strcmp(bias_stor_type, "S8") == 0)) {              \
-                    (post_ops->bias)->stor_type = AOCL_GEMM_INT8;              \
+                    ((metadata->bias)->bias, n);                               \
+                } else if ((strcmp(bias_stor_type, "DLP_S8") == 0)) {          \
+                    (metadata->bias)->stor_type = DLP_S8;                      \
                     /* Allocate bias buffer, return early if alloc fails.*/    \
-                    (post_ops->bias)->bias = malloc(n * sizeof(int8_t));       \
-                    if ((post_ops->bias)->bias == NULL) {                      \
+                    (metadata->bias)->bias = malloc(n * sizeof(int8_t));       \
+                    if ((metadata->bias)->bias == NULL) {                      \
                         goto err_handler;                                      \
                     }                                                          \
                     GEN_FUNC_NAME(fill_array_post_ops_, int8_t)                \
-                    ((post_ops->bias)->bias, n);                               \
-                } else if ((strcmp(bias_stor_type, "U8") == 0)) {              \
-                    (post_ops->bias)->stor_type = AOCL_GEMM_UINT8;             \
+                    ((metadata->bias)->bias, n);                               \
+                } else if ((strcmp(bias_stor_type, "DLP_U8") == 0)) {          \
+                    (metadata->bias)->stor_type = DLP_U8;                      \
                     /* Allocate bias buffer, return early if alloc fails.*/    \
-                    (post_ops->bias)->bias = malloc(n * sizeof(int8_t));       \
-                    if ((post_ops->bias)->bias == NULL) {                      \
+                    (metadata->bias)->bias = malloc(n * sizeof(int8_t));       \
+                    if ((metadata->bias)->bias == NULL) {                      \
                         goto err_handler;                                      \
                     }                                                          \
                     GEN_FUNC_NAME(fill_array_post_ops_, uint8_t)               \
-                    ((post_ops->bias)->bias, n);                               \
-                } else if ((strcmp(bias_stor_type, "S32") == 0)) {             \
-                    (post_ops->bias)->stor_type = AOCL_GEMM_INT32;             \
+                    ((metadata->bias)->bias, n);                               \
+                } else if ((strcmp(bias_stor_type, "DLP_S32") == 0)) {         \
+                    (metadata->bias)->stor_type = DLP_S32;                     \
                     /* Allocate bias buffer, return early if alloc fails.*/    \
-                    (post_ops->bias)->bias = malloc(n * sizeof(int32_t));      \
-                    if ((post_ops->bias)->bias == NULL) {                      \
+                    (metadata->bias)->bias = malloc(n * sizeof(int32_t));      \
+                    if ((metadata->bias)->bias == NULL) {                      \
                         goto err_handler;                                      \
                     }                                                          \
                     GEN_FUNC_NAME(fill_array_post_ops_, int32_t)               \
-                    ((post_ops->bias)->bias, n);                               \
+                    ((metadata->bias)->bias, n);                               \
                 } else {                                                       \
                 }                                                              \
             } else {                                                           \
-                (post_ops->bias)->stor_type = NULLTYPE;                        \
+                (metadata->bias)->stor_type = DLP_INVALID;                     \
                 /* Allocate bias buffer, return early if alloc fails.*/        \
-                (post_ops->bias)->bias = malloc(n * sizeof(BIAS_type));        \
-                if ((post_ops->bias)->bias == NULL) {                          \
+                (metadata->bias)->bias = malloc(n * sizeof(BIAS_type));        \
+                if ((metadata->bias)->bias == NULL) {                          \
                     goto err_handler;                                          \
                 }                                                              \
                 GEN_FUNC_NAME(fill_array_post_ops_, BIAS_type)                 \
-                ((post_ops->bias)->bias, n);                                   \
+                ((metadata->bias)->bias, n);                                   \
             }                                                                  \
         }                                                                      \
                                                                                \
@@ -1658,166 +1661,154 @@ mat_mul_accuracy_check_accum_bf16s4f32obf16(
                 clip_idx      = 0;                                             \
             }                                                                  \
                                                                                \
-            post_ops->num_eltwise = num_eltwise;                               \
-            post_ops->eltwise =                                                \
-                malloc(num_eltwise * sizeof(aocl_post_op_eltwise));            \
-            if (post_ops->eltwise == NULL) {                                   \
+            metadata->num_eltwise = num_eltwise;                               \
+            metadata->eltwise =                                                \
+                malloc(num_eltwise * sizeof(dlp_post_op_eltwise));             \
+            if (metadata->eltwise == NULL) {                                   \
                 goto err_handler;                                              \
             }                                                                  \
                                                                                \
             /* Only one of relu, prelu, swish, gelu_tanh, gelu_erf allowed as  \
              * an activator. */                                                \
             if (is_relu == TRUE) {                                             \
-                (post_ops->eltwise + activator_idx)->is_power_of_2  = FALSE;   \
-                (post_ops->eltwise + activator_idx)->scale_factor   = NULL;    \
-                (post_ops->eltwise + activator_idx)->algo.alpha     = NULL;    \
-                (post_ops->eltwise + activator_idx)->algo.beta      = NULL;    \
-                (post_ops->eltwise + activator_idx)->algo.algo_type = RELU;    \
+                (metadata->eltwise + activator_idx)->sf             = NULL;    \
+                (metadata->eltwise + activator_idx)->algo.alpha     = NULL;    \
+                (metadata->eltwise + activator_idx)->algo.beta      = NULL;    \
+                (metadata->eltwise + activator_idx)->algo.algo_type = RELU;    \
             } else if (is_param_relu == TRUE) {                                \
-                (post_ops->eltwise + activator_idx)->is_power_of_2 = FALSE;    \
-                (post_ops->eltwise + activator_idx)->scale_factor  = NULL;     \
-                (post_ops->eltwise + activator_idx)->algo.alpha    = NULL;     \
+                (metadata->eltwise + activator_idx)->sf         = NULL;        \
+                (metadata->eltwise + activator_idx)->algo.alpha = NULL;        \
                 /* If output is float/bfloat16, param type will be float       \
                  * otherwise s32 */                                            \
                 if (is_integer(#C_type)) {                                     \
-                    (post_ops->eltwise + activator_idx)->algo.alpha =          \
+                    (metadata->eltwise + activator_idx)->algo.alpha =          \
                         malloc(sizeof(int32_t));                               \
-                    if ((post_ops->eltwise + activator_idx)->algo.alpha        \
+                    if ((metadata->eltwise + activator_idx)->algo.alpha        \
                         == NULL) {                                             \
                         goto err_handler;                                      \
                     }                                                          \
-                    *((int32_t*)(post_ops->eltwise + activator_idx)            \
+                    *((int32_t*)(metadata->eltwise + activator_idx)            \
                           ->algo.alpha) = (int32_t)6;                          \
                 } else {                                                       \
-                    (post_ops->eltwise + activator_idx)->algo.alpha =          \
+                    (metadata->eltwise + activator_idx)->algo.alpha =          \
                         malloc(sizeof(float));                                 \
-                    if ((post_ops->eltwise + activator_idx)->algo.alpha        \
+                    if ((metadata->eltwise + activator_idx)->algo.alpha        \
                         == NULL) {                                             \
                         goto err_handler;                                      \
                     }                                                          \
-                    *((float*)(post_ops->eltwise + activator_idx)              \
+                    *((float*)(metadata->eltwise + activator_idx)              \
                           ->algo.alpha) = (float)6;                            \
                 }                                                              \
-                (post_ops->eltwise + activator_idx)->algo.beta      = NULL;    \
-                (post_ops->eltwise + activator_idx)->algo.algo_type = PRELU;   \
-                (post_ops->eltwise + activator_idx)->algo.beta      = NULL;    \
-                (post_ops->eltwise + activator_idx)->algo.algo_type = PRELU;   \
+                (metadata->eltwise + activator_idx)->algo.beta      = NULL;    \
+                (metadata->eltwise + activator_idx)->algo.algo_type = PRELU;   \
+                (metadata->eltwise + activator_idx)->algo.beta      = NULL;    \
+                (metadata->eltwise + activator_idx)->algo.algo_type = PRELU;   \
             }                                                                  \
             if (is_swish == TRUE) {                                            \
-                (post_ops->eltwise + activator_idx)->is_power_of_2 = FALSE;    \
-                (post_ops->eltwise + activator_idx)->scale_factor  = NULL;     \
-                (post_ops->eltwise + activator_idx)->algo.alpha    = NULL;     \
+                (metadata->eltwise + activator_idx)->sf         = NULL;        \
+                (metadata->eltwise + activator_idx)->algo.alpha = NULL;        \
                 /* If output is float/bfloat16, params type will be float      \
                  * otherwise s32 */                                            \
                 if (is_integer(#C_type)) {                                     \
-                    (post_ops->eltwise + activator_idx)->algo.alpha =          \
+                    (metadata->eltwise + activator_idx)->algo.alpha =          \
                         malloc(sizeof(int32_t));                               \
-                    if ((post_ops->eltwise + activator_idx)->algo.alpha        \
+                    if ((metadata->eltwise + activator_idx)->algo.alpha        \
                         == NULL) {                                             \
                         goto err_handler;                                      \
                     }                                                          \
-                    *((int32_t*)(post_ops->eltwise + activator_idx)            \
+                    *((int32_t*)(metadata->eltwise + activator_idx)            \
                           ->algo.alpha) = (int32_t)2;                          \
                 } else {                                                       \
-                    (post_ops->eltwise + activator_idx)->algo.alpha =          \
+                    (metadata->eltwise + activator_idx)->algo.alpha =          \
                         malloc(sizeof(float));                                 \
-                    if ((post_ops->eltwise + activator_idx)->algo.alpha        \
+                    if ((metadata->eltwise + activator_idx)->algo.alpha        \
                         == NULL) {                                             \
                         goto err_handler;                                      \
                     }                                                          \
-                    *((float*)(post_ops->eltwise + activator_idx)              \
+                    *((float*)(metadata->eltwise + activator_idx)              \
                           ->algo.alpha) = (float)2;                            \
                 }                                                              \
-                (post_ops->eltwise + activator_idx)->algo.beta      = NULL;    \
-                (post_ops->eltwise + activator_idx)->algo.algo_type = SWISH;   \
+                (metadata->eltwise + activator_idx)->algo.beta      = NULL;    \
+                (metadata->eltwise + activator_idx)->algo.algo_type = SWISH;   \
             } else if (is_gelu_tanh == TRUE) {                                 \
-                (post_ops->eltwise + activator_idx)->is_power_of_2 = FALSE;    \
-                (post_ops->eltwise + activator_idx)->scale_factor  = NULL;     \
-                (post_ops->eltwise + activator_idx)->algo.alpha    = NULL;     \
-                (post_ops->eltwise + activator_idx)->algo.beta     = NULL;     \
-                (post_ops->eltwise + activator_idx)->algo.algo_type =          \
+                (metadata->eltwise + activator_idx)->sf         = NULL;        \
+                (metadata->eltwise + activator_idx)->algo.alpha = NULL;        \
+                (metadata->eltwise + activator_idx)->algo.beta  = NULL;        \
+                (metadata->eltwise + activator_idx)->algo.algo_type =          \
                     GELU_TANH;                                                 \
             } else if (is_gelu_erf == TRUE) {                                  \
-                (post_ops->eltwise + activator_idx)->is_power_of_2 = FALSE;    \
-                (post_ops->eltwise + activator_idx)->scale_factor  = NULL;     \
-                (post_ops->eltwise + activator_idx)->algo.alpha    = NULL;     \
-                (post_ops->eltwise + activator_idx)->algo.beta     = NULL;     \
-                (post_ops->eltwise + activator_idx)->algo.algo_type =          \
+                (metadata->eltwise + activator_idx)->sf         = NULL;        \
+                (metadata->eltwise + activator_idx)->algo.alpha = NULL;        \
+                (metadata->eltwise + activator_idx)->algo.beta  = NULL;        \
+                (metadata->eltwise + activator_idx)->algo.algo_type =          \
                     GELU_ERF;                                                  \
             }                                                                  \
             if (is_clip == TRUE) {                                             \
-                (post_ops->eltwise + clip_idx)->is_power_of_2 = FALSE;         \
-                (post_ops->eltwise + clip_idx)->scale_factor  = NULL;          \
-                (post_ops->eltwise + clip_idx)->algo.alpha    = NULL;          \
-                (post_ops->eltwise + clip_idx)->algo.beta     = NULL;          \
+                (metadata->eltwise + clip_idx)->sf         = NULL;             \
+                (metadata->eltwise + clip_idx)->algo.alpha = NULL;             \
+                (metadata->eltwise + clip_idx)->algo.beta  = NULL;             \
                 /* If output is float/bfloat16, params type will be float      \
                  * otherwise s32 */                                            \
                 if (is_integer(#C_type)) {                                     \
-                    (post_ops->eltwise + clip_idx)->algo.alpha =               \
+                    (metadata->eltwise + clip_idx)->algo.alpha =               \
                         malloc(sizeof(int32_t));                               \
-                    if ((post_ops->eltwise + clip_idx)->algo.alpha == NULL) {  \
+                    if ((metadata->eltwise + clip_idx)->algo.alpha == NULL) {  \
                         goto err_handler;                                      \
                     }                                                          \
-                    (post_ops->eltwise + clip_idx)->algo.beta =                \
+                    (metadata->eltwise + clip_idx)->algo.beta =                \
                         malloc(sizeof(int32_t));                               \
-                    if ((post_ops->eltwise + clip_idx)->algo.beta == NULL) {   \
+                    if ((metadata->eltwise + clip_idx)->algo.beta == NULL) {   \
                         goto err_handler;                                      \
                     }                                                          \
-                    *((int32_t*)(post_ops->eltwise + clip_idx)->algo.alpha) =  \
+                    *((int32_t*)(metadata->eltwise + clip_idx)->algo.alpha) =  \
                         (int32_t)(-64);                                        \
-                    *((int32_t*)(post_ops->eltwise + clip_idx)->algo.beta) =   \
+                    *((int32_t*)(metadata->eltwise + clip_idx)->algo.beta) =   \
                         (int32_t)(23);                                         \
                 } else {                                                       \
-                    (post_ops->eltwise + clip_idx)->algo.alpha =               \
+                    (metadata->eltwise + clip_idx)->algo.alpha =               \
                         malloc(sizeof(float));                                 \
-                    if ((post_ops->eltwise + clip_idx)->algo.alpha == NULL) {  \
+                    if ((metadata->eltwise + clip_idx)->algo.alpha == NULL) {  \
                         goto err_handler;                                      \
                     }                                                          \
-                    (post_ops->eltwise + clip_idx)->algo.beta =                \
+                    (metadata->eltwise + clip_idx)->algo.beta =                \
                         malloc(sizeof(float));                                 \
-                    if ((post_ops->eltwise + clip_idx)->algo.beta == NULL) {   \
+                    if ((metadata->eltwise + clip_idx)->algo.beta == NULL) {   \
                         goto err_handler;                                      \
                     }                                                          \
-                    *((float*)(post_ops->eltwise + clip_idx)->algo.alpha) =    \
+                    *((float*)(metadata->eltwise + clip_idx)->algo.alpha) =    \
                         (float)(-64);                                          \
-                    *((float*)(post_ops->eltwise + clip_idx)->algo.beta) =     \
+                    *((float*)(metadata->eltwise + clip_idx)->algo.beta) =     \
                         (float)(23);                                           \
                 }                                                              \
-                (post_ops->eltwise + clip_idx)->algo.algo_type = CLIP;         \
+                (metadata->eltwise + clip_idx)->algo.algo_type = CLIP;         \
             } else if (is_tanh == TRUE) {                                      \
-                (post_ops->eltwise + activator_idx)->is_power_of_2  = FALSE;   \
-                (post_ops->eltwise + activator_idx)->scale_factor   = NULL;    \
-                (post_ops->eltwise + activator_idx)->algo.alpha     = NULL;    \
-                (post_ops->eltwise + activator_idx)->algo.beta      = NULL;    \
-                (post_ops->eltwise + activator_idx)->algo.algo_type = TANH;    \
+                (metadata->eltwise + activator_idx)->sf             = NULL;    \
+                (metadata->eltwise + activator_idx)->algo.alpha     = NULL;    \
+                (metadata->eltwise + activator_idx)->algo.beta      = NULL;    \
+                (metadata->eltwise + activator_idx)->algo.algo_type = TANH;    \
             }                                                                  \
             if (is_sigmoid == TRUE) {                                          \
-                (post_ops->eltwise + activator_idx)->is_power_of_2  = FALSE;   \
-                (post_ops->eltwise + activator_idx)->scale_factor   = NULL;    \
-                (post_ops->eltwise + activator_idx)->algo.alpha     = NULL;    \
-                (post_ops->eltwise + activator_idx)->algo.beta      = NULL;    \
-                (post_ops->eltwise + activator_idx)->algo.algo_type = SIGMOID; \
+                (metadata->eltwise + activator_idx)->sf             = NULL;    \
+                (metadata->eltwise + activator_idx)->algo.alpha     = NULL;    \
+                (metadata->eltwise + activator_idx)->algo.beta      = NULL;    \
+                (metadata->eltwise + activator_idx)->algo.algo_type = SIGMOID; \
             }                                                                  \
         }                                                                      \
                                                                                \
         if ((global_dscale_out == 'y') || (global_can_dscale == 'y')) {        \
             /* Bench limitation: can only support 1 scale, but LPGEMM can      \
              * support multiple scale post-ops. */                             \
-            post_ops->sum = malloc(sizeof(aocl_post_op_sum));                  \
-            if (post_ops->sum == NULL) {                                       \
+            metadata->scale = malloc(sizeof(dlp_scale_t));                     \
+            if (metadata->scale == NULL) {                                     \
                 goto err_handler;                                              \
             }                                                                  \
-            (post_ops->sum)->scale_factor     = NULL;                          \
-            (post_ops->sum)->buff             = NULL;                          \
-            (post_ops->sum)->zero_point       = NULL;                          \
-            (post_ops->sum)->scale_factor_len = 0;                             \
-            (post_ops->sum)->zero_point_len   = 0;                             \
+            (metadata->scale)->sf = NULL;                                      \
+            (metadata->scale)->zp = NULL;                                      \
                                                                                \
-            post_ops->seq_vector[cur_op_index] = SCALE;                        \
+            metadata->seq_vector[cur_op_index] = SCALE;                        \
             cur_op_index++;                                                    \
                                                                                \
-            (post_ops->sum)->is_power_of_2 = FALSE;                            \
-            md_t n_scale                   = n;                                \
+            md_t n_scale = n;                                                  \
             if (is_scalar_scale == TRUE) {                                     \
                 n_scale = 1;                                                   \
             }                                                                  \
@@ -1830,139 +1821,156 @@ mat_mul_accuracy_check_accum_bf16s4f32obf16(
             /* Allocate scale buffer, return early if alloc fails.*/           \
             /* Fill scale factor */                                            \
             if (is_sf_stor_type == TRUE) {                                     \
-                if ((strcmp(sf_stor_type, "BF16") == 0)) {                     \
-                    (post_ops->sum)->sf_stor_type = AOCL_GEMM_BF16;            \
-                    (post_ops->sum)->scale_factor =                            \
+                (metadata->scale)->sf = malloc(sizeof(dlp_sf_t));              \
+                if ((metadata->scale)->sf == NULL) {                           \
+                    goto err_handler;                                          \
+                }                                                              \
+                if ((strcmp(sf_stor_type, "DLP_BF16") == 0)) {                 \
+                    (metadata->scale)->sf->scale_factor_type = DLP_BF16;       \
+                    (metadata->scale)->sf->scale_factor =                      \
                         malloc(n_scale * sizeof(bfloat16));                    \
-                    if ((post_ops->sum)->scale_factor == NULL) {               \
+                    if ((metadata->scale)->sf->scale_factor == NULL) {         \
                         goto err_handler;                                      \
                     }                                                          \
                     GEN_FUNC_NAME(fill_array_, bfloat16)                       \
-                    ((post_ops->sum)->scale_factor, n_scale);                  \
-                    (post_ops->sum)->scale_factor_len = n_scale;               \
-                } else if ((strcmp(sf_stor_type, "F32") == 0)) {               \
-                    (post_ops->sum)->sf_stor_type = AOCL_GEMM_F32;             \
-                    (post_ops->sum)->scale_factor =                            \
+                    ((metadata->scale)->sf->scale_factor, n_scale);            \
+                    (metadata->scale)->sf->scale_factor_len = n_scale;         \
+                } else if ((strcmp(sf_stor_type, "DLP_F32") == 0)) {           \
+                    (metadata->scale)->sf->scale_factor_type = DLP_F32;        \
+                    (metadata->scale)->sf->scale_factor =                      \
                         malloc(n_scale * sizeof(float));                       \
-                    if ((post_ops->sum)->scale_factor == NULL) {               \
+                    if ((metadata->scale)->sf->scale_factor == NULL) {         \
                         goto err_handler;                                      \
                     }                                                          \
                     GEN_FUNC_NAME(fill_array_, float)                          \
-                    ((post_ops->sum)->scale_factor, n_scale);                  \
-                    (post_ops->sum)->scale_factor_len = n_scale;               \
-                } else if ((strcmp(sf_stor_type, "S32") == 0)) {               \
-                    (post_ops->sum)->sf_stor_type = AOCL_GEMM_INT32;           \
-                    (post_ops->sum)->scale_factor =                            \
+                    ((metadata->scale)->sf->scale_factor, n_scale);            \
+                    (metadata->scale)->sf->scale_factor_len = n_scale;         \
+                } else if ((strcmp(sf_stor_type, "DLP_S32") == 0)) {           \
+                    (metadata->scale)->sf->scale_factor_type = DLP_S32;        \
+                    (metadata->scale)->sf->scale_factor =                      \
                         malloc(n_scale * sizeof(int32_t));                     \
-                    if ((post_ops->sum)->scale_factor == NULL) {               \
+                    if ((metadata->scale)->sf->scale_factor == NULL) {         \
                         goto err_handler;                                      \
                     }                                                          \
                     GEN_FUNC_NAME(fill_array_, int32_t)                        \
-                    ((post_ops->sum)->scale_factor, n_scale);                  \
-                    (post_ops->sum)->scale_factor_len = n_scale;               \
-                } else if ((strcmp(sf_stor_type, "S8") == 0)) {                \
-                    (post_ops->sum)->sf_stor_type = AOCL_GEMM_INT8;            \
-                    (post_ops->sum)->scale_factor =                            \
+                    ((metadata->scale)->sf->scale_factor, n_scale);            \
+                    (metadata->scale)->sf->scale_factor_len = n_scale;         \
+                } else if ((strcmp(sf_stor_type, "DLP_S8") == 0)) {            \
+                    (metadata->scale)->sf->scale_factor_type = DLP_S8;         \
+                    (metadata->scale)->sf->scale_factor =                      \
                         malloc(n_scale * sizeof(int8_t));                      \
-                    if ((post_ops->sum)->scale_factor == NULL) {               \
+                    if ((metadata->scale)->sf->scale_factor == NULL) {         \
                         goto err_handler;                                      \
                     }                                                          \
                     GEN_FUNC_NAME(fill_array_, int8_t)                         \
-                    ((post_ops->sum)->scale_factor, n_scale);                  \
-                    (post_ops->sum)->scale_factor_len = n_scale;               \
-                } else if ((strcmp(sf_stor_type, "U8") == 0)) {                \
-                    (post_ops->sum)->sf_stor_type = AOCL_GEMM_UINT8;           \
-                    (post_ops->sum)->scale_factor =                            \
+                    ((metadata->scale)->sf->scale_factor, n_scale);            \
+                    (metadata->scale)->sf->scale_factor_len = n_scale;         \
+                } else if ((strcmp(sf_stor_type, "DLP_U8") == 0)) {            \
+                    (metadata->scale)->sf->scale_factor_type = DLP_U8;         \
+                    (metadata->scale)->sf->scale_factor =                      \
                         malloc(n_scale * sizeof(uint8_t));                     \
-                    if ((post_ops->sum)->scale_factor == NULL) {               \
+                    if ((metadata->scale)->sf->scale_factor == NULL) {         \
                         goto err_handler;                                      \
                     }                                                          \
                     GEN_FUNC_NAME(fill_array_, uint8_t)                        \
-                    ((post_ops->sum)->scale_factor, n_scale);                  \
-                    (post_ops->sum)->scale_factor_len = n_scale;               \
+                    ((metadata->scale)->sf->scale_factor, n_scale);            \
+                    (metadata->scale)->sf->scale_factor_len = n_scale;         \
                 } else {                                                       \
                 }                                                              \
             } else {                                                           \
-                (post_ops->sum)->scale_factor =                                \
+                (metadata->scale)->sf = malloc(sizeof(dlp_sf_t));              \
+                if ((metadata->scale)->sf == NULL) {                           \
+                    goto err_handler;                                          \
+                }                                                              \
+                (metadata->scale)->sf->scale_factor =                          \
                     malloc(n_scale * sizeof(DSCALE_type));                     \
-                if ((post_ops->sum)->scale_factor == NULL) {                   \
+                if ((metadata->scale)->sf->scale_factor == NULL) {             \
                     goto err_handler;                                          \
                 }                                                              \
                 DSCALE_type* temp_dscale_ptr =                                 \
-                    (DSCALE_type*)(post_ops->sum)->scale_factor;               \
+                    (DSCALE_type*)(metadata->scale)->sf->scale_factor;         \
                 GEN_FUNC_NAME(fill_array_, DSCALE_type)                        \
                 (temp_dscale_ptr, n_scale);                                    \
-                (post_ops->sum)->scale_factor_len = n_scale;                   \
+                (metadata->scale)->sf->scale_factor_len  = n_scale;            \
+                (metadata->scale)->sf->scale_factor_type = DLP_F32;            \
                 if (strcmp(#BLAS_SFX, "u8s8s32ou8"))                           \
                     for (md_t i = 0; i < n_scale; i++)                         \
                         temp_dscale_ptr[i] = abs(temp_dscale_ptr[i]);          \
             }                                                                  \
                                                                                \
             if (is_zp_stor_type == TRUE) {                                     \
-                if ((strcmp(zp_stor_type, "BF16") == 0)) {                     \
-                    (post_ops->sum)->zp_stor_type = AOCL_GEMM_BF16;            \
-                    (post_ops->sum)->zero_point =                              \
+                (metadata->scale)->zp = malloc(sizeof(dlp_zp_t));              \
+                if ((metadata->scale)->zp == NULL) {                           \
+                    goto err_handler;                                          \
+                }                                                              \
+                if ((strcmp(zp_stor_type, "DLP_BF16") == 0)) {                 \
+                    (metadata->scale)->zp->zero_point_type = DLP_BF16;         \
+                    (metadata->scale)->zp->zero_point =                        \
                         malloc(n_zp * sizeof(bfloat16));                       \
-                    if ((post_ops->sum)->zero_point == NULL) {                 \
+                    if ((metadata->scale)->zp->zero_point == NULL) {           \
                         goto err_handler;                                      \
                     }                                                          \
                     GEN_FUNC_NAME(fill_array_, bfloat16)                       \
-                    ((post_ops->sum)->zero_point, n_zp);                       \
-                    (post_ops->sum)->zero_point_len = n_zp;                    \
-                } else if ((strcmp(zp_stor_type, "F32") == 0)) {               \
-                    (post_ops->sum)->zp_stor_type = AOCL_GEMM_F32;             \
-                    (post_ops->sum)->zero_point =                              \
+                    ((metadata->scale)->zp->zero_point, n_zp);                 \
+                    (metadata->scale)->zp->zero_point_len = n_zp;              \
+                } else if ((strcmp(zp_stor_type, "DLP_F32") == 0)) {           \
+                    (metadata->scale)->zp->zero_point_type = DLP_F32;          \
+                    (metadata->scale)->zp->zero_point =                        \
                         malloc(n_zp * sizeof(float));                          \
-                    if ((post_ops->sum)->zero_point == NULL) {                 \
+                    if ((metadata->scale)->zp->zero_point == NULL) {           \
                         goto err_handler;                                      \
                     }                                                          \
                     GEN_FUNC_NAME(fill_array_, float)                          \
-                    ((post_ops->sum)->zero_point, n_zp);                       \
-                    (post_ops->sum)->zero_point_len = n_zp;                    \
-                } else if ((strcmp(zp_stor_type, "S32") == 0)) {               \
-                    (post_ops->sum)->zp_stor_type = AOCL_GEMM_INT32;           \
-                    (post_ops->sum)->zero_point =                              \
+                    ((metadata->scale)->zp->zero_point, n_zp);                 \
+                    (metadata->scale)->zp->zero_point_len = n_zp;              \
+                } else if ((strcmp(zp_stor_type, "DLP_S32") == 0)) {           \
+                    (metadata->scale)->zp->zero_point_type = DLP_S32;          \
+                    (metadata->scale)->zp->zero_point =                        \
                         malloc(n_zp * sizeof(int32_t));                        \
-                    if ((post_ops->sum)->zero_point == NULL) {                 \
+                    if ((metadata->scale)->zp->zero_point == NULL) {           \
                         goto err_handler;                                      \
                     }                                                          \
                     GEN_FUNC_NAME(fill_array_, int32_t)                        \
-                    ((post_ops->sum)->zero_point, n_zp);                       \
-                    (post_ops->sum)->zero_point_len = n_zp;                    \
-                } else if ((strcmp(zp_stor_type, "S8") == 0)) {                \
-                    (post_ops->sum)->zp_stor_type = AOCL_GEMM_INT8;            \
-                    (post_ops->sum)->zero_point =                              \
+                    ((metadata->scale)->zp->zero_point, n_zp);                 \
+                    (metadata->scale)->zp->zero_point_len = n_zp;              \
+                } else if ((strcmp(zp_stor_type, "DLP_S8") == 0)) {            \
+                    (metadata->scale)->zp->zero_point_type = DLP_S8;           \
+                    (metadata->scale)->zp->zero_point =                        \
                         malloc(n_zp * sizeof(int8_t));                         \
-                    if ((post_ops->sum)->zero_point == NULL) {                 \
+                    if ((metadata->scale)->zp->zero_point == NULL) {           \
                         goto err_handler;                                      \
                     }                                                          \
                     GEN_FUNC_NAME(fill_array_, int8_t)                         \
-                    ((post_ops->sum)->zero_point, n_zp);                       \
-                    (post_ops->sum)->zero_point_len = n_zp;                    \
-                } else if ((strcmp(zp_stor_type, "U8") == 0)) {                \
-                    (post_ops->sum)->zp_stor_type = AOCL_GEMM_UINT8;           \
-                    (post_ops->sum)->zero_point =                              \
+                    ((metadata->scale)->zp->zero_point, n_zp);                 \
+                    (metadata->scale)->zp->zero_point_len = n_zp;              \
+                } else if ((strcmp(zp_stor_type, "DLP_U8") == 0)) {            \
+                    (metadata->scale)->zp->zero_point_type = DLP_U8;           \
+                    (metadata->scale)->zp->zero_point =                        \
                         malloc(n_zp * sizeof(uint8_t));                        \
-                    if ((post_ops->sum)->zero_point == NULL) {                 \
+                    if ((metadata->scale)->zp->zero_point == NULL) {           \
                         goto err_handler;                                      \
                     }                                                          \
                     GEN_FUNC_NAME(fill_array_, uint8_t)                        \
-                    ((post_ops->sum)->zero_point, n_zp);                       \
-                    (post_ops->sum)->zero_point_len = n_zp;                    \
+                    ((metadata->scale)->zp->zero_point, n_zp);                 \
+                    (metadata->scale)->zp->zero_point_len = n_zp;              \
                 } else {                                                       \
                 }                                                              \
             } else {                                                           \
-                (post_ops->sum)->zp_stor_type = NULLTYPE;                      \
-                (post_ops->sum)->zero_point =                                  \
+                (metadata->scale)->zp = malloc(sizeof(dlp_zp_t));              \
+                if ((metadata->scale)->zp == NULL) {                           \
+                    goto err_handler;                                          \
+                }                                                              \
+                (metadata->scale)->zp->zero_point_type = DLP_INVALID;          \
+                (metadata->scale)->zp->zero_point =                            \
                     malloc(n_zp * sizeof(C_DSCALE_type));                      \
-                if ((post_ops->sum)->zero_point == NULL) {                     \
+                if ((metadata->scale)->zp->zero_point == NULL) {               \
                     goto err_handler;                                          \
                 }                                                              \
                 C_DSCALE_type* temp_dzero_point_ptr =                          \
-                    (C_DSCALE_type*)(post_ops->sum)->zero_point;               \
+                    (C_DSCALE_type*)(metadata->scale)->zp->zero_point;         \
                 GEN_FUNC_NAME(fill_array_, C_DSCALE_type)                      \
                 (temp_dzero_point_ptr, n_zp);                                  \
-                (post_ops->sum)->zero_point_len = n_zp;                        \
+                (metadata->scale)->zp->zero_point_len = n_zp;                  \
                 if (strcmp(#BLAS_SFX, "u8s8s32ou8"))                           \
                     for (md_t i = 0; i < n_zp; i++)                            \
                         temp_dzero_point_ptr[i] =                              \
@@ -1973,57 +1981,57 @@ mat_mul_accuracy_check_accum_bf16s4f32obf16(
         if (is_matrix_add == TRUE) {                                           \
             /* Bench limitation: can only support 1 matrix add, but LPGEMM can \
              * support multiple scale post-ops. */                             \
-            post_ops->matrix_add = malloc(sizeof(aocl_post_op_matrix_add));    \
-            if (post_ops->matrix_add == NULL) {                                \
+            metadata->matrix_add = malloc(sizeof(dlp_post_op_matrix_add));     \
+            if (metadata->matrix_add == NULL) {                                \
                 goto err_handler;                                              \
             }                                                                  \
                                                                                \
             if (is_matadd_stor_type == TRUE) {                                 \
-                if ((strcmp(matadd_stor_type, "BF16") == 0)) {                 \
-                    (post_ops->matrix_add)->stor_type = AOCL_GEMM_BF16;        \
-                    (post_ops->matrix_add)->matrix =                           \
+                if ((strcmp(matadd_stor_type, "DLP_BF16") == 0)) {             \
+                    (metadata->matrix_add)->stor_type = DLP_BF16;              \
+                    (metadata->matrix_add)->matrix =                           \
                         malloc(m * n * sizeof(bfloat16));                      \
-                    if ((post_ops->matrix_add)->matrix == NULL) {              \
+                    if ((metadata->matrix_add)->matrix == NULL) {              \
                         goto err_handler;                                      \
                     }                                                          \
                     GEN_FUNC_NAME(fill_array_, bfloat16)                       \
-                    ((post_ops->matrix_add)->matrix, (m * n));                 \
-                } else if ((strcmp(matadd_stor_type, "F32") == 0)) {           \
-                    (post_ops->matrix_add)->stor_type = AOCL_GEMM_F32;         \
-                    (post_ops->matrix_add)->matrix =                           \
+                    ((metadata->matrix_add)->matrix, (m * n));                 \
+                } else if ((strcmp(matadd_stor_type, "DLP_F32") == 0)) {       \
+                    (metadata->matrix_add)->stor_type = DLP_F32;               \
+                    (metadata->matrix_add)->matrix =                           \
                         malloc(m * n * sizeof(float));                         \
-                    if ((post_ops->matrix_add)->matrix == NULL) {              \
+                    if ((metadata->matrix_add)->matrix == NULL) {              \
                         goto err_handler;                                      \
                     }                                                          \
                     GEN_FUNC_NAME(fill_array_, float)                          \
-                    ((post_ops->matrix_add)->matrix, (m * n));                 \
-                } else if ((strcmp(matadd_stor_type, "S32") == 0)) {           \
-                    (post_ops->matrix_add)->stor_type = AOCL_GEMM_INT32;       \
-                    (post_ops->matrix_add)->matrix =                           \
+                    ((metadata->matrix_add)->matrix, (m * n));                 \
+                } else if ((strcmp(matadd_stor_type, "DLP_S32") == 0)) {       \
+                    (metadata->matrix_add)->stor_type = DLP_S32;               \
+                    (metadata->matrix_add)->matrix =                           \
                         malloc(m * n * sizeof(int32_t));                       \
-                    if ((post_ops->matrix_add)->matrix == NULL) {              \
+                    if ((metadata->matrix_add)->matrix == NULL) {              \
                         goto err_handler;                                      \
                     }                                                          \
                     GEN_FUNC_NAME(fill_array_, int32_t)                        \
-                    ((post_ops->matrix_add)->matrix, (m * n));                 \
-                } else if ((strcmp(matadd_stor_type, "S8") == 0)) {            \
-                    (post_ops->matrix_add)->stor_type = AOCL_GEMM_INT8;        \
-                    (post_ops->matrix_add)->matrix =                           \
+                    ((metadata->matrix_add)->matrix, (m * n));                 \
+                } else if ((strcmp(matadd_stor_type, "DLP_S8") == 0)) {        \
+                    (metadata->matrix_add)->stor_type = DLP_S8;                \
+                    (metadata->matrix_add)->matrix =                           \
                         malloc(m * n * sizeof(int8_t));                        \
-                    if ((post_ops->matrix_add)->matrix == NULL) {              \
+                    if ((metadata->matrix_add)->matrix == NULL) {              \
                         goto err_handler;                                      \
                     }                                                          \
                     GEN_FUNC_NAME(fill_array_, int8_t)                         \
-                    ((post_ops->matrix_add)->matrix, (m * n));                 \
-                } else if ((strcmp(matadd_stor_type, "U8") == 0)) {            \
-                    (post_ops->matrix_add)->stor_type = AOCL_GEMM_UINT8;       \
-                    (post_ops->matrix_add)->matrix =                           \
+                    ((metadata->matrix_add)->matrix, (m * n));                 \
+                } else if ((strcmp(matadd_stor_type, "DLP_U8") == 0)) {        \
+                    (metadata->matrix_add)->stor_type = DLP_U8;                \
+                    (metadata->matrix_add)->matrix =                           \
                         malloc(m * n * sizeof(int8_t));                        \
-                    if ((post_ops->matrix_add)->matrix == NULL) {              \
+                    if ((metadata->matrix_add)->matrix == NULL) {              \
                         goto err_handler;                                      \
                     }                                                          \
                     GEN_FUNC_NAME(fill_array_, uint8_t)                        \
-                    ((post_ops->matrix_add)->matrix, (m * n));                 \
+                    ((metadata->matrix_add)->matrix, (m * n));                 \
                 } else {                                                       \
                 }                                                              \
             } else {                                                           \
@@ -2031,121 +2039,126 @@ mat_mul_accuracy_check_accum_bf16s4f32obf16(
                  */                                                            \
                 if (is_integerAPI_avx512(#BLAS_SFX)) {                         \
                     if (strcmp(#C_type, "int8_t") == 0) {                      \
-                        (post_ops->matrix_add)->stor_type = NULLTYPE;          \
-                        (post_ops->matrix_add)->matrix =                       \
+                        (metadata->matrix_add)->stor_type = DLP_INVALID;       \
+                        (metadata->matrix_add)->matrix =                       \
                             malloc(m * n * sizeof(int8_t));                    \
-                        if ((post_ops->matrix_add)->matrix == NULL) {          \
+                        if ((metadata->matrix_add)->matrix == NULL) {          \
                             goto err_handler;                                  \
                         }                                                      \
                         GEN_FUNC_NAME(fill_array_, int8_t)                     \
-                        ((post_ops->matrix_add)->matrix, (m * n));             \
+                        ((metadata->matrix_add)->matrix, (m * n));             \
                     } else {                                                   \
-                        (post_ops->matrix_add)->stor_type = NULLTYPE;          \
-                        (post_ops->matrix_add)->matrix =                       \
+                        (metadata->matrix_add)->stor_type = DLP_INVALID;       \
+                        (metadata->matrix_add)->matrix =                       \
                             malloc(m * n * sizeof(int32_t));                   \
-                        if ((post_ops->matrix_add)->matrix == NULL) {          \
+                        if ((metadata->matrix_add)->matrix == NULL) {          \
                             goto err_handler;                                  \
                         }                                                      \
                         GEN_FUNC_NAME(fill_array_, int32_t)                    \
-                        ((post_ops->matrix_add)->matrix, (m * n));             \
+                        ((metadata->matrix_add)->matrix, (m * n));             \
                     }                                                          \
                 } else {                                                       \
                     if (global_dscale_out == 'y') {                            \
-                        (post_ops->matrix_add)->stor_type = NULLTYPE;          \
-                        (post_ops->matrix_add)->matrix =                       \
+                        (metadata->matrix_add)->stor_type = DLP_INVALID;       \
+                        (metadata->matrix_add)->matrix =                       \
                             malloc(m * n * sizeof(C_DSCALE_type));             \
-                        if ((post_ops->matrix_add)->matrix == NULL) {          \
+                        if ((metadata->matrix_add)->matrix == NULL) {          \
                             goto err_handler;                                  \
                         }                                                      \
                         GEN_FUNC_NAME(fill_array_, C_DSCALE_type)              \
-                        ((post_ops->matrix_add)->matrix, (m * n));             \
+                        ((metadata->matrix_add)->matrix, (m * n));             \
                     } else {                                                   \
-                        (post_ops->matrix_add)->stor_type = NULLTYPE;          \
-                        (post_ops->matrix_add)->matrix =                       \
+                        (metadata->matrix_add)->stor_type = DLP_INVALID;       \
+                        (metadata->matrix_add)->matrix =                       \
                             malloc(m * n * sizeof(float));                     \
-                        if ((post_ops->matrix_add)->matrix == NULL) {          \
+                        if ((metadata->matrix_add)->matrix == NULL) {          \
                             goto err_handler;                                  \
                         }                                                      \
                         GEN_FUNC_NAME(fill_array_, float)                      \
-                        ((post_ops->matrix_add)->matrix, (m * n));             \
+                        ((metadata->matrix_add)->matrix, (m * n));             \
                     }                                                          \
                 }                                                              \
             }                                                                  \
             if ((stor_order == 'C') || (stor_order == 'c')) {                  \
-                (post_ops->matrix_add)->ldm = m;                               \
+                (metadata->matrix_add)->ldm = m;                               \
             } else {                                                           \
-                (post_ops->matrix_add)->ldm = n;                               \
+                (metadata->matrix_add)->ldm = n;                               \
             }                                                                  \
                                                                                \
             /* Allocate scale buffer. */                                       \
             md_t n_scale = n; /* Support for vector will be added. */          \
-            (post_ops->matrix_add)->scale_factor =                             \
+            (metadata->matrix_add)->sf = malloc(sizeof(dlp_sf_t));             \
+            if ((metadata->matrix_add)->sf == NULL) {                          \
+                goto err_handler;                                              \
+            }                                                                  \
+            (metadata->matrix_add)->sf->scale_factor =                         \
                 malloc(n_scale * sizeof(DSCALE_type));                         \
-            if ((post_ops->matrix_add)->scale_factor == NULL) {                \
+            if ((metadata->matrix_add)->sf->scale_factor == NULL) {            \
                 goto err_handler;                                              \
             }                                                                  \
             /* Fill scale factor. */                                           \
             DSCALE_type* temp_dscale_ptr =                                     \
-                (DSCALE_type*)(post_ops->matrix_add)->scale_factor;            \
+                (DSCALE_type*)(metadata->matrix_add)->sf->scale_factor;        \
             for (md_t i = 0; i < n_scale; ++i) {                               \
                 temp_dscale_ptr[i] = ((DSCALE_type)2);                         \
             }                                                                  \
-            (post_ops->matrix_add)->scale_factor_len = n_scale;                \
+            (metadata->matrix_add)->sf->scale_factor_len  = n_scale;           \
+            (metadata->matrix_add)->sf->scale_factor_type = DLP_F32;           \
         }                                                                      \
                                                                                \
         if (is_matrix_mul == TRUE) {                                           \
             /* Bench limitation: can only support 1 matrix mul, but LPGEMM can \
              * support multiple scale post-ops. */                             \
-            post_ops->matrix_mul = malloc(sizeof(aocl_post_op_matrix_mul));    \
-            if (post_ops->matrix_mul == NULL) {                                \
+            metadata->matrix_mul = malloc(sizeof(dlp_post_op_matrix_mul));     \
+            if (metadata->matrix_mul == NULL) {                                \
                 goto err_handler;                                              \
             }                                                                  \
             if (is_matmul_stor_type == TRUE) {                                 \
-                if ((strcmp(matmul_stor_type, "BF16") == 0)) {                 \
-                    (post_ops->matrix_mul)->stor_type = AOCL_GEMM_BF16;        \
-                    (post_ops->matrix_mul)->matrix =                           \
+                if ((strcmp(matmul_stor_type, "DLP_BF16") == 0)) {             \
+                    (metadata->matrix_mul)->stor_type = DLP_BF16;              \
+                    (metadata->matrix_mul)->matrix =                           \
                         malloc(m * n * sizeof(bfloat16));                      \
-                    if ((post_ops->matrix_mul)->matrix == NULL) {              \
+                    if ((metadata->matrix_mul)->matrix == NULL) {              \
                         goto err_handler;                                      \
                     }                                                          \
                     GEN_FUNC_NAME(fill_array_, bfloat16)                       \
-                    ((post_ops->matrix_mul)->matrix, (m * n));                 \
-                } else if ((strcmp(matmul_stor_type, "F32") == 0)) {           \
-                    (post_ops->matrix_mul)->stor_type = AOCL_GEMM_F32;         \
-                    (post_ops->matrix_mul)->matrix =                           \
+                    ((metadata->matrix_mul)->matrix, (m * n));                 \
+                } else if ((strcmp(matmul_stor_type, "DLP_F32") == 0)) {       \
+                    (metadata->matrix_mul)->stor_type = DLP_F32;               \
+                    (metadata->matrix_mul)->matrix =                           \
                         malloc(m * n * sizeof(float));                         \
-                    if ((post_ops->matrix_mul)->matrix == NULL) {              \
+                    if ((metadata->matrix_mul)->matrix == NULL) {              \
                         goto err_handler;                                      \
                     }                                                          \
                     GEN_FUNC_NAME(fill_array_, float)                          \
-                    ((post_ops->matrix_mul)->matrix, (m * n));                 \
-                } else if ((strcmp(matmul_stor_type, "S32") == 0)) {           \
-                    (post_ops->matrix_mul)->stor_type = AOCL_GEMM_INT32;       \
-                    (post_ops->matrix_mul)->matrix =                           \
+                    ((metadata->matrix_mul)->matrix, (m * n));                 \
+                } else if ((strcmp(matmul_stor_type, "DLP_S32") == 0)) {       \
+                    (metadata->matrix_mul)->stor_type = DLP_S32;               \
+                    (metadata->matrix_mul)->matrix =                           \
                         malloc(m * n * sizeof(int32_t));                       \
-                    if ((post_ops->matrix_mul)->matrix == NULL) {              \
+                    if ((metadata->matrix_mul)->matrix == NULL) {              \
                         goto err_handler;                                      \
                     }                                                          \
                     GEN_FUNC_NAME(fill_array_, int32_t)                        \
-                    ((post_ops->matrix_mul)->matrix, (m * n));                 \
-                } else if ((strcmp(matmul_stor_type, "S8") == 0)) {            \
-                    (post_ops->matrix_mul)->stor_type = AOCL_GEMM_INT8;        \
-                    (post_ops->matrix_mul)->matrix =                           \
+                    ((metadata->matrix_mul)->matrix, (m * n));                 \
+                } else if ((strcmp(matmul_stor_type, "DLP_S8") == 0)) {        \
+                    (metadata->matrix_mul)->stor_type = DLP_S8;                \
+                    (metadata->matrix_mul)->matrix =                           \
                         malloc(m * n * sizeof(int8_t));                        \
-                    if ((post_ops->matrix_mul)->matrix == NULL) {              \
+                    if ((metadata->matrix_mul)->matrix == NULL) {              \
                         goto err_handler;                                      \
                     }                                                          \
                     GEN_FUNC_NAME(fill_array_, int8_t)                         \
-                    ((post_ops->matrix_mul)->matrix, (m * n));                 \
-                } else if ((strcmp(matmul_stor_type, "U8") == 0)) {            \
-                    (post_ops->matrix_mul)->stor_type = AOCL_GEMM_UINT8;       \
-                    (post_ops->matrix_mul)->matrix =                           \
+                    ((metadata->matrix_mul)->matrix, (m * n));                 \
+                } else if ((strcmp(matmul_stor_type, "DLP_U8") == 0)) {        \
+                    (metadata->matrix_mul)->stor_type = DLP_U8;                \
+                    (metadata->matrix_mul)->matrix =                           \
                         malloc(m * n * sizeof(int8_t));                        \
-                    if ((post_ops->matrix_mul)->matrix == NULL) {              \
+                    if ((metadata->matrix_mul)->matrix == NULL) {              \
                         goto err_handler;                                      \
                     }                                                          \
                     GEN_FUNC_NAME(fill_array_, uint8_t)                        \
-                    ((post_ops->matrix_mul)->matrix, (m * n));                 \
+                    ((metadata->matrix_mul)->matrix, (m * n));                 \
                 } else {                                                       \
                 }                                                              \
             } else {                                                           \
@@ -2153,142 +2166,145 @@ mat_mul_accuracy_check_accum_bf16s4f32obf16(
                  */                                                            \
                 if (is_integerAPI_avx512(#BLAS_SFX)) {                         \
                     if (strcmp(#C_type, "int8_t") == 0) {                      \
-                        (post_ops->matrix_mul)->stor_type = NULLTYPE;          \
-                        (post_ops->matrix_mul)->matrix =                       \
+                        (metadata->matrix_mul)->stor_type = DLP_INVALID;       \
+                        (metadata->matrix_mul)->matrix =                       \
                             malloc(m * n * sizeof(int8_t));                    \
-                        if ((post_ops->matrix_mul)->matrix == NULL) {          \
+                        if ((metadata->matrix_mul)->matrix == NULL) {          \
                             goto err_handler;                                  \
                         }                                                      \
                         GEN_FUNC_NAME(fill_array_, int8_t)                     \
-                        ((post_ops->matrix_mul)->matrix, (m * n));             \
+                        ((metadata->matrix_mul)->matrix, (m * n));             \
                     } else {                                                   \
-                        (post_ops->matrix_mul)->stor_type = NULLTYPE;          \
-                        (post_ops->matrix_mul)->matrix =                       \
+                        (metadata->matrix_mul)->stor_type = DLP_INVALID;       \
+                        (metadata->matrix_mul)->matrix =                       \
                             malloc(m * n * sizeof(int32_t));                   \
-                        if ((post_ops->matrix_mul)->matrix == NULL) {          \
+                        if ((metadata->matrix_mul)->matrix == NULL) {          \
                             goto err_handler;                                  \
                         }                                                      \
                         GEN_FUNC_NAME(fill_array_, int32_t)                    \
-                        ((post_ops->matrix_mul)->matrix, (m * n));             \
+                        ((metadata->matrix_mul)->matrix, (m * n));             \
                     }                                                          \
                 } else {                                                       \
                     if (global_dscale_out == 'y') {                            \
-                        (post_ops->matrix_mul)->stor_type = NULLTYPE;          \
-                        (post_ops->matrix_mul)->matrix =                       \
+                        (metadata->matrix_mul)->stor_type = DLP_INVALID;       \
+                        (metadata->matrix_mul)->matrix =                       \
                             malloc(m * n * sizeof(C_DSCALE_type));             \
-                        if ((post_ops->matrix_mul)->matrix == NULL) {          \
+                        if ((metadata->matrix_mul)->matrix == NULL) {          \
                             goto err_handler;                                  \
                         }                                                      \
                         GEN_FUNC_NAME(fill_array_, C_DSCALE_type)              \
-                        ((post_ops->matrix_mul)->matrix, (m * n));             \
+                        ((metadata->matrix_mul)->matrix, (m * n));             \
                     } else {                                                   \
-                        (post_ops->matrix_mul)->stor_type = NULLTYPE;          \
-                        (post_ops->matrix_mul)->matrix =                       \
+                        (metadata->matrix_mul)->stor_type = DLP_INVALID;       \
+                        (metadata->matrix_mul)->matrix =                       \
                             malloc(m * n * sizeof(float));                     \
-                        if ((post_ops->matrix_mul)->matrix == NULL) {          \
+                        if ((metadata->matrix_mul)->matrix == NULL) {          \
                             goto err_handler;                                  \
                         }                                                      \
                         GEN_FUNC_NAME(fill_array_, float)                      \
-                        ((post_ops->matrix_mul)->matrix, (m * n));             \
+                        ((metadata->matrix_mul)->matrix, (m * n));             \
                     }                                                          \
                 }                                                              \
             }                                                                  \
             if ((stor_order == 'C') || (stor_order == 'c')) {                  \
-                (post_ops->matrix_mul)->ldm = m;                               \
+                (metadata->matrix_mul)->ldm = m;                               \
             } else {                                                           \
-                (post_ops->matrix_mul)->ldm = n;                               \
+                (metadata->matrix_mul)->ldm = n;                               \
             }                                                                  \
                                                                                \
             /* Allocate scale buffer. */                                       \
             md_t n_scale = n; /* Support for vector will be added. */          \
-            (post_ops->matrix_mul)->scale_factor =                             \
+            (metadata->matrix_mul)->sf = malloc(sizeof(dlp_sf_t));             \
+            if ((metadata->matrix_mul)->sf == NULL) {                          \
+                goto err_handler;                                              \
+            }                                                                  \
+            (metadata->matrix_mul)->sf->scale_factor =                         \
                 malloc(n_scale * sizeof(DSCALE_type));                         \
-            if ((post_ops->matrix_mul)->scale_factor == NULL) {                \
+            if ((metadata->matrix_mul)->sf->scale_factor == NULL) {            \
                 goto err_handler;                                              \
             }                                                                  \
             /* Fill scale factor. */                                           \
             DSCALE_type* temp_dscale_ptr =                                     \
-                (DSCALE_type*)(post_ops->matrix_mul)->scale_factor;            \
+                (DSCALE_type*)(metadata->matrix_mul)->sf->scale_factor;        \
             for (md_t i = 0; i < n_scale; ++i) {                               \
                 temp_dscale_ptr[i] = ((DSCALE_type)2);                         \
             }                                                                  \
-            (post_ops->matrix_mul)->scale_factor_len = n_scale;                \
+            (metadata->matrix_mul)->sf->scale_factor_len  = n_scale;           \
+            (metadata->matrix_mul)->sf->scale_factor_type = DLP_F32;           \
         }                                                                      \
                                                                                \
-        post_ops->seq_length = cur_op_index;                                   \
+        metadata->seq_length = cur_op_index;                                   \
                                                                                \
         /* ---------------- Setup the pre_ops struct                           \
          * ----------------------------- */                                    \
-        post_ops->pre_ops = NULL;                                              \
+        metadata->pre_ops = NULL;                                              \
         if (global_pre_op == 'y') {                                            \
-            post_ops->pre_ops = malloc(sizeof(aocl_pre_op));                   \
-            if (post_ops->pre_ops == NULL) {                                   \
+            metadata->pre_ops = malloc(sizeof(dlp_pre_op));                    \
+            if (metadata->pre_ops == NULL) {                                   \
                 goto err_handler;                                              \
             }                                                                  \
                                                                                \
             md_t num_groups = 1;                                               \
             if (quant_group_size == 0) {                                       \
-                post_ops->pre_ops->group_size = k;                             \
+                metadata->pre_ops->group_size = k;                             \
             } else {                                                           \
-                post_ops->pre_ops->group_size = quant_group_size;              \
+                metadata->pre_ops->group_size = quant_group_size;              \
                 if (is_group_quant) {                                          \
-                    num_groups = (k + post_ops->pre_ops->group_size - 1)       \
-                                 / post_ops->pre_ops->group_size;              \
+                    num_groups = (k + metadata->pre_ops->group_size - 1)       \
+                                 / metadata->pre_ops->group_size;              \
                 }                                                              \
             }                                                                  \
                                                                                \
-            (post_ops->pre_ops)->b_zp = NULL;                                  \
+            (metadata->pre_ops)->b_zp = NULL;                                  \
             if (zp_vec_length == 0) {                                          \
                 zp_vec_length = n;                                             \
             }                                                                  \
             if (zp_vec_length != 0) {                                          \
-                (post_ops->pre_ops)->b_zp = malloc(sizeof(aocl_pre_op_zp));    \
-                if ((post_ops->pre_ops)->b_zp == NULL) {                       \
+                (metadata->pre_ops)->b_zp = malloc(sizeof(dlp_zp_t));          \
+                if ((metadata->pre_ops)->b_zp == NULL) {                       \
                     goto err_handler;                                          \
                 }                                                              \
-                ((post_ops->pre_ops)->b_zp)->zero_point =                      \
+                ((metadata->pre_ops)->b_zp)->zero_point =                      \
                     malloc(num_groups * zp_vec_length * sizeof(int8_t));       \
-                if (((post_ops->pre_ops)->b_zp)->zero_point == NULL) {         \
+                if (((metadata->pre_ops)->b_zp)->zero_point == NULL) {         \
                     goto err_handler;                                          \
                 }                                                              \
                 for (md_t i = 0; i < num_groups * zp_vec_length; ++i) {        \
-                    ((int8_t*)((post_ops->pre_ops)->b_zp)->zero_point)[i] =    \
+                    ((int8_t*)((metadata->pre_ops)->b_zp)->zero_point)[i] =    \
                         (int8_t)((i + 1) % 5);                                 \
                 }                                                              \
-                ((post_ops->pre_ops)->b_zp)->zero_point_len = zp_vec_length;   \
+                ((metadata->pre_ops)->b_zp)->zero_point_len = zp_vec_length;   \
             }                                                                  \
                                                                                \
-            (post_ops->pre_ops)->b_scl = malloc(sizeof(aocl_pre_op_sf));       \
-            if ((post_ops->pre_ops)->b_scl == NULL) {                          \
+            (metadata->pre_ops)->b_scl = malloc(sizeof(dlp_sf_t));             \
+            if ((metadata->pre_ops)->b_scl == NULL) {                          \
                 goto err_handler;                                              \
             }                                                                  \
             md_t scale_factor_len = (is_pre_op_scale_scalar == TRUE) ? 1 : n;  \
-            ((post_ops->pre_ops)->b_scl)->scale_factor_len = scale_factor_len; \
+            ((metadata->pre_ops)->b_scl)->scale_factor_len = scale_factor_len; \
             if (is_pre_op_scale_f32) {                                         \
-                ((post_ops->pre_ops)->b_scl)->scale_factor =                   \
+                ((metadata->pre_ops)->b_scl)->scale_factor =                   \
                     malloc(num_groups * scale_factor_len * sizeof(float));     \
-                if (((post_ops->pre_ops)->b_scl)->scale_factor == NULL) {      \
+                if (((metadata->pre_ops)->b_scl)->scale_factor == NULL) {      \
                     goto err_handler;                                          \
                 }                                                              \
                 GEN_FUNC_NAME(fill_array_, float)                              \
-                (((post_ops->pre_ops)->b_scl)->scale_factor,                   \
+                (((metadata->pre_ops)->b_scl)->scale_factor,                   \
                  num_groups * scale_factor_len);                               \
-                ((post_ops->pre_ops)->b_scl)->scale_factor_type =              \
-                    AOCL_GEMM_F32;                                             \
+                ((metadata->pre_ops)->b_scl)->scale_factor_type = DLP_F32;     \
             } else {                                                           \
-                ((post_ops->pre_ops)->b_scl)->scale_factor =                   \
+                ((metadata->pre_ops)->b_scl)->scale_factor =                   \
                     malloc(num_groups * scale_factor_len * sizeof(bfloat16));  \
-                if (((post_ops->pre_ops)->b_scl)->scale_factor == NULL) {      \
+                if (((metadata->pre_ops)->b_scl)->scale_factor == NULL) {      \
                     goto err_handler;                                          \
                 }                                                              \
                 GEN_FUNC_NAME(fill_array_, bfloat16)                           \
-                (((post_ops->pre_ops)->b_scl)->scale_factor,                   \
+                (((metadata->pre_ops)->b_scl)->scale_factor,                   \
                  num_groups * scale_factor_len);                               \
-                ((post_ops->pre_ops)->b_scl)->scale_factor_type =              \
-                    AOCL_GEMM_BF16;                                            \
+                ((metadata->pre_ops)->b_scl)->scale_factor_type = DLP_BF16;    \
             }                                                                  \
                                                                                \
-            (post_ops->pre_ops)->seq_length = 1;                               \
+            (metadata->pre_ops)->seq_length = 1;                               \
         }                                                                      \
                                                                                \
         /* ------------------------ Setup group level post ops                 \
@@ -2296,22 +2312,22 @@ mat_mul_accuracy_check_accum_bf16s4f32obf16(
         bool is_symm = (strcmp(#BLAS_SFX, "s8s8s32of32_sym_quant") == 0)       \
                        || (strcmp(#BLAS_SFX, "s8s8s32obf16_sym_quant") == 0);  \
         if (is_symm && is_sym_quant) {                                         \
-            post_ops->post_op_grp = malloc(sizeof(aocl_group_post_op));        \
-            if (post_ops->post_op_grp == NULL) {                               \
+            metadata->post_op_grp = malloc(sizeof(dlp_group_post_op));         \
+            if (metadata->post_op_grp == NULL) {                               \
                 goto err_handler;                                              \
             }                                                                  \
             /* Initializing both zero_points to NULL */                        \
             /* They'll be initialized  in asymm section */                     \
-            post_ops->post_op_grp->a_zp = NULL;                                \
-            post_ops->post_op_grp->b_zp = NULL;                                \
+            metadata->post_op_grp->a_zp = NULL;                                \
+            metadata->post_op_grp->b_zp = NULL;                                \
             md_t num_groups             = 1;                                   \
             if (quant_group_size == 0) {                                       \
-                post_ops->post_op_grp->group_size = k;                         \
+                metadata->post_op_grp->group_size = k;                         \
             } else {                                                           \
-                post_ops->post_op_grp->group_size = quant_group_size;          \
+                metadata->post_op_grp->group_size = quant_group_size;          \
                 if (is_group_quant) {                                          \
-                    num_groups = (k + post_ops->post_op_grp->group_size - 1)   \
-                                 / post_ops->post_op_grp->group_size;          \
+                    num_groups = (k + metadata->post_op_grp->group_size - 1)   \
+                                 / metadata->post_op_grp->group_size;          \
                 }                                                              \
             }                                                                  \
                                                                                \
@@ -2324,69 +2340,65 @@ mat_mul_accuracy_check_accum_bf16s4f32obf16(
             /* All the above are of bfloat16 type by default */                \
                                                                                \
             /* Filling scale_factor for A & B matrices */                      \
-            post_ops->post_op_grp->a_scl = malloc(sizeof(aocl_pre_op_sf));     \
-            if (post_ops->post_op_grp->a_scl == NULL) {                        \
+            metadata->post_op_grp->a_scl = malloc(sizeof(dlp_sf_t));           \
+            if (metadata->post_op_grp->a_scl == NULL) {                        \
                 goto err_handler;                                              \
             }                                                                  \
-            post_ops->post_op_grp->b_scl = malloc(sizeof(aocl_pre_op_sf));     \
-            if (post_ops->post_op_grp->b_scl == NULL) {                        \
+            metadata->post_op_grp->b_scl = malloc(sizeof(dlp_sf_t));           \
+            if (metadata->post_op_grp->b_scl == NULL) {                        \
                 goto err_handler;                                              \
             }                                                                  \
-            if (strcmp(sym_quant_sf_type, "BF16") == 0) {                      \
-                post_ops->post_op_grp->a_scl->scale_factor =                   \
+            if (strcmp(sym_quant_sf_type, "DLP_BF16") == 0) {                  \
+                metadata->post_op_grp->a_scl->scale_factor =                   \
                     malloc(m * num_groups * sizeof(bfloat16));                 \
-                if (post_ops->post_op_grp->a_scl->scale_factor == NULL) {      \
+                if (metadata->post_op_grp->a_scl->scale_factor == NULL) {      \
                     goto err_handler;                                          \
                 }                                                              \
                 GEN_FUNC_NAME(fill_array_, bfloat16)                           \
-                (post_ops->post_op_grp->a_scl->scale_factor, m * num_groups);  \
-                post_ops->post_op_grp->a_scl->scale_factor_type =              \
-                    AOCL_GEMM_BF16;                                            \
-                post_ops->post_op_grp->b_scl->scale_factor =                   \
+                (metadata->post_op_grp->a_scl->scale_factor, m * num_groups);  \
+                metadata->post_op_grp->a_scl->scale_factor_type = DLP_BF16;    \
+                metadata->post_op_grp->b_scl->scale_factor =                   \
                     malloc(n * num_groups * sizeof(bfloat16));                 \
-                if (post_ops->post_op_grp->b_scl->scale_factor == NULL) {      \
+                if (metadata->post_op_grp->b_scl->scale_factor == NULL) {      \
                     goto err_handler;                                          \
                 }                                                              \
                 GEN_FUNC_NAME(fill_array_, bfloat16)                           \
-                (post_ops->post_op_grp->b_scl->scale_factor, num_groups * n);  \
-                post_ops->post_op_grp->b_scl->scale_factor_type =              \
-                    AOCL_GEMM_BF16;                                            \
+                (metadata->post_op_grp->b_scl->scale_factor, num_groups * n);  \
+                metadata->post_op_grp->b_scl->scale_factor_type = DLP_BF16;    \
             } else {                                                           \
-                post_ops->post_op_grp->a_scl->scale_factor =                   \
+                metadata->post_op_grp->a_scl->scale_factor =                   \
                     malloc(m * num_groups * sizeof(float));                    \
-                if (post_ops->post_op_grp->a_scl->scale_factor == NULL) {      \
+                if (metadata->post_op_grp->a_scl->scale_factor == NULL) {      \
                     goto err_handler;                                          \
                 }                                                              \
                 GEN_FUNC_NAME(fill_array_, float)                              \
-                (post_ops->post_op_grp->a_scl->scale_factor, m * num_groups);  \
+                (metadata->post_op_grp->a_scl->scale_factor, m * num_groups);  \
                 /* for( md_t i = 0; i < num_groups * m; i++) {                 \
-                    ((float*)post_ops->post_op_grp->a_scl->scale_factor)[i]    \
+                    ((float*)metadata->post_op_grp->a_scl->scale_factor)[i]    \
                 = 1.0;                                                         \
                 }  */                                                          \
-                post_ops->post_op_grp->a_scl->scale_factor_type =              \
-                    AOCL_GEMM_F32;                                             \
-                post_ops->post_op_grp->b_scl->scale_factor =                   \
+                metadata->post_op_grp->a_scl->scale_factor_type = DLP_F32;     \
+                metadata->post_op_grp->b_scl->scale_factor =                   \
                     malloc(n * num_groups * sizeof(float));                    \
-                if (post_ops->post_op_grp->b_scl->scale_factor == NULL) {      \
+                if (metadata->post_op_grp->b_scl->scale_factor == NULL) {      \
                     goto err_handler;                                          \
                 }                                                              \
                 GEN_FUNC_NAME(fill_array_, float)                              \
-                (post_ops->post_op_grp->b_scl->scale_factor, num_groups * n);  \
+                (metadata->post_op_grp->b_scl->scale_factor, num_groups * n);  \
                 /*for( md_t i = 0; i < num_groups * n; i++) {                  \
-                    ((float*)post_ops->post_op_grp->b_scl->scale_factor)[i]    \
+                    ((float*)metadata->post_op_grp->b_scl->scale_factor)[i]    \
                 = 1.0;                                                         \
                 } */                                                           \
-                post_ops->post_op_grp->b_scl->scale_factor_type =              \
-                    AOCL_GEMM_F32;                                             \
+                metadata->post_op_grp->b_scl->scale_factor_type = DLP_F32;     \
             }                                                                  \
-            post_ops->post_op_grp->a_scl->scale_factor_len = m;                \
-            post_ops->post_op_grp->b_scl->scale_factor_len = n;                \
-            (post_ops->post_op_grp)->seq_length            = 1;                \
+            metadata->post_op_grp->a_scl->scale_factor_len = m;                \
+            metadata->post_op_grp->b_scl->scale_factor_len = n;                \
+            (metadata->post_op_grp)->seq_length            = 1;                \
         }                                                                      \
-        return post_ops;                                                       \
+        return metadata;                                                       \
                                                                                \
     err_handler:                                                               \
-        lpgemm_destroy_post_ops_struct(post_ops);                              \
+        lpgemm_destroy_post_ops_struct(metadata);                              \
         return NULL;                                                           \
     }
 

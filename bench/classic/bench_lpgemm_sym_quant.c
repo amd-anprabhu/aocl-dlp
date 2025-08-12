@@ -75,7 +75,7 @@ fill_array_int4_c_t(void* arr, md_t size)
                             char op_a, char op_b, md_t m, md_t n, md_t k,      \
                             ACCUM_type alpha, A_type* a, md_t lda, B_type* b,  \
                             md_t ldb, ACCUM_type beta, C_type* c, md_t ldc,    \
-                            aocl_post_op* post_op)                             \
+                            dlp_metadata_t* post_op)                           \
     {                                                                          \
         aocl_gemm_##BLAS_SFX(stor_order, transa, transb, m, n, k, alpha, a,    \
                              lda, op_a, b, ldb, op_b, beta, c, ldc, post_op);  \
@@ -107,7 +107,7 @@ print_result(const char* msg,
 {
     // double gflops = get_gflops( m, n, k, runtime );
     printf("%s transa:%c, transb:%c, m: %ld, n: %ld, k: %ld, lda: %ld, ldb: "
-           "%ld, ldc: %ld, post_ops:%s,"
+           "%ld, ldc: %ld, metadata:%s,"
            " Gops: %f, n_repeats: %d\n",
            msg, transa, transb, m, n, k, lda, ldb, ldc, post_ops_str, gflops,
            n_repeats);
@@ -119,7 +119,7 @@ print_result(const char* msg,
         char stor_order, char transa, char transb, char op_a, char op_b,       \
         int32_t n_repeats, md_t m, md_t n, md_t k, ACCUM_type alpha,           \
         A_type* a, md_t lda, B_type* b, md_t ldb, ACCUM_type beta, C_type* c,  \
-        md_t ldc, aocl_post_op* post_op, char* post_ops_str)                   \
+        md_t ldc, dlp_metadata_t* post_op, char* post_ops_str)                 \
     {                                                                          \
         double dtime;                                                          \
         double dtime_save = DBL_MAX;                                           \
@@ -198,7 +198,7 @@ GEN_MAT_MUL_GET_OUTPUT_TYPE_VALUE(uint8_t, float)
         FILE* fout, const char stor_order, char transa, char transb, md_t m,   \
         md_t n, md_t k, ACCUM_type alpha, A_type* a, md_t lda, B_type* b,      \
         md_t ldb, ACCUM_type beta, C_type* c, md_t ldc, C_type* c_ref,         \
-        md_t ldc_ref, aocl_post_op* post_op, char* post_ops_str)               \
+        md_t ldc_ref, dlp_metadata_t* post_op, char* post_ops_str)             \
     {                                                                          \
         md_t rs_a, cs_a;                                                       \
         if ((transa == 'n') || (transa == 'N')) {                              \
@@ -242,7 +242,7 @@ GEN_MAT_MUL_GET_OUTPUT_TYPE_VALUE(uint8_t, float)
             cs_c_ref = ldc_ref;                                                \
         }                                                                      \
                                                                                \
-        aocl_group_post_op* grp_post_op = post_op->post_op_grp;                \
+        dlp_group_post_op* grp_post_op = post_op->post_op_grp;                 \
         for (md_t i = 0; i < m; ++i) {                                         \
             for (md_t j = 0; j < n; ++j) {                                     \
                 ACCUM_type temp_accum     = 0;                                 \
@@ -329,10 +329,14 @@ GEN_MAT_MUL_GET_OUTPUT_TYPE_VALUE(uint8_t, float)
                             }                                                  \
                         } else if (post_op->seq_vector[op_id] == SCALE) {      \
                             temp_accum = GEN_FUNC_NAME(                        \
-                                mat_mul_accuracy_check_downscale_,             \
-                                BLAS_SFX)(temp_accum, post_op, j,              \
-                                          (post_op->sum)->sf_stor_type,        \
-                                          (post_op->sum)->zp_stor_type);       \
+                                mat_mul_accuracy_check_downscale_, BLAS_SFX)(  \
+                                temp_accum, post_op, j,                        \
+                                (post_op->scale)->sf                           \
+                                    ? (post_op->scale)->sf->scale_factor_type  \
+                                    : DLP_INVALID,                             \
+                                (post_op->scale)->zp                           \
+                                    ? (post_op->scale)->zp->zero_point_type    \
+                                    : DLP_INVALID);                            \
                         } else if (post_op->seq_vector[op_id] == MATRIX_ADD) { \
                             md_t rs_m = (post_op->matrix_add)->ldm;            \
                             md_t cs_m = 1;                                     \
@@ -341,9 +345,15 @@ GEN_MAT_MUL_GET_OUTPUT_TYPE_VALUE(uint8_t, float)
                                 rs_m = 1;                                      \
                             }                                                  \
                             float* scl_fctr =                                  \
-                                (float*)((post_op->matrix_add)->scale_factor); \
+                                (post_op->matrix_add)->sf                      \
+                                    ? (float*)((post_op->matrix_add)           \
+                                                   ->sf->scale_factor)         \
+                                    : NULL;                                    \
                             md_t scl_fctr_len =                                \
-                                (post_op->matrix_add)->scale_factor_len;       \
+                                (post_op->matrix_add)->sf                      \
+                                    ? (post_op->matrix_add)                    \
+                                          ->sf->scale_factor_len               \
+                                    : 0;                                       \
                             temp_accum += GEN_FUNC_NAME(                       \
                                 get_matrix_add_post_op_val_,                   \
                                 BLAS_SFX)((post_op->matrix_add)->matrix, i, j, \
@@ -357,9 +367,15 @@ GEN_MAT_MUL_GET_OUTPUT_TYPE_VALUE(uint8_t, float)
                                 rs_m = 1;                                      \
                             }                                                  \
                             float* scl_fctr =                                  \
-                                (float*)((post_op->matrix_mul)->scale_factor); \
+                                (post_op->matrix_mul)->sf                      \
+                                    ? (float*)((post_op->matrix_mul)           \
+                                                   ->sf->scale_factor)         \
+                                    : NULL;                                    \
                             md_t scl_fctr_len =                                \
-                                (post_op->matrix_mul)->scale_factor_len;       \
+                                (post_op->matrix_mul)->sf                      \
+                                    ? (post_op->matrix_mul)                    \
+                                          ->sf->scale_factor_len               \
+                                    : 0;                                       \
                             temp_accum *= GEN_FUNC_NAME(                       \
                                 get_matrix_mul_post_op_val_,                   \
                                 BLAS_SFX)((post_op->matrix_mul)->matrix, i, j, \
@@ -384,7 +400,7 @@ GEN_MAT_MUL_GET_OUTPUT_TYPE_VALUE(uint8_t, float)
                         fprintf(fout,                                          \
                                 "%s Failure input m: %ld, n: %ld, k: %ld,"     \
                                 " lda: %ld, ldb: %ld, ldc: %ld, computed:%f, " \
-                                "ref:%f, diff:%f, post_ops:%s\n",              \
+                                "ref:%f, diff:%f, metadata:%s\n",              \
                                 XSTR(BLAS_SFX), m, n, k, lda, ldb, ldc,        \
                                 comp_float, ref_float, comp_float - ref_float, \
                                 post_ops_str);                                 \
@@ -392,7 +408,7 @@ GEN_MAT_MUL_GET_OUTPUT_TYPE_VALUE(uint8_t, float)
                     }                                                          \
                     printf("failure, m_index: %ld, n_index: %ld, k: %ld, "     \
                            "computed:%f, ref:%f,"                              \
-                           "diff:%f, post_ops:%s\n",                           \
+                           "diff:%f, metadata:%s\n",                           \
                            i, j, k, comp_float, ref_float,                     \
                            comp_float - ref_float, post_ops_str);              \
                     fflush(stdout);                                            \
@@ -476,7 +492,7 @@ GEN_MAT_MUL_POST_OPS_CREATOR(
             beta      = 9;                                                     \
         }                                                                      \
                                                                                \
-        aocl_post_op* post_op = NULL;                                          \
+        dlp_metadata_t* post_op = NULL;                                        \
         if (((post_ops_str != NULL) && (strcmp(post_ops_str, "none") != 0))    \
             || (global_dscale_out == 'y') || (global_pre_op == 'y')) {         \
             post_op = GEN_FUNC_NAME(lpgemm_create_post_ops_struct_, BLAS_SFX)( \
@@ -495,7 +511,7 @@ GEN_MAT_MUL_POST_OPS_CREATOR(
              alpha, a, stride_a, b, stride_b, beta, c, stride_c, post_op,      \
              post_ops_str_copy);                                               \
         } else if ((op_b == 'r') || (op_b == 'R')) {                           \
-            AOCL_SYMM_STAT_QUANT meta_data;                                    \
+            DLP_SYMM_STAT_QUANT meta_data;                                     \
             meta_data.group_size = post_op->post_op_grp->group_size;           \
             B_type* b_reorder    = NULL;                                       \
             /* Reorder B.*/                                                    \

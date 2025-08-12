@@ -35,10 +35,10 @@
 // It is to be noted that the main macros are defined for combinations
 // of ISA types, and in case a kernel is not implemented for a particualr
 // ISA combination, the reference kernel should be set as FUNC_PTR.
-// TODO: Add reference kernels for BF16/VNNI kernels for ISA combinations
+// TODO: Add reference kernels for DLP_BF16/VNNI kernels for ISA combinations
 // that is not supported.
 
-// AVX512 + VNNI + BF16
+// AVX512 + VNNI + DLP_BF16
 #define LPGEMM_KERN_FUNC_MAP_AVX512_VNNI_BF16                                  \
     KMACRO(U8S8S32OS32, lpgemm_rowvar_u8s8s32o32_6x64)                         \
     KMACRO(F32F32F32OF32, lpgemm_rowvar_f32f32f32of32_avx512_6x64m)            \

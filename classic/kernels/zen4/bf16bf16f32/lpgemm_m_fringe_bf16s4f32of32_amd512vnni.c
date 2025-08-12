@@ -97,7 +97,7 @@ LPGEMM_M_FRINGE_KERN1(bfloat16, int8_t, float, bf16s4f32of32_5x64)
     /* regs to store intermediate int8 values */
     __m512i b0_s8, b1_s8;
 
-    /* Regs to store F32 scale values */
+    /* Regs to store DLP_F32 scale values */
     __m512 scale0, scale1, scale2, scale3, scale4, scale5, scale6, scale7;
     /* Reg to store masks to interleave scale factor */
     __m512i mask_scale1, mask_scale2;
@@ -150,7 +150,7 @@ LPGEMM_M_FRINGE_KERN1(bfloat16, int8_t, float, bf16s4f32of32_5x64)
                 pre_op_sf_off =
                     (group * pre_ops_attr.pre_op_ld) + pre_ops_attr.pre_op_b_j;
 
-                if (pre_ops_attr.scale_factor_type == F32) {
+                if (pre_ops_attr.scale_factor_type == DLP_F32) {
                     // load scale factor vectors
                     scale0 = _mm512_loadu_ps((float*)(pre_ops_attr.scale_factor)
                                              + pre_op_sf_off);
@@ -161,7 +161,7 @@ LPGEMM_M_FRINGE_KERN1(bfloat16, int8_t, float, bf16s4f32of32_5x64)
                     scale6 = _mm512_loadu_ps((float*)(pre_ops_attr.scale_factor)
                                              + pre_op_sf_off + 48);
                 } else {
-                    // load and convert scale factor vectors to F32 type
+                    // load and convert scale factor vectors to DLP_F32 type
                     scale0 = CVT_BF16_F32_INT_SHIFT((__m256i)_mm256_loadu_epi16(
                         (bfloat16*)(pre_ops_attr.scale_factor)
                         + pre_op_sf_off));
@@ -189,7 +189,7 @@ LPGEMM_M_FRINGE_KERN1(bfloat16, int8_t, float, bf16s4f32of32_5x64)
             } else {
                 pre_op_sf_off = group;
 
-                if (pre_ops_attr.scale_factor_type == F32) {
+                if (pre_ops_attr.scale_factor_type == DLP_F32) {
                     scale0 = _mm512_set1_ps(
                         *((float*)pre_ops_attr.scale_factor + pre_op_sf_off));
                 } else {
@@ -441,7 +441,7 @@ LPGEMM_M_FRINGE_KERN1(bfloat16, int8_t, float, bf16s4f32of32_5x64)
                 pre_op_sf_off =
                     (group * pre_ops_attr.pre_op_ld) + pre_ops_attr.pre_op_b_j;
 
-                if (pre_ops_attr.scale_factor_type == F32) {
+                if (pre_ops_attr.scale_factor_type == DLP_F32) {
                     // load scale factor vectors
                     scale0 = _mm512_loadu_ps((float*)(pre_ops_attr.scale_factor)
                                              + pre_op_sf_off);
@@ -452,7 +452,7 @@ LPGEMM_M_FRINGE_KERN1(bfloat16, int8_t, float, bf16s4f32of32_5x64)
                     scale6 = _mm512_loadu_ps((float*)(pre_ops_attr.scale_factor)
                                              + pre_op_sf_off + 48);
                 } else {
-                    // load and convert scale factor vectors to F32 type
+                    // load and convert scale factor vectors to DLP_F32 type
                     scale0 = CVT_BF16_F32_INT_SHIFT((__m256i)_mm256_loadu_epi16(
                         (bfloat16*)(pre_ops_attr.scale_factor)
                         + pre_op_sf_off));
@@ -479,7 +479,7 @@ LPGEMM_M_FRINGE_KERN1(bfloat16, int8_t, float, bf16s4f32of32_5x64)
             } else {
                 pre_op_sf_off = group;
 
-                if (pre_ops_attr.scale_factor_type == F32) {
+                if (pre_ops_attr.scale_factor_type == DLP_F32) {
                     scale0 = _mm512_set1_ps(
                         *((float*)pre_ops_attr.scale_factor + pre_op_sf_off));
                 } else {
@@ -849,7 +849,7 @@ POST_OPS_BIAS_5x64: {
 
     if ((*(char*)post_ops_list_temp->op_args2 == 'r')
         || (*(char*)post_ops_list_temp->op_args2 == 'R')) {
-        if (post_ops_list_temp->stor_type == BF16) {
+        if (post_ops_list_temp->stor_type == DLP_BF16) {
             __mmask16 bias_mask = _cvtu32_mask16(0xFFFF);
             BF16_F32_BIAS_LOAD(selector1, bias_mask, 0);
             BF16_F32_BIAS_LOAD(selector2, bias_mask, 1);
@@ -933,7 +933,7 @@ POST_OPS_BIAS_5x64: {
         // entire row of the transposed output array, instead of an
         // entire column.
         __m512 selector5;
-        if (post_ops_list_temp->stor_type == BF16) {
+        if (post_ops_list_temp->stor_type == DLP_BF16) {
             __mmask16 bias_mask = _cvtu32_mask16(0xFFFF);
             BF16_F32_BIAS_BCAST(selector1, bias_mask, 0);
             BF16_F32_BIAS_BCAST(selector2, bias_mask, 1);
@@ -1582,9 +1582,9 @@ POST_OPS_DOWNSCALE_5x64: {
 POST_OPS_MATRIX_ADD_5x64: {
     md_t ldm = *(md_t*)post_ops_list_temp->op_args3;
 
-    bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                   || ((post_ops_list_temp->stor_type == NONE)
-                       && (post_ops_attr.c_stor_type == BF16));
+    bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                   || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                       && (post_ops_attr.c_stor_type == DLP_BF16));
 
     __m512 selector3 = _mm512_setzero_ps();
     __m512 selector4 = _mm512_setzero_ps();
@@ -1752,9 +1752,9 @@ POST_OPS_MATRIX_ADD_5x64: {
 POST_OPS_MATRIX_MUL_5x64: {
     md_t ldm = *(md_t*)post_ops_list_temp->op_args3;
 
-    bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                   || ((post_ops_list_temp->stor_type == NONE)
-                       && (post_ops_attr.c_stor_type == BF16));
+    bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                   || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                       && (post_ops_attr.c_stor_type == DLP_BF16));
 
     __m512 selector3 = _mm512_setzero_ps();
     __m512 selector4 = _mm512_setzero_ps();
@@ -2295,7 +2295,7 @@ LPGEMM_M_FRINGE_KERN1(bfloat16, int8_t, float, bf16s4f32of32_4x64)
     /* regs to store intermediate int8 values */
     __m512i b0_s8, b1_s8;
 
-    /* Regs to store F32 scale values */
+    /* Regs to store DLP_F32 scale values */
     __m512 scale0, scale1, scale2, scale3, scale4, scale5, scale6, scale7;
     /* Reg to store masks to interleave scale factor */
     __m512i mask_scale1, mask_scale2;
@@ -2370,7 +2370,7 @@ LPGEMM_M_FRINGE_KERN1(bfloat16, int8_t, float, bf16s4f32of32_4x64)
                 pre_op_sf_off =
                     (group * pre_ops_attr.pre_op_ld) + pre_ops_attr.pre_op_b_j;
 
-                if (pre_ops_attr.scale_factor_type == F32) {
+                if (pre_ops_attr.scale_factor_type == DLP_F32) {
                     // load scale factor vectors
                     scale0 = _mm512_loadu_ps((float*)(pre_ops_attr.scale_factor)
                                              + pre_op_sf_off);
@@ -2381,7 +2381,7 @@ LPGEMM_M_FRINGE_KERN1(bfloat16, int8_t, float, bf16s4f32of32_4x64)
                     scale6 = _mm512_loadu_ps((float*)(pre_ops_attr.scale_factor)
                                              + pre_op_sf_off + 48);
                 } else {
-                    // load and convert scale factor vectors to F32 type
+                    // load and convert scale factor vectors to DLP_F32 type
                     scale0 = CVT_BF16_F32_INT_SHIFT((__m256i)_mm256_loadu_epi16(
                         (bfloat16*)(pre_ops_attr.scale_factor)
                         + pre_op_sf_off));
@@ -2409,7 +2409,7 @@ LPGEMM_M_FRINGE_KERN1(bfloat16, int8_t, float, bf16s4f32of32_4x64)
             } else {
                 pre_op_sf_off = group;
 
-                if (pre_ops_attr.scale_factor_type == F32) {
+                if (pre_ops_attr.scale_factor_type == DLP_F32) {
                     scale0 = _mm512_set1_ps(
                         *((float*)pre_ops_attr.scale_factor + pre_op_sf_off));
                 } else {
@@ -2637,7 +2637,7 @@ LPGEMM_M_FRINGE_KERN1(bfloat16, int8_t, float, bf16s4f32of32_4x64)
                 pre_op_sf_off =
                     (group * pre_ops_attr.pre_op_ld) + pre_ops_attr.pre_op_b_j;
 
-                if (pre_ops_attr.scale_factor_type == F32) {
+                if (pre_ops_attr.scale_factor_type == DLP_F32) {
                     // load scale factor vectors
                     scale0 = _mm512_loadu_ps((float*)(pre_ops_attr.scale_factor)
                                              + pre_op_sf_off);
@@ -2648,7 +2648,7 @@ LPGEMM_M_FRINGE_KERN1(bfloat16, int8_t, float, bf16s4f32of32_4x64)
                     scale6 = _mm512_loadu_ps((float*)(pre_ops_attr.scale_factor)
                                              + pre_op_sf_off + 48);
                 } else {
-                    // load and convert scale factor vectors to F32 type
+                    // load and convert scale factor vectors to DLP_F32 type
                     scale0 = CVT_BF16_F32_INT_SHIFT((__m256i)_mm256_loadu_epi16(
                         (bfloat16*)(pre_ops_attr.scale_factor)
                         + pre_op_sf_off));
@@ -2676,7 +2676,7 @@ LPGEMM_M_FRINGE_KERN1(bfloat16, int8_t, float, bf16s4f32of32_4x64)
             } else {
                 pre_op_sf_off = group;
 
-                if (pre_ops_attr.scale_factor_type == F32) {
+                if (pre_ops_attr.scale_factor_type == DLP_F32) {
                     scale0 = _mm512_set1_ps(
                         *((float*)pre_ops_attr.scale_factor + pre_op_sf_off));
                 } else {
@@ -2995,7 +2995,7 @@ POST_OPS_BIAS_4x64: {
 
     if ((*(char*)post_ops_list_temp->op_args2 == 'r')
         || (*(char*)post_ops_list_temp->op_args2 == 'R')) {
-        if (post_ops_list_temp->stor_type == BF16) {
+        if (post_ops_list_temp->stor_type == DLP_BF16) {
             __mmask16 bias_mask = _cvtu32_mask16(0xFFFF);
             BF16_F32_BIAS_LOAD(selector1, bias_mask, 0);
             BF16_F32_BIAS_LOAD(selector2, bias_mask, 1);
@@ -3066,7 +3066,7 @@ POST_OPS_BIAS_4x64: {
         // the ic index, and each bias element corresponds to an
         // entire row of the transposed output array, instead of an
         // entire column.
-        if (post_ops_list_temp->stor_type == BF16) {
+        if (post_ops_list_temp->stor_type == DLP_BF16) {
             __mmask16 bias_mask = _cvtu32_mask16(0xFFFF);
             BF16_F32_BIAS_BCAST(selector1, bias_mask, 0);
             BF16_F32_BIAS_BCAST(selector2, bias_mask, 1);
@@ -3605,9 +3605,9 @@ POST_OPS_DOWNSCALE_4x64: {
 POST_OPS_MATRIX_ADD_4x64: {
     md_t ldm = *(md_t*)post_ops_list_temp->op_args3;
 
-    bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                   || ((post_ops_list_temp->stor_type == NONE)
-                       && (post_ops_attr.c_stor_type == BF16));
+    bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                   || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                       && (post_ops_attr.c_stor_type == DLP_BF16));
 
     __m512 selector3 = _mm512_setzero_ps();
     __m512 selector4 = _mm512_setzero_ps();
@@ -3750,9 +3750,9 @@ POST_OPS_MATRIX_ADD_4x64: {
 POST_OPS_MATRIX_MUL_4x64: {
     md_t ldm = *(md_t*)post_ops_list_temp->op_args3;
 
-    bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                   || ((post_ops_list_temp->stor_type == NONE)
-                       && (post_ops_attr.c_stor_type == BF16));
+    bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                   || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                       && (post_ops_attr.c_stor_type == DLP_BF16));
 
     __m512 selector3 = _mm512_setzero_ps();
     __m512 selector4 = _mm512_setzero_ps();
@@ -4223,7 +4223,7 @@ LPGEMM_M_FRINGE_KERN1(bfloat16, int8_t, float, bf16s4f32of32_3x64)
     /* regs to store intermediate int8 values */
     __m512i b0_s8, b1_s8;
 
-    /* Regs to store F32 scale values */
+    /* Regs to store DLP_F32 scale values */
     __m512 scale0, scale1, scale2, scale3, scale4, scale5, scale6, scale7;
     /* Reg to store masks to interleave scale factor */
     __m512i mask_scale1, mask_scale2;
@@ -4276,7 +4276,7 @@ LPGEMM_M_FRINGE_KERN1(bfloat16, int8_t, float, bf16s4f32of32_3x64)
                 pre_op_sf_off =
                     (group * pre_ops_attr.pre_op_ld) + pre_ops_attr.pre_op_b_j;
 
-                if (pre_ops_attr.scale_factor_type == F32) {
+                if (pre_ops_attr.scale_factor_type == DLP_F32) {
                     // load scale factor vectors
                     scale0 = _mm512_loadu_ps((float*)(pre_ops_attr.scale_factor)
                                              + pre_op_sf_off);
@@ -4287,7 +4287,7 @@ LPGEMM_M_FRINGE_KERN1(bfloat16, int8_t, float, bf16s4f32of32_3x64)
                     scale6 = _mm512_loadu_ps((float*)(pre_ops_attr.scale_factor)
                                              + pre_op_sf_off + 48);
                 } else {
-                    // load and convert scale factor vectors to F32 type
+                    // load and convert scale factor vectors to DLP_F32 type
                     scale0 = CVT_BF16_F32_INT_SHIFT((__m256i)_mm256_loadu_epi16(
                         (bfloat16*)(pre_ops_attr.scale_factor)
                         + pre_op_sf_off));
@@ -4315,7 +4315,7 @@ LPGEMM_M_FRINGE_KERN1(bfloat16, int8_t, float, bf16s4f32of32_3x64)
             } else {
                 pre_op_sf_off = group;
 
-                if (pre_ops_attr.scale_factor_type == F32) {
+                if (pre_ops_attr.scale_factor_type == DLP_F32) {
                     scale0 = _mm512_set1_ps(
                         *((float*)pre_ops_attr.scale_factor + pre_op_sf_off));
                 } else {
@@ -4520,7 +4520,7 @@ LPGEMM_M_FRINGE_KERN1(bfloat16, int8_t, float, bf16s4f32of32_3x64)
                 pre_op_sf_off =
                     (group * pre_ops_attr.pre_op_ld) + pre_ops_attr.pre_op_b_j;
 
-                if (pre_ops_attr.scale_factor_type == F32) {
+                if (pre_ops_attr.scale_factor_type == DLP_F32) {
                     // load scale factor vectors
                     scale0 = _mm512_loadu_ps((float*)(pre_ops_attr.scale_factor)
                                              + pre_op_sf_off);
@@ -4531,7 +4531,7 @@ LPGEMM_M_FRINGE_KERN1(bfloat16, int8_t, float, bf16s4f32of32_3x64)
                     scale6 = _mm512_loadu_ps((float*)(pre_ops_attr.scale_factor)
                                              + pre_op_sf_off + 48);
                 } else {
-                    // load and convert scale factor vectors to F32 type
+                    // load and convert scale factor vectors to DLP_F32 type
                     scale0 = CVT_BF16_F32_INT_SHIFT((__m256i)_mm256_loadu_epi16(
                         (bfloat16*)(pre_ops_attr.scale_factor)
                         + pre_op_sf_off));
@@ -4559,7 +4559,7 @@ LPGEMM_M_FRINGE_KERN1(bfloat16, int8_t, float, bf16s4f32of32_3x64)
             } else {
                 pre_op_sf_off = group;
 
-                if (pre_ops_attr.scale_factor_type == F32) {
+                if (pre_ops_attr.scale_factor_type == DLP_F32) {
                     scale0 = _mm512_set1_ps(
                         *((float*)pre_ops_attr.scale_factor + pre_op_sf_off));
                 } else {
@@ -4824,7 +4824,7 @@ POST_OPS_BIAS_3x64: {
 
     if ((*(char*)post_ops_list_temp->op_args2 == 'r')
         || (*(char*)post_ops_list_temp->op_args2 == 'R')) {
-        if (post_ops_list_temp->stor_type == BF16) {
+        if (post_ops_list_temp->stor_type == DLP_BF16) {
             __mmask16 bias_mask = _cvtu32_mask16(0xFFFF);
             BF16_F32_BIAS_LOAD(selector1, bias_mask, 0);
             BF16_F32_BIAS_LOAD(selector2, bias_mask, 1);
@@ -4883,7 +4883,7 @@ POST_OPS_BIAS_3x64: {
         // the ic index, and each bias element corresponds to an
         // entire row of the transposed output array, instead of an
         // entire column.
-        if (post_ops_list_temp->stor_type == BF16) {
+        if (post_ops_list_temp->stor_type == DLP_BF16) {
             __mmask16 bias_mask = _cvtu32_mask16(0xFFFF);
             BF16_F32_BIAS_BCAST(selector1, bias_mask, 0);
             BF16_F32_BIAS_BCAST(selector2, bias_mask, 1);
@@ -5317,9 +5317,9 @@ POST_OPS_DOWNSCALE_3x64: {
 POST_OPS_MATRIX_ADD_3x64: {
     md_t ldm = *(md_t*)post_ops_list_temp->op_args3;
 
-    bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                   || ((post_ops_list_temp->stor_type == NONE)
-                       && (post_ops_attr.c_stor_type == BF16));
+    bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                   || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                       && (post_ops_attr.c_stor_type == DLP_BF16));
 
     __m512 selector3 = _mm512_setzero_ps();
     __m512 selector4 = _mm512_setzero_ps();
@@ -5439,9 +5439,9 @@ POST_OPS_MATRIX_ADD_3x64: {
 POST_OPS_MATRIX_MUL_3x64: {
     md_t ldm = *(md_t*)post_ops_list_temp->op_args3;
 
-    bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                   || ((post_ops_list_temp->stor_type == NONE)
-                       && (post_ops_attr.c_stor_type == BF16));
+    bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                   || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                       && (post_ops_attr.c_stor_type == DLP_BF16));
 
     __m512 selector3 = _mm512_setzero_ps();
     __m512 selector4 = _mm512_setzero_ps();
@@ -5812,7 +5812,7 @@ LPGEMM_M_FRINGE_KERN1(bfloat16, int8_t, float, bf16s4f32of32_2x64)
     /* regs to store intermediate int8 values */
     __m512i b0_s8, b1_s8;
 
-    /* Regs to store F32 scale values */
+    /* Regs to store DLP_F32 scale values */
     __m512 scale0, scale1, scale2, scale3, scale4, scale5, scale6, scale7;
     /* Reg to store masks to interleave scale factor */
     __m512i mask_scale1, mask_scale2;
@@ -5877,7 +5877,7 @@ LPGEMM_M_FRINGE_KERN1(bfloat16, int8_t, float, bf16s4f32of32_2x64)
                 pre_op_sf_off =
                     (group * pre_ops_attr.pre_op_ld) + pre_ops_attr.pre_op_b_j;
 
-                if (pre_ops_attr.scale_factor_type == F32) {
+                if (pre_ops_attr.scale_factor_type == DLP_F32) {
                     // load scale factor vectors
                     scale0 = _mm512_loadu_ps((float*)(pre_ops_attr.scale_factor)
                                              + pre_op_sf_off);
@@ -5888,7 +5888,7 @@ LPGEMM_M_FRINGE_KERN1(bfloat16, int8_t, float, bf16s4f32of32_2x64)
                     scale6 = _mm512_loadu_ps((float*)(pre_ops_attr.scale_factor)
                                              + pre_op_sf_off + 48);
                 } else {
-                    // load and convert scale factor vectors to F32 type
+                    // load and convert scale factor vectors to DLP_F32 type
                     scale0 = CVT_BF16_F32_INT_SHIFT((__m256i)_mm256_loadu_epi16(
                         (bfloat16*)(pre_ops_attr.scale_factor)
                         + pre_op_sf_off));
@@ -5916,7 +5916,7 @@ LPGEMM_M_FRINGE_KERN1(bfloat16, int8_t, float, bf16s4f32of32_2x64)
             } else {
                 pre_op_sf_off = group;
 
-                if (pre_ops_attr.scale_factor_type == F32) {
+                if (pre_ops_attr.scale_factor_type == DLP_F32) {
                     scale0 = _mm512_set1_ps(
                         *((float*)pre_ops_attr.scale_factor + pre_op_sf_off));
                 } else {
@@ -6096,7 +6096,7 @@ LPGEMM_M_FRINGE_KERN1(bfloat16, int8_t, float, bf16s4f32of32_2x64)
                 pre_op_sf_off =
                     (group * pre_ops_attr.pre_op_ld) + pre_ops_attr.pre_op_b_j;
 
-                if (pre_ops_attr.scale_factor_type == F32) {
+                if (pre_ops_attr.scale_factor_type == DLP_F32) {
                     // load scale factor vectors
                     scale0 = _mm512_loadu_ps((float*)(pre_ops_attr.scale_factor)
                                              + pre_op_sf_off);
@@ -6107,7 +6107,7 @@ LPGEMM_M_FRINGE_KERN1(bfloat16, int8_t, float, bf16s4f32of32_2x64)
                     scale6 = _mm512_loadu_ps((float*)(pre_ops_attr.scale_factor)
                                              + pre_op_sf_off + 48);
                 } else {
-                    // load and convert scale factor vectors to F32 type
+                    // load and convert scale factor vectors to DLP_F32 type
                     scale0 = CVT_BF16_F32_INT_SHIFT((__m256i)_mm256_loadu_epi16(
                         (bfloat16*)(pre_ops_attr.scale_factor)
                         + pre_op_sf_off));
@@ -6135,7 +6135,7 @@ LPGEMM_M_FRINGE_KERN1(bfloat16, int8_t, float, bf16s4f32of32_2x64)
             } else {
                 pre_op_sf_off = group;
 
-                if (pre_ops_attr.scale_factor_type == F32) {
+                if (pre_ops_attr.scale_factor_type == DLP_F32) {
                     scale0 = _mm512_set1_ps(
                         *((float*)pre_ops_attr.scale_factor + pre_op_sf_off));
                 } else {
@@ -6347,7 +6347,7 @@ POST_OPS_BIAS_2x64: {
 
     if ((*(char*)post_ops_list_temp->op_args2 == 'r')
         || (*(char*)post_ops_list_temp->op_args2 == 'R')) {
-        if (post_ops_list_temp->stor_type == BF16) {
+        if (post_ops_list_temp->stor_type == DLP_BF16) {
             __mmask16 bias_mask = _cvtu32_mask16(0xFFFF);
             BF16_F32_BIAS_LOAD(selector1, bias_mask, 0);
             BF16_F32_BIAS_LOAD(selector2, bias_mask, 1);
@@ -6394,7 +6394,7 @@ POST_OPS_BIAS_2x64: {
         // the ic index, and each bias element corresponds to an
         // entire row of the transposed output array, instead of an
         // entire column.
-        if (post_ops_list_temp->stor_type == BF16) {
+        if (post_ops_list_temp->stor_type == DLP_BF16) {
             __mmask16 bias_mask = _cvtu32_mask16(0xFFFF);
             BF16_F32_BIAS_BCAST(selector1, bias_mask, 0);
             BF16_F32_BIAS_BCAST(selector2, bias_mask, 1);
@@ -6723,9 +6723,9 @@ POST_OPS_DOWNSCALE_2x64: {
 POST_OPS_MATRIX_ADD_2x64: {
     md_t ldm = *(md_t*)post_ops_list_temp->op_args3;
 
-    bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                   || ((post_ops_list_temp->stor_type == NONE)
-                       && (post_ops_attr.c_stor_type == BF16));
+    bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                   || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                       && (post_ops_attr.c_stor_type == DLP_BF16));
 
     __m512 selector3 = _mm512_setzero_ps();
     __m512 selector4 = _mm512_setzero_ps();
@@ -6822,9 +6822,9 @@ POST_OPS_MATRIX_ADD_2x64: {
 POST_OPS_MATRIX_MUL_2x64: {
     md_t ldm = *(md_t*)post_ops_list_temp->op_args3;
 
-    bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                   || ((post_ops_list_temp->stor_type == NONE)
-                       && (post_ops_attr.c_stor_type == BF16));
+    bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                   || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                       && (post_ops_attr.c_stor_type == DLP_BF16));
 
     __m512 selector3 = _mm512_setzero_ps();
     __m512 selector4 = _mm512_setzero_ps();
@@ -7109,7 +7109,7 @@ LPGEMM_M_FRINGE_KERN1(bfloat16, int8_t, float, bf16s4f32of32_1x64)
     /* regs to store intermediate int8 values */
     __m512i b0_s8, b1_s8;
 
-    /* Regs to store F32 scale values */
+    /* Regs to store DLP_F32 scale values */
     __m512 scale0, scale1, scale2, scale3, scale4, scale5, scale6, scale7;
     /* Reg to store masks to interleave scale factor */
     __m512i mask_scale1, mask_scale2;
@@ -7169,7 +7169,7 @@ LPGEMM_M_FRINGE_KERN1(bfloat16, int8_t, float, bf16s4f32of32_1x64)
                 pre_op_sf_off =
                     (group * pre_ops_attr.pre_op_ld) + pre_ops_attr.pre_op_b_j;
 
-                if (pre_ops_attr.scale_factor_type == F32) {
+                if (pre_ops_attr.scale_factor_type == DLP_F32) {
                     // load scale factor vectors
                     scale0 = _mm512_loadu_ps((float*)(pre_ops_attr.scale_factor)
                                              + pre_op_sf_off);
@@ -7180,7 +7180,7 @@ LPGEMM_M_FRINGE_KERN1(bfloat16, int8_t, float, bf16s4f32of32_1x64)
                     scale6 = _mm512_loadu_ps((float*)(pre_ops_attr.scale_factor)
                                              + pre_op_sf_off + 48);
                 } else {
-                    // load and convert scale factor vectors to F32 type
+                    // load and convert scale factor vectors to DLP_F32 type
                     scale0 = CVT_BF16_F32_INT_SHIFT((__m256i)_mm256_loadu_epi16(
                         (bfloat16*)(pre_ops_attr.scale_factor)
                         + pre_op_sf_off));
@@ -7208,7 +7208,7 @@ LPGEMM_M_FRINGE_KERN1(bfloat16, int8_t, float, bf16s4f32of32_1x64)
             } else {
                 pre_op_sf_off = group;
 
-                if (pre_ops_attr.scale_factor_type == F32) {
+                if (pre_ops_attr.scale_factor_type == DLP_F32) {
                     scale0 = _mm512_set1_ps(
                         *((float*)pre_ops_attr.scale_factor + pre_op_sf_off));
                 } else {
@@ -7365,7 +7365,7 @@ LPGEMM_M_FRINGE_KERN1(bfloat16, int8_t, float, bf16s4f32of32_1x64)
                 pre_op_sf_off =
                     (group * pre_ops_attr.pre_op_ld) + pre_ops_attr.pre_op_b_j;
 
-                if (pre_ops_attr.scale_factor_type == F32) {
+                if (pre_ops_attr.scale_factor_type == DLP_F32) {
                     // load scale factor vectors
                     scale0 = _mm512_loadu_ps((float*)(pre_ops_attr.scale_factor)
                                              + pre_op_sf_off);
@@ -7376,7 +7376,7 @@ LPGEMM_M_FRINGE_KERN1(bfloat16, int8_t, float, bf16s4f32of32_1x64)
                     scale6 = _mm512_loadu_ps((float*)(pre_ops_attr.scale_factor)
                                              + pre_op_sf_off + 48);
                 } else {
-                    // load and convert scale factor vectors to F32 type
+                    // load and convert scale factor vectors to DLP_F32 type
                     scale0 = CVT_BF16_F32_INT_SHIFT((__m256i)_mm256_loadu_epi16(
                         (bfloat16*)(pre_ops_attr.scale_factor)
                         + pre_op_sf_off));
@@ -7404,7 +7404,7 @@ LPGEMM_M_FRINGE_KERN1(bfloat16, int8_t, float, bf16s4f32of32_1x64)
             } else {
                 pre_op_sf_off = group;
 
-                if (pre_ops_attr.scale_factor_type == F32) {
+                if (pre_ops_attr.scale_factor_type == DLP_F32) {
                     scale0 = _mm512_set1_ps(
                         *((float*)pre_ops_attr.scale_factor + pre_op_sf_off));
                 } else {
@@ -7564,7 +7564,7 @@ POST_OPS_BIAS_1x64: {
 
     if ((*(char*)post_ops_list_temp->op_args2 == 'r')
         || (*(char*)post_ops_list_temp->op_args2 == 'R')) {
-        if (post_ops_list_temp->stor_type == BF16) {
+        if (post_ops_list_temp->stor_type == DLP_BF16) {
             __mmask16 bias_mask = _cvtu32_mask16(0xFFFF);
             BF16_F32_BIAS_LOAD(selector1, bias_mask, 0);
             BF16_F32_BIAS_LOAD(selector2, bias_mask, 1);
@@ -7599,7 +7599,7 @@ POST_OPS_BIAS_1x64: {
         // the ic index, and each bias element corresponds to an
         // entire row of the transposed output array, instead of an
         // entire column.
-        if (post_ops_list_temp->stor_type == BF16) {
+        if (post_ops_list_temp->stor_type == DLP_BF16) {
             __mmask16 bias_mask = _cvtu32_mask16(0xFFFF);
             BF16_F32_BIAS_BCAST(selector1, bias_mask, 0);
         } else {
@@ -7823,9 +7823,9 @@ POST_OPS_DOWNSCALE_1x64: {
 POST_OPS_MATRIX_ADD_1x64: {
     md_t ldm = *(md_t*)post_ops_list_temp->op_args3;
 
-    bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                   || ((post_ops_list_temp->stor_type == NONE)
-                       && (post_ops_attr.c_stor_type == BF16));
+    bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                   || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                       && (post_ops_attr.c_stor_type == DLP_BF16));
 
     __m512 selector3 = _mm512_setzero_ps();
     __m512 selector4 = _mm512_setzero_ps();
@@ -7899,9 +7899,9 @@ POST_OPS_MATRIX_ADD_1x64: {
 POST_OPS_MATRIX_MUL_1x64: {
     md_t ldm = *(md_t*)post_ops_list_temp->op_args3;
 
-    bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                   || ((post_ops_list_temp->stor_type == NONE)
-                       && (post_ops_attr.c_stor_type == BF16));
+    bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                   || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                       && (post_ops_attr.c_stor_type == DLP_BF16));
 
     __m512 selector3 = _mm512_setzero_ps();
     __m512 selector4 = _mm512_setzero_ps();

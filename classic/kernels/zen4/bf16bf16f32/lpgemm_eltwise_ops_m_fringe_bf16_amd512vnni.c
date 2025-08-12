@@ -159,7 +159,7 @@ LPGEMM_ELTWISE_OPS_M_FRINGE_KERNEL(bfloat16, float, bf16of32_5x64)
     POST_OPS_BIAS_5x64_OPS: {
         if ((*(char*)post_ops_list_temp->op_args2 == 'r')
             || (*(char*)post_ops_list_temp->op_args2 == 'R')) {
-            if (post_ops_list_temp->stor_type == BF16) {
+            if (post_ops_list_temp->stor_type == DLP_BF16) {
                 BF16_F32_BIAS_LOAD(selector1, k0, 0);
                 BF16_F32_BIAS_LOAD(selector2, k1, 1);
                 BF16_F32_BIAS_LOAD(selector3, k2, 2);
@@ -246,7 +246,7 @@ LPGEMM_ELTWISE_OPS_M_FRINGE_KERNEL(bfloat16, float, bf16of32_5x64)
             // entire row of the transposed output array, instead of an
             // entire column.
             __m512 selector5;
-            if (post_ops_list_temp->stor_type == BF16) {
+            if (post_ops_list_temp->stor_type == DLP_BF16) {
                 __mmask16 bias_mask = _cvtu32_mask16(0xFFFF);
                 BF16_F32_BIAS_BCAST(selector1, bias_mask, 0);
                 BF16_F32_BIAS_BCAST(selector2, bias_mask, 1);
@@ -905,9 +905,9 @@ LPGEMM_ELTWISE_OPS_M_FRINGE_KERNEL(bfloat16, float, bf16of32_5x64)
     POST_OPS_MATRIX_ADD_5x64_OPS: {
         md_t ldm = *(md_t*)post_ops_list_temp->op_args3;
 
-        bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                       || ((post_ops_list_temp->stor_type == NONE)
-                           && (post_ops_attr.c_stor_type == BF16));
+        bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                       || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                           && (post_ops_attr.c_stor_type == DLP_BF16));
 
         __m512 scl_fctr1 = _mm512_setzero_ps();
         __m512 scl_fctr2 = _mm512_setzero_ps();
@@ -1081,9 +1081,9 @@ LPGEMM_ELTWISE_OPS_M_FRINGE_KERNEL(bfloat16, float, bf16of32_5x64)
     POST_OPS_MATRIX_MUL_5x64_OPS: {
         md_t ldm = *(md_t*)post_ops_list_temp->op_args3;
 
-        bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                       || ((post_ops_list_temp->stor_type == NONE)
-                           && (post_ops_attr.c_stor_type == BF16));
+        bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                       || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                           && (post_ops_attr.c_stor_type == DLP_BF16));
 
         __m512 scl_fctr1 = _mm512_setzero_ps();
         __m512 scl_fctr2 = _mm512_setzero_ps();
@@ -1478,7 +1478,7 @@ LPGEMM_ELTWISE_OPS_M_FRINGE_KERNEL(bfloat16, float, bf16of32_5x64)
 
         // Case where the output C matrix is bf16 (downscaled) and this is the
         // final write for a given block within C.
-        if (post_ops_attr.c_stor_type == BF16) {
+        if (post_ops_attr.c_stor_type == DLP_BF16) {
             // Actually the b matrix is of type bfloat16. However
             // in order to reuse this kernel for f32, the output
             // matrix type in kernel function signature is set to
@@ -1716,7 +1716,7 @@ LPGEMM_ELTWISE_OPS_M_FRINGE_KERNEL(bfloat16, float, bf16of32_4x64)
     POST_OPS_BIAS_4x64_OPS: {
         if ((*(char*)post_ops_list_temp->op_args2 == 'r')
             || (*(char*)post_ops_list_temp->op_args2 == 'R')) {
-            if (post_ops_list_temp->stor_type == BF16) {
+            if (post_ops_list_temp->stor_type == DLP_BF16) {
                 BF16_F32_BIAS_LOAD(selector1, k0, 0);
                 BF16_F32_BIAS_LOAD(selector2, k1, 1);
                 BF16_F32_BIAS_LOAD(selector3, k2, 2);
@@ -1790,7 +1790,7 @@ LPGEMM_ELTWISE_OPS_M_FRINGE_KERNEL(bfloat16, float, bf16of32_4x64)
             // the ic index, and each bias element corresponds to an
             // entire row of the transposed output array, instead of an
             // entire column.
-            if (post_ops_list_temp->stor_type == BF16) {
+            if (post_ops_list_temp->stor_type == DLP_BF16) {
                 __mmask16 bias_mask = _cvtu32_mask16(0xFFFF);
                 BF16_F32_BIAS_BCAST(selector1, bias_mask, 0);
                 BF16_F32_BIAS_BCAST(selector2, bias_mask, 1);
@@ -2338,9 +2338,9 @@ LPGEMM_ELTWISE_OPS_M_FRINGE_KERNEL(bfloat16, float, bf16of32_4x64)
     POST_OPS_MATRIX_ADD_4x64_OPS: {
         md_t ldm = *(md_t*)post_ops_list_temp->op_args3;
 
-        bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                       || ((post_ops_list_temp->stor_type == NONE)
-                           && (post_ops_attr.c_stor_type == BF16));
+        bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                       || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                           && (post_ops_attr.c_stor_type == DLP_BF16));
 
         __m512 scl_fctr1 = _mm512_setzero_ps();
         __m512 scl_fctr2 = _mm512_setzero_ps();
@@ -2488,9 +2488,9 @@ LPGEMM_ELTWISE_OPS_M_FRINGE_KERNEL(bfloat16, float, bf16of32_4x64)
     POST_OPS_MATRIX_MUL_4x64_OPS: {
         md_t ldm = *(md_t*)post_ops_list_temp->op_args3;
 
-        bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                       || ((post_ops_list_temp->stor_type == NONE)
-                           && (post_ops_attr.c_stor_type == BF16));
+        bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                       || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                           && (post_ops_attr.c_stor_type == DLP_BF16));
 
         __m512 scl_fctr1 = _mm512_setzero_ps();
         __m512 scl_fctr2 = _mm512_setzero_ps();
@@ -2819,7 +2819,7 @@ LPGEMM_ELTWISE_OPS_M_FRINGE_KERNEL(bfloat16, float, bf16of32_4x64)
 
         // Case where the output C matrix is bf16 (downscaled) and this is the
         // final write for a given block within C.
-        if (post_ops_attr.c_stor_type == BF16) {
+        if (post_ops_attr.c_stor_type == DLP_BF16) {
             // Actually the b matrix is of type bfloat16. However
             // in order to reuse this kernel for f32, the output
             // matrix type in kernel function signature is set to
@@ -3020,7 +3020,7 @@ LPGEMM_ELTWISE_OPS_M_FRINGE_KERNEL(bfloat16, float, bf16of32_3x64)
     POST_OPS_BIAS_3x64_OPS: {
         if ((*(char*)post_ops_list_temp->op_args2 == 'r')
             || (*(char*)post_ops_list_temp->op_args2 == 'R')) {
-            if (post_ops_list_temp->stor_type == BF16) {
+            if (post_ops_list_temp->stor_type == DLP_BF16) {
                 BF16_F32_BIAS_LOAD(selector1, k0, 0);
                 BF16_F32_BIAS_LOAD(selector2, k1, 1);
                 BF16_F32_BIAS_LOAD(selector3, k2, 2);
@@ -3082,7 +3082,7 @@ LPGEMM_ELTWISE_OPS_M_FRINGE_KERNEL(bfloat16, float, bf16of32_3x64)
             // the ic index, and each bias element corresponds to an
             // entire row of the transposed output array, instead of an
             // entire column.
-            if (post_ops_list_temp->stor_type == BF16) {
+            if (post_ops_list_temp->stor_type == DLP_BF16) {
                 __mmask16 bias_mask = _cvtu32_mask16(0xFFFF);
                 BF16_F32_BIAS_BCAST(selector1, bias_mask, 0);
                 BF16_F32_BIAS_BCAST(selector2, bias_mask, 1);
@@ -3524,9 +3524,9 @@ LPGEMM_ELTWISE_OPS_M_FRINGE_KERNEL(bfloat16, float, bf16of32_3x64)
     POST_OPS_MATRIX_ADD_3x64_OPS: {
         md_t ldm = *(md_t*)post_ops_list_temp->op_args3;
 
-        bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                       || ((post_ops_list_temp->stor_type == NONE)
-                           && (post_ops_attr.c_stor_type == BF16));
+        bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                       || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                           && (post_ops_attr.c_stor_type == DLP_BF16));
 
         __m512 scl_fctr1 = _mm512_setzero_ps();
         __m512 scl_fctr2 = _mm512_setzero_ps();
@@ -3651,9 +3651,9 @@ LPGEMM_ELTWISE_OPS_M_FRINGE_KERNEL(bfloat16, float, bf16of32_3x64)
     POST_OPS_MATRIX_MUL_3x64_OPS: {
         md_t ldm = *(md_t*)post_ops_list_temp->op_args3;
 
-        bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                       || ((post_ops_list_temp->stor_type == NONE)
-                           && (post_ops_attr.c_stor_type == BF16));
+        bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                       || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                           && (post_ops_attr.c_stor_type == DLP_BF16));
 
         __m512 scl_fctr1 = _mm512_setzero_ps();
         __m512 scl_fctr2 = _mm512_setzero_ps();
@@ -3919,7 +3919,7 @@ LPGEMM_ELTWISE_OPS_M_FRINGE_KERNEL(bfloat16, float, bf16of32_3x64)
 
         // Case where the output C matrix is bf16 (downscaled) and this is the
         // final write for a given block within C.
-        if (post_ops_attr.c_stor_type == BF16) {
+        if (post_ops_attr.c_stor_type == DLP_BF16) {
             // Actually the b matrix is of type bfloat16. However
             // in order to reuse this kernel for f32, the output
             // matrix type in kernel function signature is set to
@@ -4083,7 +4083,7 @@ LPGEMM_ELTWISE_OPS_M_FRINGE_KERNEL(bfloat16, float, bf16of32_2x64)
     POST_OPS_BIAS_2x64_OPS: {
         if ((*(char*)post_ops_list_temp->op_args2 == 'r')
             || (*(char*)post_ops_list_temp->op_args2 == 'R')) {
-            if (post_ops_list_temp->stor_type == BF16) {
+            if (post_ops_list_temp->stor_type == DLP_BF16) {
                 BF16_F32_BIAS_LOAD(selector1, k0, 0);
                 BF16_F32_BIAS_LOAD(selector2, k1, 1);
                 BF16_F32_BIAS_LOAD(selector3, k2, 2);
@@ -4133,7 +4133,7 @@ LPGEMM_ELTWISE_OPS_M_FRINGE_KERNEL(bfloat16, float, bf16of32_2x64)
             // the ic index, and each bias element corresponds to an
             // entire row of the transposed output array, instead of an
             // entire column.
-            if (post_ops_list_temp->stor_type == BF16) {
+            if (post_ops_list_temp->stor_type == DLP_BF16) {
                 __mmask16 bias_mask = _cvtu32_mask16(0xFFFF);
                 BF16_F32_BIAS_BCAST(selector1, bias_mask, 0);
                 BF16_F32_BIAS_BCAST(selector2, bias_mask, 1);
@@ -4469,9 +4469,9 @@ LPGEMM_ELTWISE_OPS_M_FRINGE_KERNEL(bfloat16, float, bf16of32_2x64)
     POST_OPS_MATRIX_ADD_2x64_OPS: {
         md_t ldm = *(md_t*)post_ops_list_temp->op_args3;
 
-        bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                       || ((post_ops_list_temp->stor_type == NONE)
-                           && (post_ops_attr.c_stor_type == BF16));
+        bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                       || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                           && (post_ops_attr.c_stor_type == DLP_BF16));
 
         __m512 scl_fctr1 = _mm512_setzero_ps();
         __m512 scl_fctr2 = _mm512_setzero_ps();
@@ -4573,9 +4573,9 @@ LPGEMM_ELTWISE_OPS_M_FRINGE_KERNEL(bfloat16, float, bf16of32_2x64)
     POST_OPS_MATRIX_MUL_2x64_OPS: {
         md_t ldm = *(md_t*)post_ops_list_temp->op_args3;
 
-        bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                       || ((post_ops_list_temp->stor_type == NONE)
-                           && (post_ops_attr.c_stor_type == BF16));
+        bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                       || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                           && (post_ops_attr.c_stor_type == DLP_BF16));
 
         __m512 scl_fctr1 = _mm512_setzero_ps();
         __m512 scl_fctr2 = _mm512_setzero_ps();
@@ -4778,7 +4778,7 @@ LPGEMM_ELTWISE_OPS_M_FRINGE_KERNEL(bfloat16, float, bf16of32_2x64)
 
         // Case where the output C matrix is bf16 (downscaled) and this is the
         // final write for a given block within C.
-        if (post_ops_attr.c_stor_type == BF16) {
+        if (post_ops_attr.c_stor_type == DLP_BF16) {
             // Actually the b matrix is of type bfloat16. However
             // in order to reuse this kernel for f32, the output
             // matrix type in kernel function signature is set to
@@ -4905,7 +4905,7 @@ LPGEMM_ELTWISE_OPS_M_FRINGE_KERNEL(bfloat16, float, bf16of32_1x64)
     POST_OPS_BIAS_1x64_OPS: {
         if ((*(char*)post_ops_list_temp->op_args2 == 'r')
             || (*(char*)post_ops_list_temp->op_args2 == 'R')) {
-            if (post_ops_list_temp->stor_type == BF16) {
+            if (post_ops_list_temp->stor_type == DLP_BF16) {
                 BF16_F32_BIAS_LOAD(selector1, k0, 0);
                 BF16_F32_BIAS_LOAD(selector2, k1, 1);
                 BF16_F32_BIAS_LOAD(selector3, k2, 2);
@@ -4943,7 +4943,7 @@ LPGEMM_ELTWISE_OPS_M_FRINGE_KERNEL(bfloat16, float, bf16of32_1x64)
             // the ic index, and each bias element corresponds to an
             // entire row of the transposed output array, instead of an
             // entire column.
-            if (post_ops_list_temp->stor_type == BF16) {
+            if (post_ops_list_temp->stor_type == DLP_BF16) {
                 __mmask16 bias_mask = _cvtu32_mask16(0xFFFF);
                 BF16_F32_BIAS_BCAST(selector1, bias_mask, 0);
             } else {
@@ -5173,9 +5173,9 @@ LPGEMM_ELTWISE_OPS_M_FRINGE_KERNEL(bfloat16, float, bf16of32_1x64)
     POST_OPS_MATRIX_ADD_1x64_OPS: {
         md_t ldm = *(md_t*)post_ops_list_temp->op_args3;
 
-        bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                       || ((post_ops_list_temp->stor_type == NONE)
-                           && (post_ops_attr.c_stor_type == BF16));
+        bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                       || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                           && (post_ops_attr.c_stor_type == DLP_BF16));
 
         __m512 scl_fctr1 = _mm512_setzero_ps();
         __m512 scl_fctr2 = _mm512_setzero_ps();
@@ -5254,9 +5254,9 @@ LPGEMM_ELTWISE_OPS_M_FRINGE_KERNEL(bfloat16, float, bf16of32_1x64)
     POST_OPS_MATRIX_MUL_1x64_OPS: {
         md_t ldm = *(md_t*)post_ops_list_temp->op_args3;
 
-        bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                       || ((post_ops_list_temp->stor_type == NONE)
-                           && (post_ops_attr.c_stor_type == BF16));
+        bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                       || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                           && (post_ops_attr.c_stor_type == DLP_BF16));
 
         __m512 scl_fctr1 = _mm512_setzero_ps();
         __m512 scl_fctr2 = _mm512_setzero_ps();
@@ -5396,7 +5396,7 @@ LPGEMM_ELTWISE_OPS_M_FRINGE_KERNEL(bfloat16, float, bf16of32_1x64)
 
         // Case where the output C matrix is bf16 (downscaled) and this is the
         // final write for a given block within C.
-        if (post_ops_attr.c_stor_type == BF16) {
+        if (post_ops_attr.c_stor_type == DLP_BF16) {
             // Actually the b matrix is of type bfloat16. However
             // in order to reuse this kernel for f32, the output
             // matrix type in kernel function signature is set to

@@ -78,7 +78,7 @@ ops = {
     # "s8s8s32"     : ["s32", "u8", "s8", "bf16", "f32"],
     # "u8s8s32"     : ["s32", "u8", "s8", "bf16", "f32"]
 }
-post_ops = ["none"]#["none", "bias", "relu", "prelu", "clip", "matrix_add", "matrix_mul",
+metadata = ["none"]#["none", "bias", "relu", "prelu", "clip", "matrix_add", "matrix_mul",
 #            "swish", "gelu_tanh", "gelu_erf", "tanh", "sigmoid",
             #"scale=scalar,zp=scalar", "scale=vector,zp=scalar", "scale=scalar,zp=vector","scale=vector,zp=vector"]
 
@@ -115,7 +115,7 @@ for inputtypes in ops:
                                     chars = " ".join([stor, transa, transb, packa, packb])
                                     for output_type in ops[inputtypes]:
                                         op = inputtypes + "o" + output_type
-                                        for post_op in post_ops:
+                                        for post_op in metadata:
                                             if post_op == "bias" or post_op == "matrix_add" or post_op == "matrix_mul":
                                                 if( output_type == "u8"):
                                                     post_op += "=" + "na"
@@ -146,7 +146,7 @@ for inputtypes in ops:
                                     chars = " ".join([stor, transa, transb, packa, packb])
                                     for output_type in ops[inputtypes]:
                                         op = inputtypes + "o" + output_type
-                                        for post_op in post_ops:
+                                        for post_op in metadata:
                                             if post_op == "bias" or post_op == "matrix_add" or post_op == "matrix_mul":
                                                 if( output_type == "u8"):
                                                     post_op += "=" + "na"

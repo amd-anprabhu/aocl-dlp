@@ -37,7 +37,7 @@ typedef void (*jit_kernel)(lpgemm_jit_params_t*,
                            lpgemm_post_op_attr*,
                            lpgemm_post_op*);
 
-// BF16 ISA is not supported by gcc < 10. Use a JIT-generated kernel here.
+// DLP_BF16 ISA is not supported by gcc < 10. Use a JIT-generated kernel here.
 LPGEMM_MAIN_KERN(bfloat16, bfloat16, float, bf16bf16f32of32_6x64)
 {
     jit_kernel kernel_fp;
@@ -796,7 +796,7 @@ LPGEMM_MAIN_KERN(bfloat16, bfloat16, float, bf16bf16f32of32_6x64)
 
         if ((*(char*)post_ops_list_temp->op_args2 == 'r')
             || (*(char*)post_ops_list_temp->op_args2 == 'R')) {
-            if (post_ops_list_temp->stor_type == BF16) {
+            if (post_ops_list_temp->stor_type == DLP_BF16) {
                 __mmask16 bias_mask = _cvtu32_mask16(0xFFFF);
                 BF16_F32_BIAS_LOAD(selector1, bias_mask, 0);
                 BF16_F32_BIAS_LOAD(selector2, bias_mask, 1);
@@ -897,7 +897,7 @@ LPGEMM_MAIN_KERN(bfloat16, bfloat16, float, bf16bf16f32of32_6x64)
             // entire column.
             __m512 selector5;
             __m512 selector6;
-            if (post_ops_list_temp->stor_type == BF16) {
+            if (post_ops_list_temp->stor_type == DLP_BF16) {
                 __mmask16 bias_mask = _cvtu32_mask16(0xFFFF);
                 BF16_F32_BIAS_BCAST(selector1, bias_mask, 0);
                 BF16_F32_BIAS_BCAST(selector2, bias_mask, 1);
@@ -1666,9 +1666,9 @@ LPGEMM_MAIN_KERN(bfloat16, bfloat16, float, bf16bf16f32of32_6x64)
     POST_OPS_MATRIX_ADD_6x64: {
         md_t ldm = *(md_t*)post_ops_list_temp->op_args3;
 
-        bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                       || ((post_ops_list_temp->stor_type == NONE)
-                           && (post_ops_attr.c_stor_type == BF16));
+        bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                       || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                           && (post_ops_attr.c_stor_type == DLP_BF16));
 
         __m512 selector3 = _mm512_setzero_ps();
         __m512 selector4 = _mm512_setzero_ps();
@@ -1871,9 +1871,9 @@ LPGEMM_MAIN_KERN(bfloat16, bfloat16, float, bf16bf16f32of32_6x64)
     POST_OPS_MATRIX_MUL_6x64: {
         md_t ldm = *(md_t*)post_ops_list_temp->op_args3;
 
-        bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                       || ((post_ops_list_temp->stor_type == NONE)
-                           && (post_ops_attr.c_stor_type == BF16));
+        bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                       || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                           && (post_ops_attr.c_stor_type == DLP_BF16));
 
         __m512 selector3 = _mm512_setzero_ps();
         __m512 selector4 = _mm512_setzero_ps();

@@ -42,7 +42,7 @@
         const AOCL_MEMORY_TAG mtag_b, C_type* c, const md_t rs_c,              \
         const md_t cs_c, const C_type alpha, const C_type beta,                \
         lpgemm_cntx_t* lcntx, lpgemm_post_op* post_op_list,                    \
-        AOCL_STORAGE_TYPE c_downscale)
+        DLP_TYPE c_downscale)
 
 LPGEMM_TINY(float, float, float, f32f32f32of32);
 LPGEMM_TINY(bfloat16, bfloat16, float, bf16bf16f32of32);
@@ -55,7 +55,7 @@ LPGEMM_TINY(bfloat16, bfloat16, float, bf16bf16f32of32);
         C_type* c, const md_t rs_c, const md_t cs_c, const C_type alpha,       \
         const C_type beta, dlp_rntm_t* rntm, lpgemm_thrinfo_t* thread,         \
         lpgemm_cntx_t* lcntx, lpgemm_post_op* post_op_list,                    \
-        AOCL_STORAGE_TYPE c_downscale)
+        DLP_TYPE c_downscale)
 
 LPGEMM_5LOOP(uint8_t, int8_t, int32_t, u8s8s32o32);
 LPGEMM_5LOOP(float, float, float, f32f32f32of32);
@@ -71,7 +71,7 @@ LPGEMM_5LOOP(int8_t, int8_t, int32_t, s8s8s32o32);
         const md_t cs_c, const C_type alpha, const C_type beta,                \
         dlp_rntm_t* rntm, lpgemm_thrinfo_t* thread, lpgemm_cntx_t* lcntx,      \
         lpgemm_pre_op* pre_op_list, lpgemm_post_op* post_op_list,              \
-        AOCL_STORAGE_TYPE c_downscale)
+        DLP_TYPE c_downscale)
 
 LPGEMM_5LOOP1(bfloat16, int8_t, float, bf16s4f32of32);
 
@@ -84,7 +84,7 @@ LPGEMM_5LOOP1(bfloat16, int8_t, float, bf16s4f32of32);
         const md_t cs_c, const C_type alpha, const C_type beta,                \
         dlp_rntm_t* rntm, lpgemm_thrinfo_t* thread, lpgemm_cntx_t* lcntx,      \
         lpgemm_group_post_op* grp_post_op_list, lpgemm_post_op* post_op_list,  \
-        AOCL_STORAGE_TYPE c_downscale)
+        DLP_TYPE c_downscale)
 
 LPGEMM_5LOOP2(int8_t, int8_t, int32_t, s8s8s32o32_sym_quant);
 
@@ -96,7 +96,7 @@ LPGEMM_5LOOP2(int8_t, int8_t, int32_t, s8s8s32o32_sym_quant);
         C_type* c, const md_t rs_c, const md_t cs_c, const C_type alpha,       \
         const C_type beta, dlp_rntm_t* rntm, lpgemm_thrinfo_t* thread,         \
         lpgemm_cntx_t* lcntx, lpgemm_post_op* post_op_list,                    \
-        AOCL_STORAGE_TYPE c_downscale)
+        DLP_TYPE c_downscale)
 
 LPGEMM_5LOOP_AVX2(bfloat16, bfloat16, float, bf16bf16f32of32);
 
@@ -108,7 +108,7 @@ LPGEMM_5LOOP_AVX2(bfloat16, bfloat16, float, bf16bf16f32of32);
         C_type* c, const md_t rs_c, const md_t cs_c, const C_type alpha,       \
         const C_type beta, dlp_rntm_t* rntm, lpgemm_thrinfo_t* thread,         \
         lpgemm_cntx_t* lcntx, lpgemm_post_op* post_op_list,                    \
-        AOCL_STORAGE_TYPE c_downscale)
+        DLP_TYPE c_downscale)
 
 LPGEMM_5LOOP_AVX512BF16(bfloat16, bfloat16, float, bf16bf16f32of32);
 
@@ -120,7 +120,7 @@ LPGEMM_5LOOP_AVX512BF16(bfloat16, bfloat16, float, bf16bf16f32of32);
         const AOCL_MEMORY_TAG mtag_b, C_type* c, const md_t rs_c,              \
         const md_t cs_c, const C_type alpha, const C_type beta,                \
         lpgemm_cntx_t* lcntx, lpgemm_post_op* post_op_list,                    \
-        AOCL_STORAGE_TYPE c_downscale)
+        DLP_TYPE c_downscale)
 
 LPGEMV_TINY(float, float, float, f32f32f32of32);
 LPGEMV_TINY(bfloat16, bfloat16, float, bf16bf16f32of32);
@@ -133,7 +133,7 @@ LPGEMV_TINY(bfloat16, bfloat16, float, bf16bf16f32of32);
         const AOCL_MEMORY_TAG mtag_b, C_type* c, const md_t rs_c,              \
         const md_t cs_c, const C_type alpha, const C_type beta,                \
         dlp_rntm_t* rntm, lpgemm_thrinfo_t* thread, lpgemm_cntx_t* lcntx,      \
-        lpgemm_post_op* post_op_list, AOCL_STORAGE_TYPE c_downscale)
+        lpgemm_post_op* post_op_list, DLP_TYPE c_downscale)
 
 LPGEMV(float, float, float, f32f32f32of32);
 LPGEMV(bfloat16, bfloat16, float, bf16bf16f32of32);
@@ -148,7 +148,7 @@ LPGEMV(int8_t, int8_t, int32_t, s8s8s32os32);
         const AOCL_MEMORY_TAG mtag_b, C_type* c, const md_t rs_c,              \
         const md_t cs_c, const C_type alpha, const C_type beta,                \
         dlp_rntm_t* rntm, lpgemm_thrinfo_t* thread, lpgemm_cntx_t* lcntx,      \
-        lpgemm_post_op* post_op_list, AOCL_STORAGE_TYPE c_downscale)
+        lpgemm_post_op* post_op_list, DLP_TYPE c_downscale)
 
 LPGEMV_AVX2(bfloat16, bfloat16, float, bf16bf16f32of32);
 

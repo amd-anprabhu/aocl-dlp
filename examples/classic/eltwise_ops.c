@@ -189,19 +189,20 @@ main()
     memcpy(b_f32_ref, a_f32, m * n * sizeof(float));
 
     // Set up post-op for GeLU_Tanh
-    aocl_post_op* gelu_post_ops = (aocl_post_op*)malloc(sizeof(aocl_post_op));
+    dlp_metadata_t* gelu_post_ops =
+        (dlp_metadata_t*)malloc(sizeof(dlp_metadata_t));
     if (!gelu_post_ops) {
         printf("Memory allocation for post-ops failed\n");
         goto cleanup;
     }
-    memset(gelu_post_ops, 0, sizeof(aocl_post_op));
+    memset(gelu_post_ops, 0, sizeof(dlp_metadata_t));
 
     // Initialize post-ops structure
     gelu_post_ops->seq_length = 1; // One operation: GeLU_Tanh
 
     // Allocate sequence vector
     gelu_post_ops->seq_vector =
-        (AOCL_POST_OP_TYPE*)malloc(sizeof(AOCL_POST_OP_TYPE));
+        (DLP_POST_OP_TYPE*)malloc(sizeof(DLP_POST_OP_TYPE));
     if (!gelu_post_ops->seq_vector) {
         printf("Memory allocation for sequence vector failed\n");
         goto cleanup;
@@ -210,17 +211,15 @@ main()
 
     // Allocate and set up eltwise post-op for GeLU_Tanh
     gelu_post_ops->eltwise =
-        (aocl_post_op_eltwise*)malloc(sizeof(aocl_post_op_eltwise));
+        (dlp_post_op_eltwise*)malloc(sizeof(dlp_post_op_eltwise));
     if (!gelu_post_ops->eltwise) {
         printf("Memory allocation for eltwise post-op failed\n");
         goto cleanup;
     }
 
-    gelu_post_ops->eltwise->is_power_of_2    = 0;
-    gelu_post_ops->eltwise->scale_factor     = NULL;
-    gelu_post_ops->eltwise->scale_factor_len = 0;
-    gelu_post_ops->eltwise->algo.alpha       = NULL;
-    gelu_post_ops->eltwise->algo.beta        = NULL;
+    gelu_post_ops->eltwise->sf         = NULL; // No scaling for this example
+    gelu_post_ops->eltwise->algo.alpha = NULL;
+    gelu_post_ops->eltwise->algo.beta  = NULL;
     gelu_post_ops->eltwise->algo.algo_type =
         GELU_TANH; // Use GeLU_Tanh activation
 

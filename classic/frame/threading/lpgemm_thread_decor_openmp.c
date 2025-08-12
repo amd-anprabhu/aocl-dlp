@@ -786,7 +786,7 @@ lpgemm_modify_tid_on_distr_type(md_t*               tid,
         const AOCL_MEMORY_TAG mtag_b, C_type* c, const md_t rs_c,              \
         const md_t cs_c, const C_type alpha, const C_type beta,                \
         dlp_rntm_t* rntm_g, lpgemm_cntx_t* lcntx,                              \
-        lpgemm_post_op* post_op_list, AOCL_STORAGE_TYPE c_downscale)           \
+        lpgemm_post_op* post_op_list, DLP_TYPE c_downscale)                    \
     {                                                                          \
         md_t n_threads;                                                        \
                                                                                \
@@ -858,7 +858,7 @@ GEN_LPGEMM_OPENMP_DECORATOR(int8_t, int8_t, int32_t, s8s8s32o32)
         const md_t* cs_b, const AOCL_MEMORY_TAG* mtag_b, C_type** c,           \
         const md_t* rs_c, const md_t* cs_c, const C_type alpha,                \
         const C_type beta, dlp_rntm_t* rntm_g, lpgemm_cntx_t* lcntx,           \
-        lpgemm_post_op(*post_op_list), AOCL_STORAGE_TYPE c_downscale)          \
+        lpgemm_post_op(*post_op_list), DLP_TYPE c_downscale)                   \
     {                                                                          \
         /* For now, Assuming all the problems in GEMM are of same size.        \
          * To-Do: optimize work distribution for case where a batch contains   \
@@ -946,7 +946,7 @@ GEN_BATCH_LPGEMM_OPENMP_DECORATOR(int8_t, int8_t, int32_t, s8s8s32o32)
         AOCL_MEMORY_TAG mtag_b, C_type* c, const md_t rs_c, const md_t cs_c,   \
         const C_type alpha, const C_type beta, dlp_rntm_t* rntm_g,             \
         lpgemm_cntx_t* lcntx, lpgemm_pre_op* pre_op_list,                      \
-        lpgemm_post_op* post_op_list, AOCL_STORAGE_TYPE c_downscale)           \
+        lpgemm_post_op* post_op_list, DLP_TYPE c_downscale)                    \
     {                                                                          \
         md_t n_threads;                                                        \
                                                                                \
@@ -1021,7 +1021,7 @@ GEN_LPGEMM_OPENMP_DECORATOR_MP(bfloat16, int8_t, float, bf16s4f32of32)
         AOCL_MEMORY_TAG mtag_b, float* c, const md_t rs_c, const md_t cs_c,    \
         const C_type alpha, const C_type beta, dlp_rntm_t* rntm_g,             \
         lpgemm_cntx_t* lcntx, lpgemm_group_post_op* grp_post_op_list,          \
-        lpgemm_post_op* post_op_list, AOCL_STORAGE_TYPE c_downscale)           \
+        lpgemm_post_op* post_op_list, DLP_TYPE c_downscale)                    \
     {                                                                          \
         md_t n_threads;                                                        \
                                                                                \
@@ -1090,7 +1090,7 @@ GEN_LPGEMM_OPENMP_DECORATOR_GRP(int8_t, int8_t, int32_t, s8s8s32o32_sym_quant)
         const md_t* rs_c, const md_t* cs_c, const C_type alpha,                \
         const C_type beta, dlp_rntm_t* rntm_g, lpgemm_cntx_t* lcntx,           \
         lpgemm_pre_op(*pre_op_list), lpgemm_post_op(*post_op_list),            \
-        AOCL_STORAGE_TYPE c_downscale)                                         \
+        DLP_TYPE c_downscale)                                                  \
     {                                                                          \
         /* For now, Assuming all the problems in GEMM are of same size.        \
          * To-Do: optimize work distribution for case where a batch contains   \
@@ -1266,7 +1266,7 @@ lpgemm_eltwise_ops_f32of32_get_threading(md_t*                      n_threads,
         const md_t m, const md_t n, const A_type* a, const md_t rs_a,          \
         const md_t cs_a, B_type* b, const md_t rs_b, const md_t cs_b,          \
         dlp_rntm_t* rntm_g, lpgemm_eltwise_ops_cntx_t* lcntx,                  \
-        lpgemm_post_op* post_op_list, AOCL_STORAGE_TYPE c_downscale)           \
+        lpgemm_post_op* post_op_list, DLP_TYPE c_downscale)                    \
     {                                                                          \
         md_t n_threads;                                                        \
                                                                                \
@@ -1327,7 +1327,7 @@ GEN_UTIL_ELTWISE_OPS_OPENMP_DECORATOR(float, float, f32of32)
         const AOCL_MEMORY_TAG mtag_b, C_type* c, const md_t rs_c,              \
         const md_t cs_c, const C_type alpha, const C_type beta,                \
         dlp_rntm_t* rntm_g, lpgemm_cntx_t* lcntx,                              \
-        lpgemm_post_op* post_op_list, AOCL_STORAGE_TYPE c_downscale)           \
+        lpgemm_post_op* post_op_list, DLP_TYPE c_downscale)                    \
     {                                                                          \
         md_t n_threads = 1;                                                    \
                                                                                \
@@ -1369,7 +1369,7 @@ GEN_LPGEMM_DECORATOR(int8_t, int8_t, int32_t, s8s8s32o32)
         AOCL_MEMORY_TAG mtag_b, C_type* c, const md_t rs_c, const md_t cs_c,   \
         const C_type alpha, const C_type beta, dlp_rntm_t* rntm_g,             \
         lpgemm_cntx_t* lcntx, lpgemm_pre_op* pre_op_list,                      \
-        lpgemm_post_op* post_op_list, AOCL_STORAGE_TYPE c_downscale)           \
+        lpgemm_post_op* post_op_list, DLP_TYPE c_downscale)                    \
     {                                                                          \
         md_t n_threads = 1;                                                    \
                                                                                \
@@ -1416,7 +1416,7 @@ GEN_LPGEMM_DECORATOR1(bfloat16, int8_t, float, bf16s4f32of32)
         AOCL_MEMORY_TAG mtag_b, float* c, const md_t rs_c, const md_t cs_c,    \
         const C_type alpha, const C_type beta, dlp_rntm_t* rntm_g,             \
         lpgemm_cntx_t* lcntx, lpgemm_group_post_op* grp_post_op_list,          \
-        lpgemm_post_op* post_op_list, AOCL_STORAGE_TYPE c_downscale)           \
+        lpgemm_post_op* post_op_list, DLP_TYPE c_downscale)                    \
     {                                                                          \
         md_t n_threads = 1;                                                    \
                                                                                \
@@ -1455,7 +1455,7 @@ GEN_LPGEMM_DECORATOR2(int8_t, int8_t, int32_t, s8s8s32o32_sym_quant)
         const md_t* cs_b, const AOCL_MEMORY_TAG* mtag_b, C_type** c,           \
         const md_t* rs_c, const md_t* cs_c, const C_type alpha,                \
         const C_type beta, dlp_rntm_t* rntm_g, lpgemm_cntx_t* lcntx,           \
-        lpgemm_post_op(*post_op_list), AOCL_STORAGE_TYPE c_downscale)          \
+        lpgemm_post_op(*post_op_list), DLP_TYPE c_downscale)                   \
     {                                                                          \
         md_t n_threads = 1;                                                    \
                                                                                \
@@ -1502,7 +1502,7 @@ GEN_BATCH_LPGEMM_OPENMP_DECORATOR(int8_t, int8_t, int32_t, s8s8s32o32)
         const md_t* rs_c, const md_t* cs_c, const C_type alpha,                \
         const C_type beta, dlp_rntm_t* rntm_g, lpgemm_cntx_t* lcntx,           \
         lpgemm_pre_op(*pre_op_list), lpgemm_post_op(*post_op_list),            \
-        AOCL_STORAGE_TYPE c_downscale)                                         \
+        DLP_TYPE c_downscale)                                                  \
     {                                                                          \
         md_t n_threads = 1;                                                    \
                                                                                \
@@ -1542,7 +1542,7 @@ GEN_BATCH_LPGEMM_OPENMP_DECORATOR_MP(bfloat16, int8_t, float, bf16s4f32of32)
         const md_t m, const md_t n, const A_type* a, const md_t rs_a,          \
         const md_t cs_a, B_type* b, const md_t rs_b, const md_t cs_b,          \
         dlp_rntm_t* rntm_g, lpgemm_eltwise_ops_cntx_t* lcntx,                  \
-        lpgemm_post_op* post_op_list, AOCL_STORAGE_TYPE c_downscale)           \
+        lpgemm_post_op* post_op_list, DLP_TYPE c_downscale)                    \
     {                                                                          \
         md_t n_threads = 1;                                                    \
                                                                                \

@@ -40,7 +40,7 @@
         const md_t cs_a, B_type* b, const md_t rs_b, const md_t cs_b,          \
         dlp_rntm_t* rntm, lpgemm_thrinfo_t* thread,                            \
         lpgemm_eltwise_ops_cntx_t* lcntx, lpgemm_post_op* post_op_list,        \
-        AOCL_STORAGE_TYPE c_downscale)
+        DLP_TYPE c_downscale)
 
 LPGEMM_ELTWISE_OPS_IFACE(bfloat16, float, bf16of32);
 LPGEMM_ELTWISE_OPS_IFACE(float, float, f32of32);

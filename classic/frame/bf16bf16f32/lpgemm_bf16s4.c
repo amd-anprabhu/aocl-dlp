@@ -107,7 +107,7 @@ LPGEMM_5LOOP1(bfloat16, int8_t, float, bf16s4f32of32)
     lpgemm_pre_op_attr  pre_ops_attr;
 
     post_ops_attr.c_stor_type = c_downscale;
-    if (c_downscale < F32) {
+    if (c_downscale < DLP_F32) {
         post_ops_attr.buf_downscale = c;
     } else {
         post_ops_attr.buf_downscale = NULL;
@@ -166,11 +166,11 @@ LPGEMM_5LOOP1(bfloat16, int8_t, float, bf16s4f32of32)
             lpgemm_get_packb_strides(lcntx, &rs_b_use, &cs_b_use);
         }
 
-        if (c_downscale == F32) {
+        if (c_downscale == DLP_F32) {
             c_use_jc = c + jc;
         }
         // Temp accumulaton buffer for C allocation.
-        else if (c_downscale < F32) {
+        else if (c_downscale < DLP_F32) {
             // Buffer memory is only required if output needs to be
             // persisted across iterations of the pc/KC loop.
             // It was observed that the locks used while checking out
@@ -295,7 +295,7 @@ LPGEMM_5LOOP1(bfloat16, int8_t, float, bf16s4f32of32)
 
                 // Only per thread C matrix is stored in temp buffer, so both
                 // per thread jc and ic start should be normalized to zero.
-                if (c_downscale < F32) {
+                if (c_downscale < DLP_F32) {
                     c_use_ic = c_use_jc + (rs_c_use * (ic - ic_start));
                 } else {
                     c_use_ic = c_use_jc + (rs_c_use * ic);
@@ -417,7 +417,7 @@ LPGEMM_5LOOP1(bfloat16, int8_t, float, bf16s4f32of32)
             dlp_free_page_aligned(pack_a_buffer_bf16);
         }
     }
-    if (c_downscale < F32) {
+    if (c_downscale < DLP_F32) {
         if (temp_scal_c_buffer_bf16 != NULL) {
             dlp_free_page_aligned(temp_scal_c_buffer_bf16);
         }

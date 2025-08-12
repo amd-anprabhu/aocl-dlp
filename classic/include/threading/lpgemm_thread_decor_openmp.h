@@ -44,7 +44,7 @@
         const AOCL_MEMORY_TAG mtag_b, C_type* c, const md_t rs_c,              \
         const md_t cs_c, const C_type alpha, const C_type beta,                \
         dlp_rntm_t* rntm_g, lpgemm_cntx_t* lcntx,                              \
-        lpgemm_post_op* post_op_list, AOCL_STORAGE_TYPE c_downscale);
+        lpgemm_post_op* post_op_list, DLP_TYPE c_downscale);
 
 GEN_LPGEMM_OPENMP_DECORATOR_FN(uint8_t, int8_t, int32_t, u8s8s32o32)
 GEN_LPGEMM_OPENMP_DECORATOR_FN(bfloat16, bfloat16, float, bf16bf16f32of32)
@@ -60,7 +60,7 @@ GEN_LPGEMM_OPENMP_DECORATOR_FN(int8_t, int8_t, int32_t, s8s8s32o32)
         const md_t* cs_b, const AOCL_MEMORY_TAG* mtag_b, C_type** c,           \
         const md_t* rs_c, const md_t* cs_c, const C_type alpha,                \
         const C_type beta, dlp_rntm_t* rntm_g, lpgemm_cntx_t* lcntx,           \
-        lpgemm_post_op(*post_op_list), AOCL_STORAGE_TYPE c_downscale);
+        lpgemm_post_op(*post_op_list), DLP_TYPE c_downscale);
 
 GEN_BATCH_LPGEMM_OPENMP_DECORATOR_FN(bfloat16, bfloat16, float, bf16bf16f32of32)
 GEN_BATCH_LPGEMM_OPENMP_DECORATOR_FN(float, float, float, f32f32f32of32)
@@ -77,7 +77,7 @@ GEN_BATCH_LPGEMM_OPENMP_DECORATOR_FN(int8_t, int8_t, int32_t, s8s8s32o32)
         const md_t* rs_c, const md_t* cs_c, const C_type alpha,                \
         const C_type beta, dlp_rntm_t* rntm_g, lpgemm_cntx_t* lcntx,           \
         lpgemm_pre_op(*pre_op_list), lpgemm_post_op(*post_op_list),            \
-        AOCL_STORAGE_TYPE c_downscale);
+        DLP_TYPE c_downscale);
 
 GEN_BATCH_LPGEMM_OPENMP_DECORATOR_FN_MXP(bfloat16, int8_t, float, bf16s4f32of32)
 
@@ -89,7 +89,7 @@ GEN_BATCH_LPGEMM_OPENMP_DECORATOR_FN_MXP(bfloat16, int8_t, float, bf16s4f32of32)
         AOCL_MEMORY_TAG mtag_b, C_type* c, const md_t rs_c, const md_t cs_c,   \
         const C_type alpha, const C_type beta, dlp_rntm_t* rntm_g,             \
         lpgemm_cntx_t* lcntx, lpgemm_pre_op* pre_op_list,                      \
-        lpgemm_post_op* post_op_list, AOCL_STORAGE_TYPE c_downscale);
+        lpgemm_post_op* post_op_list, DLP_TYPE c_downscale);
 
 GEN_LPGEMM_OPENMP_DECORATOR_FN1(bfloat16, int8_t, float, bf16s4f32of32)
 
@@ -101,7 +101,7 @@ GEN_LPGEMM_OPENMP_DECORATOR_FN1(bfloat16, int8_t, float, bf16s4f32of32)
         AOCL_MEMORY_TAG mtag_b, float* c, const md_t rs_c, const md_t cs_c,    \
         const C_type alpha, const C_type beta, dlp_rntm_t* rntm_g,             \
         lpgemm_cntx_t* lcntx, lpgemm_group_post_op* grp_post_op_list,          \
-        lpgemm_post_op* post_op_list, AOCL_STORAGE_TYPE c_downscale);
+        lpgemm_post_op* post_op_list, DLP_TYPE c_downscale);
 
 GEN_LPGEMM_OPENMP_DECORATOR_FN2(int8_t, int8_t, int32_t, s8s8s32o32_sym_quant)
 
@@ -110,7 +110,7 @@ GEN_LPGEMM_OPENMP_DECORATOR_FN2(int8_t, int8_t, int32_t, s8s8s32o32_sym_quant)
         const md_t m, const md_t n, const A_type* a, const md_t rs_a,          \
         const md_t cs_a, B_type* b, const md_t rs_b, const md_t cs_b,          \
         dlp_rntm_t* rntm_g, lpgemm_eltwise_ops_cntx_t* lcntx,                  \
-        lpgemm_post_op* post_op_list, AOCL_STORAGE_TYPE c_downscale);
+        lpgemm_post_op* post_op_list, DLP_TYPE c_downscale);
 
 GEN_UTIL_ELTWISE_OPS_OPENMP_DECORATOR_FN(bfloat16, float, bf16of32)
 GEN_UTIL_ELTWISE_OPS_OPENMP_DECORATOR_FN(float, float, f32of32)
@@ -125,7 +125,7 @@ GEN_UTIL_ELTWISE_OPS_OPENMP_DECORATOR_FN(float, float, f32of32)
         const AOCL_MEMORY_TAG mtag_b, C_type* c, const md_t rs_c,              \
         const md_t cs_c, const C_type alpha, const C_type beta,                \
         dlp_rntm_t* rntm_g, lpgemm_cntx_t* lcntx,                              \
-        lpgemm_post_op* post_op_list, AOCL_STORAGE_TYPE c_downscale);
+        lpgemm_post_op* post_op_list, DLP_TYPE c_downscale);
 
 GEN_LPGEMM_DECORATOR_FN(uint8_t, int8_t, int32_t, u8s8s32o32)
 GEN_LPGEMM_DECORATOR_FN(bfloat16, bfloat16, float, bf16bf16f32of32)
@@ -140,7 +140,7 @@ GEN_LPGEMM_DECORATOR_FN(int8_t, int8_t, int32_t, s8s8s32o32)
         const md_t* cs_b, const AOCL_MEMORY_TAG* mtag_b, C_type** c,           \
         const md_t* rs_c, const md_t* cs_c, const C_type alpha,                \
         const C_type beta, dlp_rntm_t* rntm_g, lpgemm_cntx_t* lcntx,           \
-        lpgemm_post_op(*post_op_list), AOCL_STORAGE_TYPE c_downscale);
+        lpgemm_post_op(*post_op_list), DLP_TYPE c_downscale);
 
 GEN_BATCH_LPGEMM_DECORATOR_FN(bfloat16, bfloat16, float, bf16bf16f32of32)
 GEN_BATCH_LPGEMM_DECORATOR_FN(float, float, float, f32f32f32of32)
@@ -156,7 +156,7 @@ GEN_BATCH_LPGEMM_DECORATOR_FN(int8_t, int8_t, int32_t, s8s8s32o32)
         const md_t* rs_c, const md_t* cs_c, const C_type alpha,                \
         const C_type beta, dlp_rntm_t* rntm_g, lpgemm_cntx_t* lcntx,           \
         lpgemm_pre_op(*pre_op_list), lpgemm_post_op(*post_op_list),            \
-        AOCL_STORAGE_TYPE c_downscale);
+        DLP_TYPE c_downscale);
 
 GEN_BATCH_LPGEMM_DECORATOR_FN_MP(bfloat16, int8_t, float, bf16s4f32of32)
 
@@ -168,7 +168,7 @@ GEN_BATCH_LPGEMM_DECORATOR_FN_MP(bfloat16, int8_t, float, bf16s4f32of32)
         const AOCL_MEMORY_TAG mtag_b, C_type* c, const md_t rs_c,              \
         const md_t cs_c, const C_type alpha, const C_type beta,                \
         dlp_rntm_t* rntm_g, lpgemm_cntx_t* lcntx, lpgemm_pre_op* pre_op_list,  \
-        lpgemm_post_op* post_op_list, AOCL_STORAGE_TYPE c_downscale);
+        lpgemm_post_op* post_op_list, DLP_TYPE c_downscale);
 
 GEN_LPGEMM_DECORATOR_FN1(bfloat16, int8_t, float, bf16s4f32of32)
 
@@ -180,7 +180,7 @@ GEN_LPGEMM_DECORATOR_FN1(bfloat16, int8_t, float, bf16s4f32of32)
         AOCL_MEMORY_TAG mtag_b, float* c, const md_t rs_c, const md_t cs_c,    \
         const C_type alpha, const C_type beta, dlp_rntm_t* rntm_g,             \
         lpgemm_cntx_t* lcntx, lpgemm_group_post_op* grp_post_op_list,          \
-        lpgemm_post_op* post_op_list, AOCL_STORAGE_TYPE c_downscale);
+        lpgemm_post_op* post_op_list, DLP_TYPE c_downscale);
 
 GEN_LPGEMM_OPENMP_DECORATOR_FN2(int8_t, int8_t, int32_t, s8s8s32o32_sym_quant)
 
@@ -189,7 +189,7 @@ GEN_LPGEMM_OPENMP_DECORATOR_FN2(int8_t, int8_t, int32_t, s8s8s32o32_sym_quant)
         const md_t m, const md_t n, const A_type* a, const md_t rs_a,          \
         const md_t cs_a, B_type* b, const md_t rs_b, const md_t cs_b,          \
         dlp_rntm_t* rntm_g, lpgemm_eltwise_ops_cntx_t* lcntx,                  \
-        lpgemm_post_op* post_op_list, AOCL_STORAGE_TYPE c_downscale);
+        lpgemm_post_op* post_op_list, DLP_TYPE c_downscale);
 
 GEN_UTIL_ELTWISE_OPS_DECORATOR_FN(bfloat16, float, bf16of32)
 GEN_UTIL_ELTWISE_OPS_DECORATOR_FN(float, float, f32of32)

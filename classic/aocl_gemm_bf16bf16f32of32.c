@@ -70,13 +70,13 @@ AOCL_GEMM_MATMUL(bfloat16, bfloat16, float, float, bf16bf16f32of32)
     LPGEMM_START_LOGGER();
     LPGEMM_WRITE_LOGGER("bf16bf16f32of32", order, transa, transb, m, n, k,
                         ((float)alpha), lda, mem_format_a, ldb, mem_format_b,
-                        ((float)beta), ldc, post_op_unparsed);
+                        ((float)beta), ldc, metadata);
 
     dlp_trans_t dlp_transa;
     dlp_trans_t dlp_transb;
 
-    /*BF16 API can still work with AVX2 ISA, where the input data would
-     be converted to F32 and then call the F32 kernels*/
+    /*DLP_BF16 API can still work with AVX2 ISA, where the input data would
+     be converted to DLP_F32 and then call the DLP_F32 kernels*/
     if (dlp_cpuid_is_avx2fma3_supported() == FALSE) {
         dlp_print_msg(" AVX2 ISA not supported by processor, "
                       "cannot perform bf16bf16f32 gemm.",
@@ -179,7 +179,7 @@ AOCL_GEMM_MATMUL(bfloat16, bfloat16, float, float, bf16bf16f32of32)
     // Convert post op struct to post op linked list format.
     lpgemm_post_op post_op_list[AOCL_MAX_POST_OPS];
     dlp_clsc_err_t err = lpgemm_translate_to_post_ops_list(
-        post_op_unparsed, post_op_list, (void*)c, (void*)(&order), m, n);
+        metadata, post_op_list, (void*)c, (void*)(&order), m, n);
 
     if (err != DLP_CLSC_SUCCESS) {
         goto err_hndl;
@@ -194,9 +194,9 @@ AOCL_GEMM_MATMUL(bfloat16, bfloat16, float, float, bf16bf16f32of32)
 
 #if (defined(DLP_KERNELS_ZEN4) && (!defined(LPGEMM_BF16_JIT)))
     /* While AOCL_ENABLE_INSTRUCTIONS=AVX2 is enabled in machines that supports
-     * BF16/VNNI with only the ISA check the exeution could enter tiny path and
-     * result in seg fault as the tiny path for BF16->FP32 is not available.
-     * Hence the arch_id also has to be verified here.
+     * DLP_BF16/VNNI with only the ISA check the exeution could enter tiny path
+     * and result in seg fault as the tiny path for DLP_BF16->FP32 is not
+     * available. Hence the arch_id also has to be verified here.
      */
     dlp_arch_t arch_id = dlp_get_arch();
     if (((arch_id == DLP_ARCH_ZEN4) || (arch_id == DLP_ARCH_ZEN5))
@@ -205,7 +205,7 @@ AOCL_GEMM_MATMUL(bfloat16, bfloat16, float, float, bf16bf16f32of32)
         && (is_single_thread(&rntm_g) == TRUE) && (is_row_major == TRUE)) {
         lpgemm_rowvar_tiny_bf16bf16f32of32(
             m, n, k, a, rs_a, cs_a, mtag_a, b, rs_b, cs_b, mtag_b, c, rs_c,
-            cs_c, alpha, beta, lcntx_g, post_op_list, F32);
+            cs_c, alpha, beta, lcntx_g, post_op_list, DLP_F32);
         return;
     }
 #endif
@@ -215,22 +215,22 @@ AOCL_GEMM_MATMUL(bfloat16, bfloat16, float, float, bf16bf16f32of32)
     if (is_column_major == TRUE) {
         lpgemm_bf16bf16f32of32_openmp_thread_decorator(
             n, m, k, b, rs_b, cs_b, mtag_b, a, rs_a, cs_a, mtag_a, c, rs_c,
-            cs_c, alpha, beta, &rntm_g, lcntx_g, post_op_list, F32);
+            cs_c, alpha, beta, &rntm_g, lcntx_g, post_op_list, DLP_F32);
     } else {
         lpgemm_bf16bf16f32of32_openmp_thread_decorator(
             m, n, k, a, rs_a, cs_a, mtag_a, b, rs_b, cs_b, mtag_b, c, rs_c,
-            cs_c, alpha, beta, &rntm_g, lcntx_g, post_op_list, F32);
+            cs_c, alpha, beta, &rntm_g, lcntx_g, post_op_list, DLP_F32);
     }
 #else
     // Swapping inputs to induce row major computation for column major inputs.
     if (is_column_major == TRUE) {
         lpgemm_bf16bf16f32of32_thread_decorator(
             n, m, k, b, rs_b, cs_b, mtag_b, a, rs_a, cs_a, mtag_a, c, rs_c,
-            cs_c, alpha, beta, &rntm_g, lcntx_g, post_op_list, F32);
+            cs_c, alpha, beta, &rntm_g, lcntx_g, post_op_list, DLP_F32);
     } else {
         lpgemm_bf16bf16f32of32_thread_decorator(
             m, n, k, a, rs_a, cs_a, mtag_a, b, rs_b, cs_b, mtag_b, c, rs_c,
-            cs_c, alpha, beta, &rntm_g, lcntx_g, post_op_list, F32);
+            cs_c, alpha, beta, &rntm_g, lcntx_g, post_op_list, DLP_F32);
     }
 #endif
 

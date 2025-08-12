@@ -154,9 +154,9 @@ main()
     memset(c, 0, m * n * sizeof(int32_t)); // Initialize C with zeros
 
     // Print a small section of the input matrices
-    print_u8_matrix_section("Matrix A (U8)", a, m, k, 3, 3);
-    print_s8_matrix_section("Matrix B (S8)", b, k, n, 3, 3);
-    print_s32_matrix_section("Initial Matrix C (S32)", c, m, n, 3, 3);
+    print_u8_matrix_section("Matrix A (DLP_U8)", a, m, k, 3, 3);
+    print_s8_matrix_section("Matrix B (DLP_S8)", b, k, n, 3, 3);
+    print_s32_matrix_section("Initial Matrix C (DLP_S32)", c, m, n, 3, 3);
 
     // GEMM parameters
     int32_t alpha        = 1;   // Scalar for A*B
@@ -167,7 +167,8 @@ main()
     char    mem_format_a = 'N'; // A is not reordered
     char    mem_format_b = 'N'; // B is not reordered
 
-    // Perform matrix multiplication with U8/S8 inputs and S32 output: C = alpha
+    // Perform matrix multiplication with DLP_U8/DLP_S8 inputs and DLP_S32
+    // output: C = alpha
     // * A * B + beta * C
     aocl_gemm_u8s8s32os32(order, transa, transb, m, n, k, alpha, a, lda,
                           mem_format_a, b, ldb, mem_format_b, beta, c, ldc,
@@ -175,7 +176,7 @@ main()
     );
 
     // Print a small section of the output matrix
-    print_s32_matrix_section("Result Matrix C (S32)", c, m, n, 3, 3);
+    print_s32_matrix_section("Result Matrix C (DLP_S32)", c, m, n, 3, 3);
 
     // Example 2: Using signed 8-bit for both input matrices
     printf("\n--- Example with signed 8-bit inputs (S8S8) ---\n\n");
@@ -194,11 +195,12 @@ main()
     memset(c, 0, m * n * sizeof(int32_t));
 
     // Print a small section of the input matrices
-    print_s8_matrix_section("Matrix A (S8)", a_s8, m, k, 3, 3);
-    print_s8_matrix_section("Matrix B (S8)", b, k, n, 3, 3);
-    print_s32_matrix_section("Initial Matrix C (S32)", c, m, n, 3, 3);
+    print_s8_matrix_section("Matrix A (DLP_S8)", a_s8, m, k, 3, 3);
+    print_s8_matrix_section("Matrix B (DLP_S8)", b, k, n, 3, 3);
+    print_s32_matrix_section("Initial Matrix C (DLP_S32)", c, m, n, 3, 3);
 
-    // Perform matrix multiplication with S8/S8 inputs and S32 output: C = alpha
+    // Perform matrix multiplication with DLP_S8/DLP_S8 inputs and DLP_S32
+    // output: C = alpha
     // * A * B + beta * C
     aocl_gemm_s8s8s32os32(order, transa, transb, m, n, k, alpha, a_s8, lda,
                           mem_format_a, b, ldb, mem_format_b, beta, c, ldc,
@@ -206,7 +208,7 @@ main()
     );
 
     // Print a small section of the output matrix
-    print_s32_matrix_section("Result Matrix C (S32)", c, m, n, 3, 3);
+    print_s32_matrix_section("Result Matrix C (DLP_S32)", c, m, n, 3, 3);
 
     // Free the additional matrix
     free(a_s8);

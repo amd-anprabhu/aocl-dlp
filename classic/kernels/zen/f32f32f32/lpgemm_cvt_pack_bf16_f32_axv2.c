@@ -68,8 +68,8 @@ cvt_bf16_f32_row_major(float*          cvt_buffer,
 
         for (ic = 0; (ic + MR - 1) < MC; ic += MR) {
             for (kr = 0; (kr + 8 - 1) < KC; kr += 8) {
-                /*Load 8 BF16 elements from 16 rows, and convert them to F32
-                 * elements*/
+                /*Load 8 DLP_BF16 elements from 16 rows, and convert them to
+                 * DLP_F32 elements*/
                 LOAD_AND_CONVERT_BF16_F32(a_reg[0], (ic + 0));
                 LOAD_AND_CONVERT_BF16_F32(a_reg[1], (ic + 1));
                 LOAD_AND_CONVERT_BF16_F32(a_reg[2], (ic + 2));
@@ -87,7 +87,7 @@ cvt_bf16_f32_row_major(float*          cvt_buffer,
                 LOAD_AND_CONVERT_BF16_F32(a_reg[14], (ic + 14));
                 LOAD_AND_CONVERT_BF16_F32(a_reg[15], (ic + 15));
 
-                /*Store 8 F32 elements each in 16 rows */
+                /*Store 8 DLP_F32 elements each in 16 rows */
                 _mm256_storeu_ps(cvt_buffer + ((ic + 0) * rs_p) + kr, a_reg[0]);
                 _mm256_storeu_ps(cvt_buffer + ((ic + 1) * rs_p) + kr, a_reg[1]);
                 _mm256_storeu_ps(cvt_buffer + ((ic + 2) * rs_p) + kr, a_reg[2]);

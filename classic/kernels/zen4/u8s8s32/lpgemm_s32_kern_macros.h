@@ -57,7 +57,7 @@
     S32_S32_BETA_OP(c_int32_##m_ind##p2, m_ir, m_ind, 2, scratch1, scratch2);  \
     S32_S32_BETA_OP(c_int32_##m_ind##p3, m_ir, m_ind, 3, scratch1, scratch2);
 
-// Downscale S8 beta op.
+// Downscale DLP_S8 beta op.
 #define S8_S32_BETA_OP(reg, m_ir, m_ind, n_ind, scratch1, scratch2)            \
     scratch1 = _mm512_cvtepi8_epi32(_mm_maskz_loadu_epi8(                      \
         0xFFFF, (int8_t*)post_ops_attr.buf_downscale                           \
@@ -81,7 +81,7 @@
     S8_S32_BETA_OP(c_int32_##m_ind##p2, m_ir, m_ind, 2, scratch1, scratch2);   \
     S8_S32_BETA_OP(c_int32_##m_ind##p3, m_ir, m_ind, 3, scratch1, scratch2);
 
-// Downscale U8 beta op.
+// Downscale DLP_U8 beta op.
 #define U8_S32_BETA_OP(reg, m_ir, m_ind, n_ind, scratch1, scratch2)            \
     scratch1 = _mm512_cvtepu8_epi32(_mm_maskz_loadu_epi8(                      \
         0xFFFF, (uint8_t*)post_ops_attr.buf_downscale                          \
@@ -105,7 +105,7 @@
     U8_S32_BETA_OP(c_int32_##m_ind##p2, m_ir, m_ind, 2, scratch1, scratch2);   \
     U8_S32_BETA_OP(c_int32_##m_ind##p3, m_ir, m_ind, 3, scratch1, scratch2);
 
-// Downscale F32 beta op
+// Downscale DLP_F32 beta op
 #define F32_S32_BETA_OP(reg, m_ir, m_ind, n_ind, scratch1, scratch2)           \
     scratch1 = _mm512_cvtps_epi32(_mm512_maskz_loadu_ps(                       \
         0xFFFF, (float*)post_ops_attr.buf_downscale                            \
@@ -129,7 +129,7 @@
     F32_S32_BETA_OP(c_int32_##m_ind##p2, m_ir, m_ind, 2, scratch1, scratch2);  \
     F32_S32_BETA_OP(c_int32_##m_ind##p3, m_ir, m_ind, 3, scratch1, scratch2);
 
-// Downscale F32 beta op
+// Downscale DLP_F32 beta op
 #define F32_F32_BETA_OP(reg, m_ir, m_ind, n_ind, scratch1, scratch2)           \
     scratch1 = _mm512_loadu_ps(c + (rs_c * (m_ir + m_ind)) + (n_ind * 16));    \
     F32_BETA_FMA(reg, scratch1, scratch2)
@@ -155,7 +155,7 @@
     F32_F32_BETA_OP(acc_##m_ind##0, m_ir, m_ind, 0, scratch1, scratch2);       \
     F32_F32_BETA_OP(acc_##m_ind##1, m_ir, m_ind, 1, scratch1, scratch2);
 
-// Downscale BF16 beta op
+// Downscale DLP_BF16 beta op
 #define BF16_S32_BETA_OP(reg, m_ir, m_ind, n_ind, scratch1, scratch2)          \
     scratch1 = _mm512_cvtps_epi32((__m512)_mm512_sllv_epi32(                   \
         _mm512_cvtepi16_epi32(_mm256_maskz_loadu_epi16(                        \
@@ -243,7 +243,7 @@
                    + post_ops_attr.post_op_c_j + (n_ind * 16)));               \
     S32_BETA_FMA(reg, scratch1, scratch2)
 
-// Downscale U8 n < 16 mask load beta macro
+// Downscale DLP_U8 n < 16 mask load beta macro
 #define U8_S32_BETA_OP_NLT16F_MASK(lmask, reg, m_ind, n_ind, scratch1,         \
                                    scratch2)                                   \
     scratch1 = _mm512_cvtepu8_epi32(_mm_maskz_loadu_epi8(                      \
@@ -253,7 +253,7 @@
                    + post_ops_attr.post_op_c_j + (n_ind * 16)));               \
     S32_BETA_FMA(reg, scratch1, scratch2)
 
-// Downscale n < 16 mask load F32 beta macro
+// Downscale n < 16 mask load DLP_F32 beta macro
 #define F32_S32_BETA_OP_NLT16F_MASK(lmask, reg, m_ind, n_ind, scratch1,        \
                                     scratch2)                                  \
     scratch1 = _mm512_cvtps_epi32(_mm512_maskz_loadu_ps(                       \
@@ -263,7 +263,7 @@
                    + post_ops_attr.post_op_c_j + (n_ind * 16)));               \
     S32_BETA_FMA(reg, scratch1, scratch2)
 
-// Downscale n < 16 mask load BF16 beta macro
+// Downscale n < 16 mask load DLP_BF16 beta macro
 #define BF16_S32_BETA_OP_NLT16F_MASK(lmask, reg, m_ind, n_ind, scratch1,       \
                                      scratch2)                                 \
     scratch1 = _mm512_cvtps_epi32((__m512)_mm512_sllv_epi32(                   \
@@ -275,7 +275,7 @@
         _mm512_set1_epi32(16)));                                               \
     S32_BETA_FMA(reg, scratch1, scratch2)
 
-// BF16 bias helper macros.
+// DLP_BF16 bias helper macros.
 #define BF16_F32_BIAS_LOAD(scr, mask, n_ind)                                   \
     scr = (__m512)(_mm512_sllv_epi32(                                          \
         _mm512_cvtepi16_epi32(_mm256_maskz_loadu_epi16(                        \
@@ -283,19 +283,19 @@
                         + post_ops_attr.post_op_c_j + (n_ind * 16))),          \
         _mm512_set1_epi32(16)));
 
-// F32 bias helper macros.
+// DLP_F32 bias helper macros.
 #define S32_F32_BIAS_LOAD(scr, mask, n_ind)                                    \
     scr = _mm512_cvtepi32_ps(_mm512_maskz_loadu_epi32(                         \
         (mask), ((int32_t*)post_ops_list_temp->op_args1)                       \
                     + post_ops_attr.post_op_c_j + (n_ind * 16)));
 
-// U8 bias helper macros.
+// DLP_U8 bias helper macros.
 #define U8_F32_BIAS_LOAD(scr, mask, n_ind)                                     \
     scr = _mm512_cvtepi32_ps(_mm512_cvtepu8_epi32(_mm_maskz_loadu_epi8(        \
         (mask), ((int8_t*)post_ops_list_temp->op_args1)                        \
                     + post_ops_attr.post_op_c_j + (n_ind * 16))));
 
-// S8 bias helper macros.
+// DLP_S8 bias helper macros.
 #define S8_F32_BIAS_LOAD(scr, mask, n_ind)                                     \
     scr = _mm512_cvtepi32_ps(_mm512_cvtepi8_epi32(_mm_maskz_loadu_epi8(        \
         (mask), ((int8_t*)post_ops_list_temp->op_args1)                        \
@@ -364,7 +364,7 @@
     CVT_ACCUM_REG_APPLY_SCALES_M_N(flt_reg_pfx, int_reg_pfx, a_scl_ind, m_ind, \
                                    0)
 
-// BF16 bias helper macros.
+// DLP_BF16 bias helper macros.
 #define BF16_S32_BIAS_LOAD(scr, mask, n_ind)                                   \
     scr = _mm512_cvtps_epi32((__m512)(_mm512_sllv_epi32(                       \
         _mm512_cvtepi16_epi32(_mm256_maskz_loadu_epi16(                        \
@@ -372,13 +372,13 @@
                         + post_ops_attr.post_op_c_j + (n_ind * 16))),          \
         _mm512_set1_epi32(16))));
 
-// F32 bias helper macros.
+// DLP_F32 bias helper macros.
 #define F32_S32_BIAS_LOAD(scr, mask, n_ind)                                    \
     scr = _mm512_cvtps_epi32(_mm512_maskz_loadu_ps(                            \
         (mask), ((float*)post_ops_list_temp->op_args1)                         \
                     + post_ops_attr.post_op_c_j + (n_ind * 16)));
 
-// S8 bias helper macros.
+// DLP_S8 bias helper macros.
 #define S8_S32_BIAS_LOAD(scr, mask, n_ind)                                     \
     scr = _mm512_cvtepi8_epi32(_mm_maskz_loadu_epi8(                           \
         (mask), ((int8_t*)post_ops_list_temp->op_args1)                        \
@@ -406,7 +406,7 @@
 #define CVT_MULRND_F32(reg, scale, zero_point)                                 \
     reg = _mm512_mul_round_ps(                                                 \
         reg, scale, (_MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC));          \
-    if (post_ops_attr.c_stor_type == U8) {                                     \
+    if (post_ops_attr.c_stor_type == DLP_U8) {                                 \
         reg = _mm512_add_ps(                                                   \
             reg, _mm512_cvtepi32_ps(_mm512_cvtepu8_epi32(zero_point)));        \
     } else {                                                                   \
@@ -766,7 +766,7 @@
     S32_S32_MATRIX_ADD_LOAD(_cvtu32_mask16(0xFFFF), scr3, scl_fct3, m_ind, 3); \
     S32_MATRIX_ADD_4COL(scr0, scr1, scr2, scr3, m_ind);
 
-// S32 with F32 matrix add post-ops helper macros
+// DLP_S32 with DLP_F32 matrix add post-ops helper macros
 #define F32_MATRIX_ADD_1COL(scr0, m_ind)                                       \
     c_int32_##m_ind##p0 = _mm512_cvtps_epi32(                                  \
         _mm512_add_ps((__m512)scr0, _mm512_cvtepi32_ps(c_int32_##m_ind##p0)));
@@ -795,7 +795,7 @@
     c_int32_##m_ind##p3 = _mm512_cvtps_epi32(                                  \
         _mm512_add_ps((__m512)scr3, _mm512_cvtepi32_ps(c_int32_##m_ind##p3)));
 
-// BF16 buffer for matrix add/mul in u8s8s32.
+// DLP_BF16 buffer for matrix add/mul in u8s8s32.
 #define BF16_S32_MATRIX_ADD_LOAD(mask, scr, scl_fct, m_ind, n_ind)             \
     scr = _mm512_sllv_epi32(                                                   \
         _mm512_cvtepi16_epi32(_mm256_maskz_loadu_epi16(                        \
@@ -842,7 +842,7 @@
                              3);                                               \
     F32_MATRIX_ADD_4COL(scr0, scr1, scr2, scr3, m_ind);
 
-// F32 buffer for matrix add/mul in u8s8s32.
+// DLP_F32 buffer for matrix add/mul in u8s8s32.
 #define F32_S32_MATRIX_ADD_LOAD(mask, scr, scl_fct, m_ind, n_ind)              \
     scr = (__m512i)_mm512_maskz_loadu_ps(                                      \
         mask, matptr + ((post_ops_attr.post_op_c_i + m_ind) * ldm)             \
@@ -970,7 +970,7 @@
     S32_S32_MATRIX_MUL_LOAD(_cvtu32_mask16(0xFFFF), scr3, scl_fct3, m_ind, 3); \
     S32_MATRIX_MUL_4COL(scr0, scr1, scr2, scr3, m_ind);
 
-// S32 with F32 matrix add post-ops helper macros
+// DLP_S32 with DLP_F32 matrix add post-ops helper macros
 #define F32_MATRIX_MUL_1COL(scr0, m_ind)                                       \
     c_int32_##m_ind##p0 = _mm512_cvtps_epi32(_mm512_mul_round_ps(              \
         (__m512)scr0, _mm512_cvtepi32_ps(c_int32_##m_ind##p0),                 \
@@ -1009,7 +1009,7 @@
         (__m512)scr3, _mm512_cvtepi32_ps(c_int32_##m_ind##p3),                 \
         (_MM_FROUND_TO_NEAREST_INT | _MM_FROUND_NO_EXC)));
 
-// BF16 buffer for matrix add/mul in u8s8s32.
+// DLP_BF16 buffer for matrix add/mul in u8s8s32.
 #define BF16_S32_MATRIX_MUL_LOAD(mask, scr, scl_fct, m_ind, n_ind)             \
     BF16_S32_MATRIX_ADD_LOAD(mask, scr, scl_fct, m_ind, n_ind);
 
@@ -1051,7 +1051,7 @@
                              3);                                               \
     F32_MATRIX_MUL_4COL(scr0, scr1, scr2, scr3, m_ind);
 
-// F32 buffer for matrix add/mul in u8s8s32.
+// DLP_F32 buffer for matrix add/mul in u8s8s32.
 #define F32_S32_MATRIX_MUL_LOAD(mask, scr, scl_fct, m_ind, n_ind)              \
     F32_S32_MATRIX_ADD_LOAD(mask, scr, scl_fct, m_ind, n_ind);
 
@@ -1205,7 +1205,7 @@
 #define CVT_ACCUM_REG_INT_TO_FLOAT_1ROWS_XCOL(flt_reg_pfx, int_reg_pfx, cols)  \
     CVT_ACCUM_REG_INT_TO_FLOAT_##cols##COL(flt_reg_pfx, int_reg_pfx, 0);
 
-// F32 matrix add post-ops helper macros
+// DLP_F32 matrix add post-ops helper macros
 #define F32_ACC_MATRIX_ADD_1COL(scr0, m_ind)                                   \
     acc_##m_ind##0 = _mm512_add_ps((__m512)scr0, (acc_##m_ind##0));
 
@@ -1224,7 +1224,7 @@
     acc_##m_ind##2 = _mm512_add_ps((__m512)scr2, (acc_##m_ind##2));            \
     acc_##m_ind##3 = _mm512_add_ps((__m512)scr3, (acc_##m_ind##3));
 
-// BF16 buffer for matrix add/mul in u8s8s32.
+// DLP_BF16 buffer for matrix add/mul in u8s8s32.
 #define BF16_F32_MATRIX_ADD_LOAD(mask, scr, scl_fct, m_ind, n_ind)             \
     scr = (__m512)(_mm512_sllv_epi32(                                          \
         _mm512_cvtepi16_epi32(_mm256_maskz_loadu_epi16(                        \
@@ -1271,7 +1271,7 @@
                              3);                                               \
     F32_ACC_MATRIX_ADD_4COL(scr0, scr1, scr2, scr3, m_ind);
 
-// F32 buffer for matrix add/mul in u8s8s32.
+// DLP_F32 buffer for matrix add/mul in u8s8s32.
 #define F32_ACC_MATRIX_ADD_LOAD(mask, scr, scl_fct, m_ind, n_ind)              \
     scr = _mm512_maskz_loadu_ps(                                               \
         mask, matptr + ((post_ops_attr.post_op_c_i + m_ind) * ldm)             \
@@ -1564,7 +1564,7 @@
     S32_F32_MATRIX_MUL_LOAD(_cvtu32_mask16(0xFFFF), scr3, scl_fct3, m_ind, 3); \
     F32_ONLY_MATRIX_MUL_4COL(scr0, scr1, scr2, scr3, m_ind);
 
-// BF16 buffer for matrix add/mul in u8s8s32.
+// DLP_BF16 buffer for matrix add/mul in u8s8s32.
 #define BF16_F32_MATRIX_MUL_LOAD(mask, scr, scl_fct, m_ind, n_ind)             \
     BF16_F32_MATRIX_ADD_LOAD(mask, scr, scl_fct, m_ind, n_ind);
 
@@ -1606,7 +1606,7 @@
                              3);                                               \
     F32_ONLY_MATRIX_MUL_4COL(scr0, scr1, scr2, scr3, m_ind);
 
-// F32 buffer for matrix add/mul in u8s8s32.
+// DLP_F32 buffer for matrix add/mul in u8s8s32.
 #define F32_MATRIX_MUL_LOAD(mask, scr, scl_fct, m_ind, n_ind)                  \
     F32_ACC_MATRIX_ADD_LOAD(mask, scr, scl_fct, m_ind, n_ind);
 

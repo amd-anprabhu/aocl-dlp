@@ -36,7 +36,7 @@ DLP_INLINE md_t
 get_packb_bf16bf16f32of32_min_NR()
 {
     // This is the minimum NR' required for use in bf16bf16f32 kernels. The idea
-    // here is that since k needs to be a multiple of 2 (BF16 instr), NR'=16
+    // here is that since k needs to be a multiple of 2 (DLP_BF16 instr), NR'=16
     // results in total of 2 * NR' = 64 bytes to be loaded, which fits in 1 ZMM
     // register. Thus the smallest n fringe kernel dimension has n=16, and thus
     // any rounding for buffer sizes should be to 16.

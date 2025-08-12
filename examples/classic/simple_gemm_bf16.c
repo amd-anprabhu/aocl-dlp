@@ -32,7 +32,7 @@
  * This example shows how to:
  * 1. Initialize BFloat16 matrices
  * 2. Perform matrix multiplication with bf16 input and f32 output
- * 3. Check hardware compatibility for AVX512-BF16 instructions
+ * 3. Check hardware compatibility for AVX512-DLP_BF16 instructions
  */
 
 #include "aocl_dlp.h"
@@ -133,9 +133,9 @@ main()
     memset(c, 0, ldc * m * sizeof(float)); // Initialize C with zeros
 
     // Print a small section of the input matrices
-    print_bf16_matrix_section("Matrix A (BF16)", a, m, k, 3, 3);
-    print_bf16_matrix_section("Matrix B (BF16)", b, k, n, 3, 3);
-    print_float_matrix_section("Initial Matrix C (F32)", c, m, n, 3, 3);
+    print_bf16_matrix_section("Matrix A (DLP_BF16)", a, m, k, 3, 3);
+    print_bf16_matrix_section("Matrix B (DLP_BF16)", b, k, n, 3, 3);
+    print_float_matrix_section("Initial Matrix C (DLP_F32)", c, m, n, 3, 3);
 
     // GEMM parameters
     float alpha        = 1.0f; // Scalar for A*B
@@ -146,7 +146,8 @@ main()
     char  mem_format_a = 'N';  // A is not reordered
     char  mem_format_b = 'N';  // B is not reordered
 
-    // Perform matrix multiplication with BF16 inputs and F32 output: C = alpha
+    // Perform matrix multiplication with DLP_BF16 inputs and DLP_F32 output: C
+    // = alpha
     // * A * B + beta * C
     aocl_gemm_bf16bf16f32of32(order, transa, transb, m, n, k, alpha, a, lda,
                               mem_format_a, b, ldb, mem_format_b, beta, c, ldc,
@@ -154,7 +155,7 @@ main()
     );
 
     // Print a small section of the output matrix
-    print_float_matrix_section("Result Matrix C (F32)", c, m, n, 3, 3);
+    print_float_matrix_section("Result Matrix C (DLP_F32)", c, m, n, 3, 3);
 
     // Free allocated memory
     free(a);

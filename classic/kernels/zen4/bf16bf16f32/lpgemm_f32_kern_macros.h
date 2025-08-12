@@ -43,7 +43,7 @@
     /* Apply scaling on for <= 0 elements.*/                                   \
     reg = _mm512_mask_mul_ps(reg, relu_cmp_mask, reg, selector2);
 
-// F32 fma macro
+// DLP_F32 fma macro
 #define F32_BETA_FMA(reg, scratch1, scratch2)                                  \
     scratch1 = _mm512_mul_ps(scratch2, scratch1);                              \
     reg      = _mm512_add_ps(scratch1, reg);
@@ -100,12 +100,12 @@
                                  + (cs_b * (jr + n_ind)),                      \
                              mask, (__m256i)_mm512_cvtneps_pbh(reg))
 
-// BF16 -> F32 convert helpers. reg: __m512
+// DLP_BF16 -> DLP_F32 convert helpers. reg: __m512
 #define CVT_BF16_F32_INT_SHIFT(in)                                             \
     (__m512)                                                                   \
         _mm512_sllv_epi32(_mm512_cvtepi16_epi32((in)), _mm512_set1_epi32(16));
 
-// BF16 bias helper macros.
+// DLP_BF16 bias helper macros.
 #define BF16_F32_BIAS_LOAD(scr, mask, n_ind)                                   \
     scr = (__m512)(_mm512_sllv_epi32(                                          \
         _mm512_cvtepi16_epi32(_mm256_maskz_loadu_epi16(                        \

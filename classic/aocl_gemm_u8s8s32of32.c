@@ -43,7 +43,7 @@ AOCL_GEMM_MATMUL(uint8_t, int8_t, float, int32_t, u8s8s32of32)
     LPGEMM_START_LOGGER();
     LPGEMM_WRITE_LOGGER("u8s8s32of32", order, transa, transb, m, n, k,
                         ((float)alpha), lda, mem_format_a, ldb, mem_format_b,
-                        ((float)beta), ldc, post_op_unparsed);
+                        ((float)beta), ldc, metadata);
     dlp_trans_t dlp_transa;
     dlp_trans_t dlp_transb;
 
@@ -129,7 +129,7 @@ AOCL_GEMM_MATMUL(uint8_t, int8_t, float, int32_t, u8s8s32of32)
     // Convert post op struct to post op linked list format.
     lpgemm_post_op post_op_list[AOCL_MAX_POST_OPS];
     dlp_clsc_err_t err = lpgemm_translate_to_post_ops_list(
-        post_op_unparsed, post_op_list, (void*)c, (void*)(&order), m, n);
+        metadata, post_op_list, (void*)c, (void*)(&order), m, n);
 
     if (err != DLP_CLSC_SUCCESS) {
         goto err_hndl;
@@ -145,11 +145,11 @@ AOCL_GEMM_MATMUL(uint8_t, int8_t, float, int32_t, u8s8s32of32)
 #ifdef DLP_ENABLE_OPENMP
     lpgemm_u8s8s32o32_openmp_thread_decorator(
         m, n, k, a, rs_a, cs_a, mtag_a, b, rs_b, cs_b, mtag_b, (int32_t*)c,
-        rs_c, cs_c, alpha, beta, &rntm_g, lcntx_g, post_op_list, F32);
+        rs_c, cs_c, alpha, beta, &rntm_g, lcntx_g, post_op_list, DLP_F32);
 #else
     lpgemm_u8s8s32o32_thread_decorator(
         m, n, k, a, rs_a, cs_a, mtag_a, b, rs_b, cs_b, mtag_b, (int32_t*)c,
-        rs_c, cs_c, alpha, beta, &rntm_g, lcntx_g, post_op_list, F32);
+        rs_c, cs_c, alpha, beta, &rntm_g, lcntx_g, post_op_list, DLP_F32);
 #endif
 
 err_hndl:;

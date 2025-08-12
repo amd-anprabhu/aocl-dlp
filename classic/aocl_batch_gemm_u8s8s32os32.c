@@ -42,7 +42,7 @@ AOCL_BGEMM_MATMUL(uint8_t, int8_t, int32_t, int32_t, u8s8s32os32)
     LPGEMM_START_LOGGER();
     BATCH_LPGEMM_WRITE_LOGGER("u8s8s32os32", order, transa, transb, group_count,
                               group_size, m, n, k, alpha, lda, mem_format_a,
-                              ldb, mem_format_b, beta, ldc, post_op_unparsed);
+                              ldb, mem_format_b, beta, ldc, metadata);
 
     // Check if avx512_vnni ISA is supported, lpgemm matmul only works with it.
     if (dlp_cpuid_is_avx512vnni_supported() == FALSE) {
@@ -91,7 +91,7 @@ AOCL_BGEMM_MATMUL(uint8_t, int8_t, int32_t, int32_t, u8s8s32os32)
         lpgemm_post_op post_op_list[AOCL_MAX_POST_OPS];
 
         dlp_clsc_err_t err = lpgemm_translate_to_post_ops_list(
-            post_op_unparsed[gc_i], post_op_list, (void*)c[gc_i],
+            metadata[gc_i], post_op_list, (void*)c[gc_i],
             (void*)((order + gc_i)), m[gc_i], n[gc_i]);
 
         if (err != DLP_CLSC_SUCCESS)
@@ -191,14 +191,14 @@ AOCL_BGEMM_MATMUL(uint8_t, int8_t, int32_t, int32_t, u8s8s32os32)
             g_sz, m_local, n_local, k_local, (const uint8_t**)a_local, rs_a,
             cs_a, mtag_a, (const int8_t**)b_local, rs_b, cs_b, mtag_b,
             &c[mat_idx], rs_c, cs_c, alpha[gc_i], beta[gc_i], &rntm_g, lcntx_g,
-            post_op_list, S32);
+            post_op_list, DLP_S32);
 
 #else
         batch_lpgemm_u8s8s32o32_thread_decorator(
             g_sz, m_local, n_local, k_local, (const uint8_t**)a_local, rs_a,
             cs_a, mtag_a, (const int8_t**)b_local, rs_b, cs_b, mtag_b,
             &c[mat_idx], rs_c, cs_c, alpha[gc_i], beta[gc_i], &rntm_g, lcntx_g,
-            post_op_list, S32);
+            post_op_list, DLP_S32);
 #endif
         mat_idx += g_sz;
     }
@@ -211,7 +211,7 @@ AOCL_BGEMM_MATMUL(uint8_t, int8_t, int8_t, int32_t, u8s8s32os8)
     LPGEMM_START_LOGGER();
     BATCH_LPGEMM_WRITE_LOGGER("u8s8s32os8", order, transa, transb, group_count,
                               group_size, m, n, k, alpha, lda, mem_format_a,
-                              ldb, mem_format_b, beta, ldc, post_op_unparsed);
+                              ldb, mem_format_b, beta, ldc, metadata);
 
     // Check if avx512_vnni ISA is supported, lpgemm matmul only works with it.
     if (dlp_cpuid_is_avx512vnni_supported() == FALSE) {
@@ -264,7 +264,7 @@ AOCL_BGEMM_MATMUL(uint8_t, int8_t, int8_t, int32_t, u8s8s32os8)
         lpgemm_post_op post_op_list[AOCL_MAX_POST_OPS];
 
         dlp_clsc_err_t err = lpgemm_translate_to_post_ops_list(
-            post_op_unparsed[gc_i], post_op_list, (void*)c[gc_i],
+            metadata[gc_i], post_op_list, (void*)c[gc_i],
             (void*)((order + gc_i)), m[gc_i], n[gc_i]);
 
         if (err != DLP_CLSC_SUCCESS)
@@ -359,14 +359,14 @@ AOCL_BGEMM_MATMUL(uint8_t, int8_t, int8_t, int32_t, u8s8s32os8)
             g_sz, m_local, n_local, k_local, (const uint8_t**)a_local, rs_a,
             cs_a, mtag_a, (const int8_t**)b_local, rs_b, cs_b, mtag_b,
             (int32_t**)&c[mat_idx], rs_c, cs_c, alpha[gc_i], beta[gc_i],
-            &rntm_g, lcntx_g, post_op_list, S8);
+            &rntm_g, lcntx_g, post_op_list, DLP_S8);
 
 #else
         batch_lpgemm_u8s8s32o32_thread_decorator(
             g_sz, m_local, n_local, k_local, (const uint8_t**)a_local, rs_a,
             cs_a, mtag_a, (const int8_t**)b_local, rs_b, cs_b, mtag_b,
             (int32_t**)&c[mat_idx], rs_c, cs_c, alpha[gc_i], beta[gc_i],
-            &rntm_g, lcntx_g, post_op_list, S8);
+            &rntm_g, lcntx_g, post_op_list, DLP_S8);
 #endif
         mat_idx += g_sz;
     }
@@ -379,7 +379,7 @@ AOCL_BGEMM_MATMUL(uint8_t, int8_t, float, int32_t, u8s8s32of32)
     LPGEMM_START_LOGGER();
     BATCH_LPGEMM_WRITE_LOGGER("u8s8s32of32", order, transa, transb, group_count,
                               group_size, m, n, k, alpha, lda, mem_format_a,
-                              ldb, mem_format_b, beta, ldc, post_op_unparsed);
+                              ldb, mem_format_b, beta, ldc, metadata);
 
     // Check if avx512_vnni ISA is supported, lpgemm matmul only works with it.
     if (dlp_cpuid_is_avx512vnni_supported() == FALSE) {
@@ -433,7 +433,7 @@ AOCL_BGEMM_MATMUL(uint8_t, int8_t, float, int32_t, u8s8s32of32)
         lpgemm_post_op post_op_list[AOCL_MAX_POST_OPS];
 
         dlp_clsc_err_t err = lpgemm_translate_to_post_ops_list(
-            post_op_unparsed[gc_i], post_op_list, (void*)c[gc_i],
+            metadata[gc_i], post_op_list, (void*)c[gc_i],
             (void*)((order + gc_i)), m[gc_i], n[gc_i]);
 
         if (err != DLP_CLSC_SUCCESS)
@@ -527,14 +527,14 @@ AOCL_BGEMM_MATMUL(uint8_t, int8_t, float, int32_t, u8s8s32of32)
             g_sz, m_local, n_local, k_local, (const uint8_t**)a_local, rs_a,
             cs_a, mtag_a, (const int8_t**)b_local, rs_b, cs_b, mtag_b,
             (int32_t**)&c[mat_idx], rs_c, cs_c, alpha[gc_i], beta[gc_i],
-            &rntm_g, lcntx_g, post_op_list, F32);
+            &rntm_g, lcntx_g, post_op_list, DLP_F32);
 
 #else
         batch_lpgemm_u8s8s32o32_thread_decorator(
             g_sz, m_local, n_local, k_local, (const uint8_t**)a_local, rs_a,
             cs_a, mtag_a, (const int8_t**)b_local, rs_b, cs_b, mtag_b,
             (int32_t**)&c[mat_idx], rs_c, cs_c, alpha[gc_i], beta[gc_i],
-            &rntm_g, lcntx_g, post_op_list, F32);
+            &rntm_g, lcntx_g, post_op_list, DLP_F32);
 #endif
         mat_idx += g_sz;
     }
@@ -545,10 +545,9 @@ err_hndl:;
 AOCL_BGEMM_MATMUL(uint8_t, int8_t, bfloat16, int32_t, u8s8s32obf16)
 {
     LPGEMM_START_LOGGER();
-    BATCH_LPGEMM_WRITE_LOGGER("u8s8s32obf16", order, transa, transb,
-                              group_count, group_size, m, n, k, alpha, lda,
-                              mem_format_a, ldb, mem_format_b, beta, ldc,
-                              post_op_unparsed);
+    BATCH_LPGEMM_WRITE_LOGGER(
+        "u8s8s32obf16", order, transa, transb, group_count, group_size, m, n, k,
+        alpha, lda, mem_format_a, ldb, mem_format_b, beta, ldc, metadata);
 
     // Check if avx512_vnni ISA is supported, lpgemm matmul only works with it.
     if (dlp_cpuid_is_avx512vnni_supported() == FALSE) {
@@ -600,7 +599,7 @@ AOCL_BGEMM_MATMUL(uint8_t, int8_t, bfloat16, int32_t, u8s8s32obf16)
         lpgemm_post_op post_op_list[AOCL_MAX_POST_OPS];
 
         dlp_clsc_err_t err = lpgemm_translate_to_post_ops_list(
-            post_op_unparsed[gc_i], post_op_list, (void*)c[gc_i],
+            metadata[gc_i], post_op_list, (void*)c[gc_i],
             (void*)((order + gc_i)), m[gc_i], n[gc_i]);
 
         if (err != DLP_CLSC_SUCCESS)
@@ -694,14 +693,14 @@ AOCL_BGEMM_MATMUL(uint8_t, int8_t, bfloat16, int32_t, u8s8s32obf16)
             g_sz, m_local, n_local, k_local, (const uint8_t**)a_local, rs_a,
             cs_a, mtag_a, (const int8_t**)b_local, rs_b, cs_b, mtag_b,
             (int32_t**)&c[mat_idx], rs_c, cs_c, alpha[gc_i], beta[gc_i],
-            &rntm_g, lcntx_g, post_op_list, BF16);
+            &rntm_g, lcntx_g, post_op_list, DLP_BF16);
 
 #else
         batch_lpgemm_u8s8s32o32_thread_decorator(
             g_sz, m_local, n_local, k_local, (const uint8_t**)a_local, rs_a,
             cs_a, mtag_a, (const int8_t**)b_local, rs_b, cs_b, mtag_b,
             (int32_t**)&c[mat_idx], rs_c, cs_c, alpha[gc_i], beta[gc_i],
-            &rntm_g, lcntx_g, post_op_list, BF16);
+            &rntm_g, lcntx_g, post_op_list, DLP_BF16);
 #endif
         mat_idx += g_sz;
     }
@@ -714,7 +713,7 @@ AOCL_BGEMM_MATMUL(uint8_t, int8_t, uint8_t, int32_t, u8s8s32ou8)
     LPGEMM_START_LOGGER();
     BATCH_LPGEMM_WRITE_LOGGER("u8s8s32ou8", order, transa, transb, group_count,
                               group_size, m, n, k, alpha, lda, mem_format_a,
-                              ldb, mem_format_b, beta, ldc, post_op_unparsed);
+                              ldb, mem_format_b, beta, ldc, metadata);
 
     // Check if avx512_vnni ISA is supported, lpgemm matmul only works with it.
     if (dlp_cpuid_is_avx512vnni_supported() == FALSE) {
@@ -766,7 +765,7 @@ AOCL_BGEMM_MATMUL(uint8_t, int8_t, uint8_t, int32_t, u8s8s32ou8)
         lpgemm_post_op post_op_list[AOCL_MAX_POST_OPS];
 
         dlp_clsc_err_t err = lpgemm_translate_to_post_ops_list(
-            post_op_unparsed[gc_i], post_op_list, (void*)c[gc_i],
+            metadata[gc_i], post_op_list, (void*)c[gc_i],
             (void*)((order + gc_i)), m[gc_i], n[gc_i]);
 
         if (err != DLP_CLSC_SUCCESS)
@@ -860,14 +859,14 @@ AOCL_BGEMM_MATMUL(uint8_t, int8_t, uint8_t, int32_t, u8s8s32ou8)
             g_sz, m_local, n_local, k_local, (const uint8_t**)a_local, rs_a,
             cs_a, mtag_a, (const int8_t**)b_local, rs_b, cs_b, mtag_b,
             (int32_t**)&c[mat_idx], rs_c, cs_c, alpha[gc_i], beta[gc_i],
-            &rntm_g, lcntx_g, post_op_list, U8);
+            &rntm_g, lcntx_g, post_op_list, DLP_U8);
 
 #else
         batch_lpgemm_u8s8s32o32_thread_decorator(
             g_sz, m_local, n_local, k_local, (const uint8_t**)a_local, rs_a,
             cs_a, mtag_a, (const int8_t**)b_local, rs_b, cs_b, mtag_b,
             (int32_t**)&c[mat_idx], rs_c, cs_c, alpha[gc_i], beta[gc_i],
-            &rntm_g, lcntx_g, post_op_list, U8);
+            &rntm_g, lcntx_g, post_op_list, DLP_U8);
 #endif
         mat_idx += g_sz;
     }

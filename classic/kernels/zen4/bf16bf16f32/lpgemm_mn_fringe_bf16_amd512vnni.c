@@ -229,7 +229,7 @@ POST_OPS_BIAS_5xLT16: {
     if ((*(char*)post_ops_list_temp->op_args2 == 'r')
         || (*(char*)post_ops_list_temp->op_args2 == 'R')) {
         __mmask16 bias_mask = _cvtu32_mask16(0xFFFF >> (16 - n0_rem));
-        if (post_ops_list_temp->stor_type == BF16) {
+        if (post_ops_list_temp->stor_type == DLP_BF16) {
             BF16_F32_BIAS_LOAD(selector1, bias_mask, 0);
         } else {
             selector1 = _mm512_maskz_loadu_ps(
@@ -255,7 +255,7 @@ POST_OPS_BIAS_5xLT16: {
         __m512 selector3;
         __m512 selector4;
         __m512 selector5;
-        if (post_ops_list_temp->stor_type == BF16) {
+        if (post_ops_list_temp->stor_type == DLP_BF16) {
             __mmask16 bias_mask = _cvtu32_mask16(0xFFFF);
             BF16_F32_BIAS_BCAST(selector1, bias_mask, 0);
             BF16_F32_BIAS_BCAST(selector2, bias_mask, 1);
@@ -535,9 +535,9 @@ POST_OPS_MATRIX_ADD_5xLT16: {
     __mmask16 load_mask = _cvtu32_mask16(0xFFFF >> (16 - n0_rem));
     md_t      ldm       = *(md_t*)post_ops_list_temp->op_args3;
 
-    bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                   || ((post_ops_list_temp->stor_type == NONE)
-                       && (post_ops_attr.c_stor_type == BF16));
+    bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                   || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                       && (post_ops_attr.c_stor_type == DLP_BF16));
 
     __m512 scl_fctr1 = _mm512_setzero_ps();
     __m512 scl_fctr2 = _mm512_setzero_ps();
@@ -658,9 +658,9 @@ POST_OPS_MATRIX_MUL_5xLT16: {
     __mmask16 load_mask = _cvtu32_mask16(0xFFFF >> (16 - n0_rem));
     md_t      ldm       = *(md_t*)post_ops_list_temp->op_args3;
 
-    bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                   || ((post_ops_list_temp->stor_type == NONE)
-                       && (post_ops_attr.c_stor_type == BF16));
+    bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                   || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                       && (post_ops_attr.c_stor_type == DLP_BF16));
 
     __m512 scl_fctr1 = _mm512_setzero_ps();
     __m512 scl_fctr2 = _mm512_setzero_ps();
@@ -1055,7 +1055,7 @@ POST_OPS_BIAS_4xLT16: {
     if ((*(char*)post_ops_list_temp->op_args2 == 'r')
         || (*(char*)post_ops_list_temp->op_args2 == 'R')) {
         __mmask16 bias_mask = _cvtu32_mask16(0xFFFF >> (16 - n0_rem));
-        if (post_ops_list_temp->stor_type == BF16) {
+        if (post_ops_list_temp->stor_type == DLP_BF16) {
             BF16_F32_BIAS_LOAD(selector1, bias_mask, 0);
         } else {
             selector1 = _mm512_maskz_loadu_ps(
@@ -1077,7 +1077,7 @@ POST_OPS_BIAS_4xLT16: {
     } else {
         __m512 selector3;
         __m512 selector4;
-        if (post_ops_list_temp->stor_type == BF16) {
+        if (post_ops_list_temp->stor_type == DLP_BF16) {
             __mmask16 bias_mask = _cvtu32_mask16(0xFFFF);
             BF16_F32_BIAS_BCAST(selector1, bias_mask, 0);
             BF16_F32_BIAS_BCAST(selector2, bias_mask, 1);
@@ -1318,9 +1318,9 @@ POST_OPS_MATRIX_ADD_4xLT16: {
     __mmask16 load_mask = _cvtu32_mask16(0xFFFF >> (16 - n0_rem));
     md_t      ldm       = *(md_t*)post_ops_list_temp->op_args3;
 
-    bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                   || ((post_ops_list_temp->stor_type == NONE)
-                       && (post_ops_attr.c_stor_type == BF16));
+    bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                   || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                       && (post_ops_attr.c_stor_type == DLP_BF16));
 
     __m512 scl_fctr1 = _mm512_setzero_ps();
     __m512 scl_fctr2 = _mm512_setzero_ps();
@@ -1424,9 +1424,9 @@ POST_OPS_MATRIX_MUL_4xLT16: {
     __mmask16 load_mask = _cvtu32_mask16(0xFFFF >> (16 - n0_rem));
     md_t      ldm       = *(md_t*)post_ops_list_temp->op_args3;
 
-    bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                   || ((post_ops_list_temp->stor_type == NONE)
-                       && (post_ops_attr.c_stor_type == BF16));
+    bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                   || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                       && (post_ops_attr.c_stor_type == DLP_BF16));
 
     __m512 scl_fctr1 = _mm512_setzero_ps();
     __m512 scl_fctr2 = _mm512_setzero_ps();
@@ -1759,7 +1759,7 @@ POST_OPS_BIAS_3xLT16: {
     if ((*(char*)post_ops_list_temp->op_args2 == 'r')
         || (*(char*)post_ops_list_temp->op_args2 == 'R')) {
         __mmask16 bias_mask = _cvtu32_mask16(0xFFFF >> (16 - n0_rem));
-        if (post_ops_list_temp->stor_type == BF16) {
+        if (post_ops_list_temp->stor_type == DLP_BF16) {
             BF16_F32_BIAS_LOAD(selector1, bias_mask, 0);
         } else {
             selector1 = _mm512_maskz_loadu_ps(
@@ -1777,7 +1777,7 @@ POST_OPS_BIAS_3xLT16: {
         c_float_2p0 = _mm512_add_ps(selector1, c_float_2p0);
     } else {
         __m512 selector3;
-        if (post_ops_list_temp->stor_type == BF16) {
+        if (post_ops_list_temp->stor_type == DLP_BF16) {
             __mmask16 bias_mask = _cvtu32_mask16(0xFFFF);
             BF16_F32_BIAS_BCAST(selector1, bias_mask, 0);
             BF16_F32_BIAS_BCAST(selector2, bias_mask, 1);
@@ -1981,9 +1981,9 @@ POST_OPS_MATRIX_ADD_3xLT16: {
     __mmask16 load_mask = _cvtu32_mask16(0xFFFF >> (16 - n0_rem));
     md_t      ldm       = *(md_t*)post_ops_list_temp->op_args3;
 
-    bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                   || ((post_ops_list_temp->stor_type == NONE)
-                       && (post_ops_attr.c_stor_type == BF16));
+    bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                   || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                       && (post_ops_attr.c_stor_type == DLP_BF16));
 
     __m512 scl_fctr1 = _mm512_setzero_ps();
     __m512 scl_fctr2 = _mm512_setzero_ps();
@@ -2070,9 +2070,9 @@ POST_OPS_MATRIX_MUL_3xLT16: {
     __mmask16 load_mask = _cvtu32_mask16(0xFFFF >> (16 - n0_rem));
     md_t      ldm       = *(md_t*)post_ops_list_temp->op_args3;
 
-    bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                   || ((post_ops_list_temp->stor_type == NONE)
-                       && (post_ops_attr.c_stor_type == BF16));
+    bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                   || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                       && (post_ops_attr.c_stor_type == DLP_BF16));
 
     __m512 scl_fctr1 = _mm512_setzero_ps();
     __m512 scl_fctr2 = _mm512_setzero_ps();
@@ -2346,7 +2346,7 @@ POST_OPS_BIAS_2xLT16: {
     if ((*(char*)post_ops_list_temp->op_args2 == 'r')
         || (*(char*)post_ops_list_temp->op_args2 == 'R')) {
         __mmask16 bias_mask = _cvtu32_mask16(0xFFFF >> (16 - n0_rem));
-        if (post_ops_list_temp->stor_type == BF16) {
+        if (post_ops_list_temp->stor_type == DLP_BF16) {
             BF16_F32_BIAS_LOAD(selector1, bias_mask, 0);
         } else {
             selector1 = _mm512_maskz_loadu_ps(
@@ -2360,7 +2360,7 @@ POST_OPS_BIAS_2xLT16: {
         // c[1,0-15]
         c_float_1p0 = _mm512_add_ps(selector1, c_float_1p0);
     } else {
-        if (post_ops_list_temp->stor_type == BF16) {
+        if (post_ops_list_temp->stor_type == DLP_BF16) {
             __mmask16 bias_mask = _cvtu32_mask16(0xFFFF);
             BF16_F32_BIAS_BCAST(selector1, bias_mask, 0);
             BF16_F32_BIAS_BCAST(selector2, bias_mask, 1);
@@ -2525,9 +2525,9 @@ POST_OPS_MATRIX_ADD_2xLT16: {
     __mmask16 load_mask = _cvtu32_mask16(0xFFFF >> (16 - n0_rem));
     md_t      ldm       = *(md_t*)post_ops_list_temp->op_args3;
 
-    bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                   || ((post_ops_list_temp->stor_type == NONE)
-                       && (post_ops_attr.c_stor_type == BF16));
+    bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                   || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                       && (post_ops_attr.c_stor_type == DLP_BF16));
 
     __m512 scl_fctr1 = _mm512_setzero_ps();
     __m512 scl_fctr2 = _mm512_setzero_ps();
@@ -2597,9 +2597,9 @@ POST_OPS_MATRIX_MUL_2xLT16: {
     __mmask16 load_mask = _cvtu32_mask16(0xFFFF >> (16 - n0_rem));
     md_t      ldm       = *(md_t*)post_ops_list_temp->op_args3;
 
-    bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                   || ((post_ops_list_temp->stor_type == NONE)
-                       && (post_ops_attr.c_stor_type == BF16));
+    bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                   || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                       && (post_ops_attr.c_stor_type == DLP_BF16));
 
     __m512 scl_fctr1 = _mm512_setzero_ps();
     __m512 scl_fctr2 = _mm512_setzero_ps();
@@ -2813,7 +2813,7 @@ POST_OPS_BIAS_1xLT16: {
     if ((*(char*)post_ops_list_temp->op_args2 == 'r')
         || (*(char*)post_ops_list_temp->op_args2 == 'R')) {
         __mmask16 bias_mask = _cvtu32_mask16(0xFFFF >> (16 - n0_rem));
-        if (post_ops_list_temp->stor_type == BF16) {
+        if (post_ops_list_temp->stor_type == DLP_BF16) {
             BF16_F32_BIAS_LOAD(selector1, bias_mask, 0);
         } else {
             selector1 = _mm512_maskz_loadu_ps(
@@ -2824,7 +2824,7 @@ POST_OPS_BIAS_1xLT16: {
         // c[0,0-15]
         c_float_0p0 = _mm512_add_ps(selector1, c_float_0p0);
     } else {
-        if (post_ops_list_temp->stor_type == BF16) {
+        if (post_ops_list_temp->stor_type == DLP_BF16) {
             __mmask16 bias_mask = _cvtu32_mask16(0xFFFF);
             BF16_F32_BIAS_BCAST(selector1, bias_mask, 0);
         } else {
@@ -2952,9 +2952,9 @@ POST_OPS_MATRIX_ADD_1xLT16: {
     __mmask16 load_mask = _cvtu32_mask16(0xFFFF >> (16 - n0_rem));
     md_t      ldm       = *(md_t*)post_ops_list_temp->op_args3;
 
-    bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                   || ((post_ops_list_temp->stor_type == NONE)
-                       && (post_ops_attr.c_stor_type == BF16));
+    bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                   || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                       && (post_ops_attr.c_stor_type == DLP_BF16));
 
     __m512 scl_fctr1 = _mm512_setzero_ps();
 
@@ -3007,9 +3007,9 @@ POST_OPS_MATRIX_MUL_1xLT16: {
     __mmask16 load_mask = _cvtu32_mask16(0xFFFF >> (16 - n0_rem));
     md_t      ldm       = *(md_t*)post_ops_list_temp->op_args3;
 
-    bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                   || ((post_ops_list_temp->stor_type == NONE)
-                       && (post_ops_attr.c_stor_type == BF16));
+    bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                   || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                       && (post_ops_attr.c_stor_type == DLP_BF16));
 
     __m512 scl_fctr1 = _mm512_setzero_ps();
 
@@ -3289,7 +3289,7 @@ LPGEMM_MN_FRINGE_KERN(bfloat16, bfloat16, float, bf16bf16f32of32_5x16)
 POST_OPS_BIAS_5x16: {
     if ((*(char*)post_ops_list_temp->op_args2 == 'r')
         || (*(char*)post_ops_list_temp->op_args2 == 'R')) {
-        if (post_ops_list_temp->stor_type == BF16) {
+        if (post_ops_list_temp->stor_type == DLP_BF16) {
             __mmask16 bias_mask = _cvtu32_mask16(0xFFFF);
             BF16_F32_BIAS_LOAD(selector1, bias_mask, 0);
         } else {
@@ -3315,7 +3315,7 @@ POST_OPS_BIAS_5x16: {
         __m512 selector3;
         __m512 selector4;
         __m512 selector5;
-        if (post_ops_list_temp->stor_type == BF16) {
+        if (post_ops_list_temp->stor_type == DLP_BF16) {
             __mmask16 bias_mask = _cvtu32_mask16(0xFFFF);
             BF16_F32_BIAS_BCAST(selector1, bias_mask, 0);
             BF16_F32_BIAS_BCAST(selector2, bias_mask, 1);
@@ -3593,9 +3593,9 @@ POST_OPS_DOWNSCALE_5x16: {
 POST_OPS_MATRIX_ADD_5x16: {
     md_t ldm = *(md_t*)post_ops_list_temp->op_args3;
 
-    bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                   || ((post_ops_list_temp->stor_type == NONE)
-                       && (post_ops_attr.c_stor_type == BF16));
+    bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                   || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                       && (post_ops_attr.c_stor_type == DLP_BF16));
 
     __m512 scl_fctr1 = _mm512_setzero_ps();
     __m512 scl_fctr2 = _mm512_setzero_ps();
@@ -3714,9 +3714,9 @@ POST_OPS_MATRIX_ADD_5x16: {
 POST_OPS_MATRIX_MUL_5x16: {
     md_t ldm = *(md_t*)post_ops_list_temp->op_args3;
 
-    bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                   || ((post_ops_list_temp->stor_type == NONE)
-                       && (post_ops_attr.c_stor_type == BF16));
+    bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                   || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                       && (post_ops_attr.c_stor_type == DLP_BF16));
 
     __m512 scl_fctr1 = _mm512_setzero_ps();
     __m512 scl_fctr2 = _mm512_setzero_ps();
@@ -4098,7 +4098,7 @@ LPGEMM_MN_FRINGE_KERN(bfloat16, bfloat16, float, bf16bf16f32of32_4x16)
 POST_OPS_BIAS_4x16: {
     if ((*(char*)post_ops_list_temp->op_args2 == 'r')
         || (*(char*)post_ops_list_temp->op_args2 == 'R')) {
-        if (post_ops_list_temp->stor_type == BF16) {
+        if (post_ops_list_temp->stor_type == DLP_BF16) {
             __mmask16 bias_mask = _cvtu32_mask16(0xFFFF);
             BF16_F32_BIAS_LOAD(selector1, bias_mask, 0);
         } else {
@@ -4120,7 +4120,7 @@ POST_OPS_BIAS_4x16: {
     } else {
         __m512 selector3;
         __m512 selector4;
-        if (post_ops_list_temp->stor_type == BF16) {
+        if (post_ops_list_temp->stor_type == DLP_BF16) {
             __mmask16 bias_mask = _cvtu32_mask16(0xFFFF);
             BF16_F32_BIAS_BCAST(selector1, bias_mask, 0);
             BF16_F32_BIAS_BCAST(selector2, bias_mask, 1);
@@ -4360,9 +4360,9 @@ POST_OPS_DOWNSCALE_4x16: {
 POST_OPS_MATRIX_ADD_4x16: {
     md_t ldm = *(md_t*)post_ops_list_temp->op_args3;
 
-    bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                   || ((post_ops_list_temp->stor_type == NONE)
-                       && (post_ops_attr.c_stor_type == BF16));
+    bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                   || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                       && (post_ops_attr.c_stor_type == DLP_BF16));
 
     __m512 scl_fctr1 = _mm512_setzero_ps();
     __m512 scl_fctr2 = _mm512_setzero_ps();
@@ -4464,9 +4464,9 @@ POST_OPS_MATRIX_ADD_4x16: {
 POST_OPS_MATRIX_MUL_4x16: {
     md_t ldm = *(md_t*)post_ops_list_temp->op_args3;
 
-    bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                   || ((post_ops_list_temp->stor_type == NONE)
-                       && (post_ops_attr.c_stor_type == BF16));
+    bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                   || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                       && (post_ops_attr.c_stor_type == DLP_BF16));
 
     __m512 scl_fctr1 = _mm512_setzero_ps();
     __m512 scl_fctr2 = _mm512_setzero_ps();
@@ -4790,7 +4790,7 @@ LPGEMM_MN_FRINGE_KERN(bfloat16, bfloat16, float, bf16bf16f32of32_3x16)
 POST_OPS_BIAS_3x16: {
     if ((*(char*)post_ops_list_temp->op_args2 == 'r')
         || (*(char*)post_ops_list_temp->op_args2 == 'R')) {
-        if (post_ops_list_temp->stor_type == BF16) {
+        if (post_ops_list_temp->stor_type == DLP_BF16) {
             __mmask16 bias_mask = _cvtu32_mask16(0xFFFF);
             BF16_F32_BIAS_LOAD(selector1, bias_mask, 0);
         } else {
@@ -4808,7 +4808,7 @@ POST_OPS_BIAS_3x16: {
         c_float_2p0 = _mm512_add_ps(selector1, c_float_2p0);
     } else {
         __m512 selector3;
-        if (post_ops_list_temp->stor_type == BF16) {
+        if (post_ops_list_temp->stor_type == DLP_BF16) {
             __mmask16 bias_mask = _cvtu32_mask16(0xFFFF);
             BF16_F32_BIAS_BCAST(selector1, bias_mask, 0);
             BF16_F32_BIAS_BCAST(selector2, bias_mask, 1);
@@ -5010,9 +5010,9 @@ POST_OPS_DOWNSCALE_3x16: {
 POST_OPS_MATRIX_ADD_3x16: {
     md_t ldm = *(md_t*)post_ops_list_temp->op_args3;
 
-    bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                   || ((post_ops_list_temp->stor_type == NONE)
-                       && (post_ops_attr.c_stor_type == BF16));
+    bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                   || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                       && (post_ops_attr.c_stor_type == DLP_BF16));
 
     __m512 scl_fctr1 = _mm512_setzero_ps();
     __m512 scl_fctr2 = _mm512_setzero_ps();
@@ -5097,9 +5097,9 @@ POST_OPS_MATRIX_ADD_3x16: {
 POST_OPS_MATRIX_MUL_3x16: {
     md_t ldm = *(md_t*)post_ops_list_temp->op_args3;
 
-    bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                   || ((post_ops_list_temp->stor_type == NONE)
-                       && (post_ops_attr.c_stor_type == BF16));
+    bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                   || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                       && (post_ops_attr.c_stor_type == DLP_BF16));
 
     __m512 scl_fctr1 = _mm512_setzero_ps();
     __m512 scl_fctr2 = _mm512_setzero_ps();
@@ -5365,7 +5365,7 @@ LPGEMM_MN_FRINGE_KERN(bfloat16, bfloat16, float, bf16bf16f32of32_2x16)
 POST_OPS_BIAS_2x16: {
     if ((*(char*)post_ops_list_temp->op_args2 == 'r')
         || (*(char*)post_ops_list_temp->op_args2 == 'R')) {
-        if (post_ops_list_temp->stor_type == BF16) {
+        if (post_ops_list_temp->stor_type == DLP_BF16) {
             __mmask16 bias_mask = _cvtu32_mask16(0xFFFF);
             BF16_F32_BIAS_LOAD(selector1, bias_mask, 0);
         } else {
@@ -5379,7 +5379,7 @@ POST_OPS_BIAS_2x16: {
         // c[1,0-15]
         c_float_1p0 = _mm512_add_ps(selector1, c_float_1p0);
     } else {
-        if (post_ops_list_temp->stor_type == BF16) {
+        if (post_ops_list_temp->stor_type == DLP_BF16) {
             __mmask16 bias_mask = _cvtu32_mask16(0xFFFF);
             BF16_F32_BIAS_BCAST(selector1, bias_mask, 0);
             BF16_F32_BIAS_BCAST(selector2, bias_mask, 1);
@@ -5543,9 +5543,9 @@ POST_OPS_DOWNSCALE_2x16: {
 POST_OPS_MATRIX_ADD_2x16: {
     md_t ldm = *(md_t*)post_ops_list_temp->op_args3;
 
-    bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                   || ((post_ops_list_temp->stor_type == NONE)
-                       && (post_ops_attr.c_stor_type == BF16));
+    bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                   || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                       && (post_ops_attr.c_stor_type == DLP_BF16));
 
     __m512 scl_fctr1 = _mm512_setzero_ps();
     __m512 scl_fctr2 = _mm512_setzero_ps();
@@ -5613,9 +5613,9 @@ POST_OPS_MATRIX_ADD_2x16: {
 POST_OPS_MATRIX_MUL_2x16: {
     md_t ldm = *(md_t*)post_ops_list_temp->op_args3;
 
-    bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                   || ((post_ops_list_temp->stor_type == NONE)
-                       && (post_ops_attr.c_stor_type == BF16));
+    bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                   || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                       && (post_ops_attr.c_stor_type == DLP_BF16));
 
     __m512 scl_fctr1 = _mm512_setzero_ps();
     __m512 scl_fctr2 = _mm512_setzero_ps();
@@ -5823,7 +5823,7 @@ LPGEMM_MN_FRINGE_KERN(bfloat16, bfloat16, float, bf16bf16f32of32_1x16)
 POST_OPS_BIAS_1x16: {
     if ((*(char*)post_ops_list_temp->op_args2 == 'r')
         || (*(char*)post_ops_list_temp->op_args2 == 'R')) {
-        if (post_ops_list_temp->stor_type == BF16) {
+        if (post_ops_list_temp->stor_type == DLP_BF16) {
             __mmask16 bias_mask = _cvtu32_mask16(0xFFFF);
             BF16_F32_BIAS_LOAD(selector1, bias_mask, 0);
         } else {
@@ -5834,7 +5834,7 @@ POST_OPS_BIAS_1x16: {
         // c[0,0-15]
         c_float_0p0 = _mm512_add_ps(selector1, c_float_0p0);
     } else {
-        if (post_ops_list_temp->stor_type == BF16) {
+        if (post_ops_list_temp->stor_type == DLP_BF16) {
             __mmask16 bias_mask = _cvtu32_mask16(0xFFFF);
             BF16_F32_BIAS_BCAST(selector1, bias_mask, 0);
         } else {
@@ -5960,9 +5960,9 @@ POST_OPS_DOWNSCALE_1x16: {
 POST_OPS_MATRIX_ADD_1x16: {
     md_t ldm = *(md_t*)post_ops_list_temp->op_args3;
 
-    bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                   || ((post_ops_list_temp->stor_type == NONE)
-                       && (post_ops_attr.c_stor_type == BF16));
+    bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                   || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                       && (post_ops_attr.c_stor_type == DLP_BF16));
 
     __m512 scl_fctr1 = _mm512_setzero_ps();
 
@@ -6013,9 +6013,9 @@ POST_OPS_MATRIX_ADD_1x16: {
 POST_OPS_MATRIX_MUL_1x16: {
     md_t ldm = *(md_t*)post_ops_list_temp->op_args3;
 
-    bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                   || ((post_ops_list_temp->stor_type == NONE)
-                       && (post_ops_attr.c_stor_type == BF16));
+    bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                   || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                       && (post_ops_attr.c_stor_type == DLP_BF16));
 
     __m512 scl_fctr1 = _mm512_setzero_ps();
 
@@ -6347,7 +6347,7 @@ LPGEMM_MN_FRINGE_KERN(bfloat16, bfloat16, float, bf16bf16f32of32_5x32)
 POST_OPS_BIAS_5x32: {
     if ((*(char*)post_ops_list_temp->op_args2 == 'r')
         || (*(char*)post_ops_list_temp->op_args2 == 'R')) {
-        if (post_ops_list_temp->stor_type == BF16) {
+        if (post_ops_list_temp->stor_type == DLP_BF16) {
             __mmask16 bias_mask = _cvtu32_mask16(0xFFFF);
             BF16_F32_BIAS_LOAD(selector1, bias_mask, 0);
             BF16_F32_BIAS_LOAD(selector2, bias_mask, 1);
@@ -6391,7 +6391,7 @@ POST_OPS_BIAS_5x32: {
         __m512 selector3;
         __m512 selector4;
         __m512 selector5;
-        if (post_ops_list_temp->stor_type == BF16) {
+        if (post_ops_list_temp->stor_type == DLP_BF16) {
             __mmask16 bias_mask = _cvtu32_mask16(0xFFFF);
             BF16_F32_BIAS_BCAST(selector1, bias_mask, 0);
             BF16_F32_BIAS_BCAST(selector2, bias_mask, 1);
@@ -6790,9 +6790,9 @@ POST_OPS_DOWNSCALE_5x32: {
 POST_OPS_MATRIX_ADD_5x32: {
     md_t ldm = *(md_t*)post_ops_list_temp->op_args3;
 
-    bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                   || ((post_ops_list_temp->stor_type == NONE)
-                       && (post_ops_attr.c_stor_type == BF16));
+    bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                   || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                       && (post_ops_attr.c_stor_type == DLP_BF16));
 
     __m512 scl_fctr1 = _mm512_setzero_ps();
     __m512 scl_fctr2 = _mm512_setzero_ps();
@@ -6933,9 +6933,9 @@ POST_OPS_MATRIX_ADD_5x32: {
 POST_OPS_MATRIX_MUL_5x32: {
     md_t ldm = *(md_t*)post_ops_list_temp->op_args3;
 
-    bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                   || ((post_ops_list_temp->stor_type == NONE)
-                       && (post_ops_attr.c_stor_type == BF16));
+    bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                   || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                       && (post_ops_attr.c_stor_type == DLP_BF16));
 
     __m512 scl_fctr1 = _mm512_setzero_ps();
     __m512 scl_fctr2 = _mm512_setzero_ps();
@@ -7458,7 +7458,7 @@ LPGEMM_MN_FRINGE_KERN(bfloat16, bfloat16, float, bf16bf16f32of32_4x32)
 POST_OPS_BIAS_4x32: {
     if ((*(char*)post_ops_list_temp->op_args2 == 'r')
         || (*(char*)post_ops_list_temp->op_args2 == 'R')) {
-        if (post_ops_list_temp->stor_type == BF16) {
+        if (post_ops_list_temp->stor_type == DLP_BF16) {
             __mmask16 bias_mask = _cvtu32_mask16(0xFFFF);
             BF16_F32_BIAS_LOAD(selector1, bias_mask, 0);
             BF16_F32_BIAS_LOAD(selector2, bias_mask, 1);
@@ -7495,7 +7495,7 @@ POST_OPS_BIAS_4x32: {
     } else {
         __m512 selector3;
         __m512 selector4;
-        if (post_ops_list_temp->stor_type == BF16) {
+        if (post_ops_list_temp->stor_type == DLP_BF16) {
             __mmask16 bias_mask = _cvtu32_mask16(0xFFFF);
             BF16_F32_BIAS_BCAST(selector1, bias_mask, 0);
             BF16_F32_BIAS_BCAST(selector2, bias_mask, 1);
@@ -7833,9 +7833,9 @@ POST_OPS_DOWNSCALE_4x32: {
 POST_OPS_MATRIX_ADD_4x32: {
     md_t ldm = *(md_t*)post_ops_list_temp->op_args3;
 
-    bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                   || ((post_ops_list_temp->stor_type == NONE)
-                       && (post_ops_attr.c_stor_type == BF16));
+    bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                   || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                       && (post_ops_attr.c_stor_type == DLP_BF16));
 
     __m512 scl_fctr1 = _mm512_setzero_ps();
     __m512 scl_fctr2 = _mm512_setzero_ps();
@@ -7955,9 +7955,9 @@ POST_OPS_MATRIX_ADD_4x32: {
 POST_OPS_MATRIX_MUL_4x32: {
     md_t ldm = *(md_t*)post_ops_list_temp->op_args3;
 
-    bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                   || ((post_ops_list_temp->stor_type == NONE)
-                       && (post_ops_attr.c_stor_type == BF16));
+    bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                   || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                       && (post_ops_attr.c_stor_type == DLP_BF16));
 
     __m512 scl_fctr1 = _mm512_setzero_ps();
     __m512 scl_fctr2 = _mm512_setzero_ps();
@@ -8393,7 +8393,7 @@ LPGEMM_MN_FRINGE_KERN(bfloat16, bfloat16, float, bf16bf16f32of32_3x32)
 POST_OPS_BIAS_3x32: {
     if ((*(char*)post_ops_list_temp->op_args2 == 'r')
         || (*(char*)post_ops_list_temp->op_args2 == 'R')) {
-        if (post_ops_list_temp->stor_type == BF16) {
+        if (post_ops_list_temp->stor_type == DLP_BF16) {
             __mmask16 bias_mask = _cvtu32_mask16(0xFFFF);
             BF16_F32_BIAS_LOAD(selector1, bias_mask, 0);
             BF16_F32_BIAS_LOAD(selector2, bias_mask, 1);
@@ -8423,7 +8423,7 @@ POST_OPS_BIAS_3x32: {
         c_float_2p1 = _mm512_add_ps(selector2, c_float_2p1);
     } else {
         __m512 selector3;
-        if (post_ops_list_temp->stor_type == BF16) {
+        if (post_ops_list_temp->stor_type == DLP_BF16) {
             __mmask16 bias_mask = _cvtu32_mask16(0xFFFF);
             BF16_F32_BIAS_BCAST(selector1, bias_mask, 0);
             BF16_F32_BIAS_BCAST(selector2, bias_mask, 1);
@@ -8699,9 +8699,9 @@ POST_OPS_DOWNSCALE_3x32: {
 POST_OPS_MATRIX_ADD_3x32: {
     md_t ldm = *(md_t*)post_ops_list_temp->op_args3;
 
-    bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                   || ((post_ops_list_temp->stor_type == NONE)
-                       && (post_ops_attr.c_stor_type == BF16));
+    bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                   || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                       && (post_ops_attr.c_stor_type == DLP_BF16));
 
     __m512 scl_fctr1 = _mm512_setzero_ps();
     __m512 scl_fctr2 = _mm512_setzero_ps();
@@ -8800,9 +8800,9 @@ POST_OPS_MATRIX_ADD_3x32: {
 POST_OPS_MATRIX_MUL_3x32: {
     md_t ldm = *(md_t*)post_ops_list_temp->op_args3;
 
-    bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                   || ((post_ops_list_temp->stor_type == NONE)
-                       && (post_ops_attr.c_stor_type == BF16));
+    bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                   || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                       && (post_ops_attr.c_stor_type == DLP_BF16));
 
     __m512 scl_fctr1 = _mm512_setzero_ps();
     __m512 scl_fctr2 = _mm512_setzero_ps();
@@ -9151,7 +9151,7 @@ LPGEMM_MN_FRINGE_KERN(bfloat16, bfloat16, float, bf16bf16f32of32_2x32)
 POST_OPS_BIAS_2x32: {
     if ((*(char*)post_ops_list_temp->op_args2 == 'r')
         || (*(char*)post_ops_list_temp->op_args2 == 'R')) {
-        if (post_ops_list_temp->stor_type == BF16) {
+        if (post_ops_list_temp->stor_type == DLP_BF16) {
             __mmask16 bias_mask = _cvtu32_mask16(0xFFFF);
             BF16_F32_BIAS_LOAD(selector1, bias_mask, 0);
             BF16_F32_BIAS_LOAD(selector2, bias_mask, 1);
@@ -9174,7 +9174,7 @@ POST_OPS_BIAS_2x32: {
         // c[1, 16-31]
         c_float_1p1 = _mm512_add_ps(selector2, c_float_1p1);
     } else {
-        if (post_ops_list_temp->stor_type == BF16) {
+        if (post_ops_list_temp->stor_type == DLP_BF16) {
             __mmask16 bias_mask = _cvtu32_mask16(0xFFFF);
             BF16_F32_BIAS_BCAST(selector1, bias_mask, 0);
             BF16_F32_BIAS_BCAST(selector2, bias_mask, 1);
@@ -9387,9 +9387,9 @@ POST_OPS_DOWNSCALE_2x32: {
 POST_OPS_MATRIX_ADD_2x32: {
     md_t ldm = *(md_t*)post_ops_list_temp->op_args3;
 
-    bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                   || ((post_ops_list_temp->stor_type == NONE)
-                       && (post_ops_attr.c_stor_type == BF16));
+    bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                   || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                       && (post_ops_attr.c_stor_type == DLP_BF16));
 
     __m512 scl_fctr1 = _mm512_setzero_ps();
     __m512 scl_fctr2 = _mm512_setzero_ps();
@@ -9467,9 +9467,9 @@ POST_OPS_MATRIX_ADD_2x32: {
 POST_OPS_MATRIX_MUL_2x32: {
     md_t ldm = *(md_t*)post_ops_list_temp->op_args3;
 
-    bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                   || ((post_ops_list_temp->stor_type == NONE)
-                       && (post_ops_attr.c_stor_type == BF16));
+    bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                   || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                       && (post_ops_attr.c_stor_type == DLP_BF16));
 
     __m512 scl_fctr1 = _mm512_setzero_ps();
     __m512 scl_fctr2 = _mm512_setzero_ps();
@@ -9729,7 +9729,7 @@ LPGEMM_MN_FRINGE_KERN(bfloat16, bfloat16, float, bf16bf16f32of32_1x32)
 POST_OPS_BIAS_1x32: {
     if ((*(char*)post_ops_list_temp->op_args2 == 'r')
         || (*(char*)post_ops_list_temp->op_args2 == 'R')) {
-        if (post_ops_list_temp->stor_type == BF16) {
+        if (post_ops_list_temp->stor_type == DLP_BF16) {
             __mmask16 bias_mask = _cvtu32_mask16(0xFFFF);
             BF16_F32_BIAS_LOAD(selector1, bias_mask, 0);
             BF16_F32_BIAS_LOAD(selector2, bias_mask, 1);
@@ -9746,7 +9746,7 @@ POST_OPS_BIAS_1x32: {
         // c[0, 16-31]
         c_float_0p1 = _mm512_add_ps(selector2, c_float_0p1);
     } else {
-        if (post_ops_list_temp->stor_type == BF16) {
+        if (post_ops_list_temp->stor_type == DLP_BF16) {
             __mmask16 bias_mask = _cvtu32_mask16(0xFFFF);
             BF16_F32_BIAS_BCAST(selector1, bias_mask, 0);
         } else {
@@ -9902,9 +9902,9 @@ POST_OPS_DOWNSCALE_1x32: {
 POST_OPS_MATRIX_ADD_1x32: {
     md_t ldm = *(md_t*)post_ops_list_temp->op_args3;
 
-    bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                   || ((post_ops_list_temp->stor_type == NONE)
-                       && (post_ops_attr.c_stor_type == BF16));
+    bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                   || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                       && (post_ops_attr.c_stor_type == DLP_BF16));
 
     __m512 scl_fctr1 = _mm512_setzero_ps();
     __m512 scl_fctr2 = _mm512_setzero_ps();
@@ -9963,9 +9963,9 @@ POST_OPS_MATRIX_ADD_1x32: {
 POST_OPS_MATRIX_MUL_1x32: {
     md_t ldm = *(md_t*)post_ops_list_temp->op_args3;
 
-    bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                   || ((post_ops_list_temp->stor_type == NONE)
-                       && (post_ops_attr.c_stor_type == BF16));
+    bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                   || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                       && (post_ops_attr.c_stor_type == DLP_BF16));
 
     __m512 scl_fctr1 = _mm512_setzero_ps();
     __m512 scl_fctr2 = _mm512_setzero_ps();
@@ -10377,7 +10377,7 @@ POST_OPS_BIAS_5x48: {
 
     if ((*(char*)post_ops_list_temp->op_args2 == 'r')
         || (*(char*)post_ops_list_temp->op_args2 == 'R')) {
-        if (post_ops_list_temp->stor_type == BF16) {
+        if (post_ops_list_temp->stor_type == DLP_BF16) {
             __mmask16 bias_mask = _cvtu32_mask16(0xFFFF);
             BF16_F32_BIAS_LOAD(selector1, bias_mask, 0);
             BF16_F32_BIAS_LOAD(selector2, bias_mask, 1);
@@ -10438,7 +10438,7 @@ POST_OPS_BIAS_5x48: {
     } else {
         __m512 selector4;
         __m512 selector5;
-        if (post_ops_list_temp->stor_type == BF16) {
+        if (post_ops_list_temp->stor_type == DLP_BF16) {
             __mmask16 bias_mask = _cvtu32_mask16(0xFFFF);
             BF16_F32_BIAS_BCAST(selector1, bias_mask, 0);
             BF16_F32_BIAS_BCAST(selector2, bias_mask, 1);
@@ -10963,9 +10963,9 @@ POST_OPS_DOWNSCALE_5x48: {
 POST_OPS_MATRIX_ADD_5x48: {
     md_t ldm = *(md_t*)post_ops_list_temp->op_args3;
 
-    bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                   || ((post_ops_list_temp->stor_type == NONE)
-                       && (post_ops_attr.c_stor_type == BF16));
+    bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                   || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                       && (post_ops_attr.c_stor_type == DLP_BF16));
 
     __m512 selector3 = _mm512_setzero_ps();
 
@@ -11110,9 +11110,9 @@ POST_OPS_MATRIX_ADD_5x48: {
 POST_OPS_MATRIX_MUL_5x48: {
     md_t ldm = *(md_t*)post_ops_list_temp->op_args3;
 
-    bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                   || ((post_ops_list_temp->stor_type == NONE)
-                       && (post_ops_attr.c_stor_type == BF16));
+    bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                   || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                       && (post_ops_attr.c_stor_type == DLP_BF16));
 
     __m512 selector3 = _mm512_setzero_ps();
 
@@ -11760,7 +11760,7 @@ POST_OPS_BIAS_4x48: {
 
     if ((*(char*)post_ops_list_temp->op_args2 == 'r')
         || (*(char*)post_ops_list_temp->op_args2 == 'R')) {
-        if (post_ops_list_temp->stor_type == BF16) {
+        if (post_ops_list_temp->stor_type == DLP_BF16) {
             __mmask16 bias_mask = _cvtu32_mask16(0xFFFF);
             BF16_F32_BIAS_LOAD(selector1, bias_mask, 0);
             BF16_F32_BIAS_LOAD(selector2, bias_mask, 1);
@@ -11811,7 +11811,7 @@ POST_OPS_BIAS_4x48: {
         c_float_3p2 = _mm512_add_ps(selector3, c_float_3p2);
     } else {
         __m512 selector4;
-        if (post_ops_list_temp->stor_type == BF16) {
+        if (post_ops_list_temp->stor_type == DLP_BF16) {
             __mmask16 bias_mask = _cvtu32_mask16(0xFFFF);
             BF16_F32_BIAS_BCAST(selector1, bias_mask, 0);
             BF16_F32_BIAS_BCAST(selector2, bias_mask, 1);
@@ -12249,9 +12249,9 @@ POST_OPS_DOWNSCALE_4x48: {
 POST_OPS_MATRIX_ADD_4x48: {
     md_t ldm = *(md_t*)post_ops_list_temp->op_args3;
 
-    bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                   || ((post_ops_list_temp->stor_type == NONE)
-                       && (post_ops_attr.c_stor_type == BF16));
+    bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                   || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                       && (post_ops_attr.c_stor_type == DLP_BF16));
 
     __m512 selector3 = _mm512_setzero_ps();
 
@@ -12375,9 +12375,9 @@ POST_OPS_MATRIX_ADD_4x48: {
 POST_OPS_MATRIX_MUL_4x48: {
     md_t ldm = *(md_t*)post_ops_list_temp->op_args3;
 
-    bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                   || ((post_ops_list_temp->stor_type == NONE)
-                       && (post_ops_attr.c_stor_type == BF16));
+    bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                   || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                       && (post_ops_attr.c_stor_type == DLP_BF16));
 
     __m512 selector3 = _mm512_setzero_ps();
 
@@ -12913,7 +12913,7 @@ POST_OPS_BIAS_3x48: {
 
     if ((*(char*)post_ops_list_temp->op_args2 == 'r')
         || (*(char*)post_ops_list_temp->op_args2 == 'R')) {
-        if (post_ops_list_temp->stor_type == BF16) {
+        if (post_ops_list_temp->stor_type == DLP_BF16) {
             __mmask16 bias_mask = _cvtu32_mask16(0xFFFF);
             BF16_F32_BIAS_LOAD(selector1, bias_mask, 0);
             BF16_F32_BIAS_LOAD(selector2, bias_mask, 1);
@@ -12954,7 +12954,7 @@ POST_OPS_BIAS_3x48: {
         // c[2,32-47]
         c_float_2p2 = _mm512_add_ps(selector3, c_float_2p2);
     } else {
-        if (post_ops_list_temp->stor_type == BF16) {
+        if (post_ops_list_temp->stor_type == DLP_BF16) {
             __mmask16 bias_mask = _cvtu32_mask16(0xFFFF);
             BF16_F32_BIAS_BCAST(selector1, bias_mask, 0);
             BF16_F32_BIAS_BCAST(selector2, bias_mask, 1);
@@ -13307,9 +13307,9 @@ POST_OPS_DOWNSCALE_3x48: {
 POST_OPS_MATRIX_ADD_3x48: {
     md_t ldm = *(md_t*)post_ops_list_temp->op_args3;
 
-    bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                   || ((post_ops_list_temp->stor_type == NONE)
-                       && (post_ops_attr.c_stor_type == BF16));
+    bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                   || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                       && (post_ops_attr.c_stor_type == DLP_BF16));
 
     __m512 selector3 = _mm512_setzero_ps();
 
@@ -13412,9 +13412,9 @@ POST_OPS_MATRIX_ADD_3x48: {
 POST_OPS_MATRIX_MUL_3x48: {
     md_t ldm = *(md_t*)post_ops_list_temp->op_args3;
 
-    bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                   || ((post_ops_list_temp->stor_type == NONE)
-                       && (post_ops_attr.c_stor_type == BF16));
+    bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                   || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                       && (post_ops_attr.c_stor_type == DLP_BF16));
 
     __m512 selector3 = _mm512_setzero_ps();
 
@@ -13838,7 +13838,7 @@ POST_OPS_BIAS_2x48: {
 
     if ((*(char*)post_ops_list_temp->op_args2 == 'r')
         || (*(char*)post_ops_list_temp->op_args2 == 'R')) {
-        if (post_ops_list_temp->stor_type == BF16) {
+        if (post_ops_list_temp->stor_type == DLP_BF16) {
             __mmask16 bias_mask = _cvtu32_mask16(0xFFFF);
             BF16_F32_BIAS_LOAD(selector1, bias_mask, 0);
             BF16_F32_BIAS_LOAD(selector2, bias_mask, 1);
@@ -13870,7 +13870,7 @@ POST_OPS_BIAS_2x48: {
         // c[1,32-47]
         c_float_1p2 = _mm512_add_ps(selector3, c_float_1p2);
     } else {
-        if (post_ops_list_temp->stor_type == BF16) {
+        if (post_ops_list_temp->stor_type == DLP_BF16) {
             __mmask16 bias_mask = _cvtu32_mask16(0xFFFF);
             BF16_F32_BIAS_BCAST(selector1, bias_mask, 0);
             BF16_F32_BIAS_BCAST(selector2, bias_mask, 1);
@@ -14141,9 +14141,9 @@ POST_OPS_DOWNSCALE_2x48: {
 POST_OPS_MATRIX_ADD_2x48: {
     md_t ldm = *(md_t*)post_ops_list_temp->op_args3;
 
-    bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                   || ((post_ops_list_temp->stor_type == NONE)
-                       && (post_ops_attr.c_stor_type == BF16));
+    bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                   || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                       && (post_ops_attr.c_stor_type == DLP_BF16));
 
     __m512 selector3 = _mm512_setzero_ps();
 
@@ -14227,9 +14227,9 @@ POST_OPS_MATRIX_ADD_2x48: {
 POST_OPS_MATRIX_MUL_2x48: {
     md_t ldm = *(md_t*)post_ops_list_temp->op_args3;
 
-    bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                   || ((post_ops_list_temp->stor_type == NONE)
-                       && (post_ops_attr.c_stor_type == BF16));
+    bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                   || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                       && (post_ops_attr.c_stor_type == DLP_BF16));
 
     __m512 selector3 = _mm512_setzero_ps();
 
@@ -14543,7 +14543,7 @@ POST_OPS_BIAS_1x48: {
 
     if ((*(char*)post_ops_list_temp->op_args2 == 'r')
         || (*(char*)post_ops_list_temp->op_args2 == 'R')) {
-        if (post_ops_list_temp->stor_type == BF16) {
+        if (post_ops_list_temp->stor_type == DLP_BF16) {
             __mmask16 bias_mask = _cvtu32_mask16(0xFFFF);
             BF16_F32_BIAS_LOAD(selector1, bias_mask, 0);
             BF16_F32_BIAS_LOAD(selector2, bias_mask, 1);
@@ -14566,7 +14566,7 @@ POST_OPS_BIAS_1x48: {
         // c[0,32-47]
         c_float_0p2 = _mm512_add_ps(selector3, c_float_0p2);
     } else {
-        if (post_ops_list_temp->stor_type == BF16) {
+        if (post_ops_list_temp->stor_type == DLP_BF16) {
             __mmask16 bias_mask = _cvtu32_mask16(0xFFFF);
             BF16_F32_BIAS_BCAST(selector1, bias_mask, 0);
         } else {
@@ -14757,9 +14757,9 @@ POST_OPS_DOWNSCALE_1x48: {
 POST_OPS_MATRIX_ADD_1x48: {
     md_t ldm = *(md_t*)post_ops_list_temp->op_args3;
 
-    bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                   || ((post_ops_list_temp->stor_type == NONE)
-                       && (post_ops_attr.c_stor_type == BF16));
+    bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                   || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                       && (post_ops_attr.c_stor_type == DLP_BF16));
 
     __m512 selector3 = _mm512_setzero_ps();
 
@@ -14824,9 +14824,9 @@ POST_OPS_MATRIX_ADD_1x48: {
 POST_OPS_MATRIX_MUL_1x48: {
     md_t ldm = *(md_t*)post_ops_list_temp->op_args3;
 
-    bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                   || ((post_ops_list_temp->stor_type == NONE)
-                       && (post_ops_attr.c_stor_type == BF16));
+    bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                   || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                       && (post_ops_attr.c_stor_type == DLP_BF16));
 
     __m512 selector3 = _mm512_setzero_ps();
 

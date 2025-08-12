@@ -49,7 +49,7 @@ class UalDlp;
  * @brief DLP-specific implementation of post-operations
  *
  * This class implements the IOperation interface for the DLP backend,
- * converting high-level operation parameters to DLP's aocl_post_op structure.
+ * converting high-level operation parameters to DLP's dlp_metadata_t structure.
  *
  * Supports multiple operations of the same type efficiently by:
  * 1. Collecting operations in vectors during addOperation()
@@ -59,8 +59,8 @@ class UalDlp;
 class DlpOperation : public dlp::testing::framework::IOperation
 {
   private:
-    std::unique_ptr<aocl_post_op> m_postops;
-    bool                          m_finalized = false;
+    std::unique_ptr<dlp_metadata_t> m_postops;
+    bool                            m_finalized = false;
 
     // Collections for different operation types (filled during addOperation)
     std::vector<std::unique_ptr<dlp::testing::framework::ElementWiseParam>>
@@ -73,7 +73,7 @@ class DlpOperation : public dlp::testing::framework::IOperation
         m_matrix_mul_ops;
 
     // Private method to get the backend-specific postops structure
-    aocl_post_op* toAoclPostOp() const { return m_postops.get(); }
+    dlp_metadata_t* toAoclPostOp() const { return m_postops.get(); }
 
     // Helper methods for batch conversion (called once in finalize)
     void convertElementWiseOperations();
@@ -84,13 +84,11 @@ class DlpOperation : public dlp::testing::framework::IOperation
     void buildSequenceVector();
 
     // Helper to convert Matrix to appropriate DLP format
-    void* convertMatrixToPtr(const dlp::testing::framework::Matrix& matrix);
-    AOCL_PARAMS_STORAGE_TYPES getStorageType(
-        dlp::testing::framework::MatrixType type);
-    AOCL_ELT_ALGO_TYPE getElementWiseAlgoType(
+    void*    convertMatrixToPtr(const dlp::testing::framework::Matrix& matrix);
+    DLP_TYPE getStorageType(dlp::testing::framework::MatrixType type);
+    DLP_ELT_ALGO_TYPE getElementWiseAlgoType(
         dlp::testing::framework::ElementWiseOperation op);
-    AOCL_POST_OP_TYPE getPostOpType(
-        dlp::testing::framework::OperationType type);
+    DLP_POST_OP_TYPE getPostOpType(dlp::testing::framework::OperationType type);
 
   public:
     DlpOperation();

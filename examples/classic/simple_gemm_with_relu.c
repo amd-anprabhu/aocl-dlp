@@ -107,8 +107,8 @@ int
 main()
 {
     // Initialize post-ops pointers to NULL to avoid uninitialized warnings
-    aocl_post_op* relu_post_ops  = NULL;
-    aocl_post_op* prelu_post_ops = NULL;
+    dlp_metadata_t* relu_post_ops  = NULL;
+    dlp_metadata_t* prelu_post_ops = NULL;
 
     // Matrix dimensions
     md_t m = 128; // Rows of A and C
@@ -162,19 +162,19 @@ main()
     apply_relu(c2, m, n);
 
     // Method 2: Set up post-op for ReLU activation
-    relu_post_ops = (aocl_post_op*)malloc(sizeof(aocl_post_op));
+    relu_post_ops = (dlp_metadata_t*)malloc(sizeof(dlp_metadata_t));
     if (!relu_post_ops) {
         printf("Memory allocation for post-ops failed\n");
         goto cleanup;
     }
-    memset(relu_post_ops, 0, sizeof(aocl_post_op));
+    memset(relu_post_ops, 0, sizeof(dlp_metadata_t));
 
     // Initialize post-ops structure for ReLU
     relu_post_ops->seq_length = 1; // One operation: ReLU
 
     // Allocate sequence vector
     relu_post_ops->seq_vector =
-        (AOCL_POST_OP_TYPE*)malloc(sizeof(AOCL_POST_OP_TYPE));
+        (DLP_POST_OP_TYPE*)malloc(sizeof(DLP_POST_OP_TYPE));
     if (!relu_post_ops->seq_vector) {
         printf("Memory allocation for sequence vector failed\n");
         goto cleanup;
@@ -183,18 +183,16 @@ main()
 
     // Allocate and set up eltwise post-op for ReLU
     relu_post_ops->eltwise =
-        (aocl_post_op_eltwise*)malloc(sizeof(aocl_post_op_eltwise));
+        (dlp_post_op_eltwise*)malloc(sizeof(dlp_post_op_eltwise));
     if (!relu_post_ops->eltwise) {
         printf("Memory allocation for eltwise post-op failed\n");
         goto cleanup;
     }
 
-    relu_post_ops->eltwise->is_power_of_2    = 0;
-    relu_post_ops->eltwise->scale_factor     = NULL;
-    relu_post_ops->eltwise->scale_factor_len = 0;
-    relu_post_ops->eltwise->algo.alpha       = NULL;
-    relu_post_ops->eltwise->algo.beta        = NULL;
-    relu_post_ops->eltwise->algo.algo_type   = RELU; // Use ReLU activation
+    relu_post_ops->eltwise->sf         = NULL; // No scaling for this example
+    relu_post_ops->eltwise->algo.alpha = NULL;
+    relu_post_ops->eltwise->algo.beta  = NULL;
+    relu_post_ops->eltwise->algo.algo_type = RELU; // Use ReLU activation
 
     // Perform matrix multiplication with fused ReLU activation
     aocl_gemm_f32f32f32of32(order, transa, transb, m, n, k, alpha, a, lda,
@@ -215,19 +213,19 @@ main()
     apply_prelu(c3, m, n, prelu_scale);
 
     // Now set up post-op for PReLU activation
-    prelu_post_ops = (aocl_post_op*)malloc(sizeof(aocl_post_op));
+    prelu_post_ops = (dlp_metadata_t*)malloc(sizeof(dlp_metadata_t));
     if (!prelu_post_ops) {
         printf("Memory allocation for PReLU post-ops failed\n");
         goto cleanup;
     }
-    memset(prelu_post_ops, 0, sizeof(aocl_post_op));
+    memset(prelu_post_ops, 0, sizeof(dlp_metadata_t));
 
     // Initialize post-ops structure for PReLU
     prelu_post_ops->seq_length = 1; // One operation: PReLU
 
     // Allocate sequence vector
     prelu_post_ops->seq_vector =
-        (AOCL_POST_OP_TYPE*)malloc(sizeof(AOCL_POST_OP_TYPE));
+        (DLP_POST_OP_TYPE*)malloc(sizeof(DLP_POST_OP_TYPE));
     if (!prelu_post_ops->seq_vector) {
         printf("Memory allocation for PReLU sequence vector failed\n");
         goto cleanup;
@@ -236,16 +234,14 @@ main()
 
     // Allocate and set up eltwise post-op for PReLU
     prelu_post_ops->eltwise =
-        (aocl_post_op_eltwise*)malloc(sizeof(aocl_post_op_eltwise));
+        (dlp_post_op_eltwise*)malloc(sizeof(dlp_post_op_eltwise));
     if (!prelu_post_ops->eltwise) {
         printf("Memory allocation for PReLU eltwise post-op failed\n");
         goto cleanup;
     }
 
     // Set up PReLU parameters
-    prelu_post_ops->eltwise->is_power_of_2    = 0;
-    prelu_post_ops->eltwise->scale_factor     = NULL;
-    prelu_post_ops->eltwise->scale_factor_len = 0;
+    prelu_post_ops->eltwise->sf = NULL; // No scaling for this example
 
     // Alpha parameter for PReLU (scaling factor for negative values)
     prelu_post_ops->eltwise->algo.alpha = malloc(sizeof(float));

@@ -45,13 +45,13 @@
  * @param[in] lda Leading dimension of matrix A.
  * @param[out] b Pointer to matrix B.
  * @param[in] ldb Leading dimension of matrix B.
- * @param[in] post_op_unparsed Pointer to post-operation structures.
+ * @param[in] metadata Pointer to post-operation structures.
  */
 #define AOCL_UTIL_ELTWISE_OPS(A_type, B_type, LP_SFX)                          \
     DLP_CLASSIC_EXPORT void aocl_gemm_eltwise_ops_##LP_SFX(                    \
         const char order, const char transa, const char transb, const md_t m,  \
         const md_t n, const A_type* a, const md_t lda, B_type* b,              \
-        const md_t ldb, aocl_post_op* post_op_unparsed)
+        const md_t ldb, dlp_metadata_t* metadata)
 
 AOCL_UTIL_ELTWISE_OPS(bfloat16, float, bf16of32);
 AOCL_UTIL_ELTWISE_OPS(bfloat16, bfloat16, bf16obf16);

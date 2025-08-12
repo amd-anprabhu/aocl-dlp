@@ -196,7 +196,7 @@
     xmm0 = _mm_load_ss(cbuf);                                                  \
     xmm2 = _mm_fmadd_ps(xmm0, beta, xmm2);
 
-/*Load C from buf_downscale and convert to F32,
+/*Load C from buf_downscale and convert to DLP_F32,
 multiply with Beta, and add to alpha*A*B*/
 #define BF16_F32_C_BNZ_8(m_ind, n_ind, ymm0, beta, ymm2)                       \
     ymm0 = (__m256)_mm256_sllv_epi32(                                          \
@@ -233,8 +233,8 @@ multiply with Beta, and add to alpha*A*B*/
         ymm2 = _mm256_fmadd_ps(ymm0, beta, ymm2);                              \
     }
 
-/*Load C from buf_downscale and convert to F32,                                \
-multiply with Beta, and add to alpha*A*B*/
+/*Load C from buf_downscale and convert to DLP_F32, \ multiply with Beta, and
+add to alpha*A*B*/
 #define BF16_F32_C_BNZ_4(m_ind, n_ind, xmm0, beta, xmm2)                       \
     xmm0 = (__m128)_mm_sllv_epi32(                                             \
         _mm_cvtepi16_epi32(_mm_loadu_si128(                                    \
@@ -245,7 +245,7 @@ multiply with Beta, and add to alpha*A*B*/
         _mm_set1_epi32(16));                                                   \
     xmm2 = _mm_fmadd_ps(xmm0, beta, xmm2);
 
-/*Load C from buf_downscale and convert to F32,
+/*Load C from buf_downscale and convert to DLP_F32,
 multiply with Beta, and add to alpha*A*B and strore*/
 #define BF16_F32_C_BNZ_2(m_ind, n_ind, xmm0, beta, xmm2)                       \
     xmm0 = (__m128)_mm_sllv_epi32(                                             \
@@ -257,7 +257,7 @@ multiply with Beta, and add to alpha*A*B and strore*/
         _mm_set1_epi32(16));                                                   \
     xmm2 = _mm_fmadd_ps(xmm0, beta, xmm2);
 
-/*Load C from buf_downscale and convert to F32,
+/*Load C from buf_downscale and convert to DLP_F32,
 multiply with Beta, and add to alpha*A*B*/
 #define BF16_F32_C_BNZ_1(m_ind, n_ind, xmm0, beta, xmm2)                       \
     xmm0 = (__m128)_mm_sllv_epi32(                                             \
@@ -355,7 +355,7 @@ multiply with Beta, and add to alpha*A*B*/
     F32_MATRIX_ADD_4COL_YMM(scr0, scr1, scr2, scr3, m_ind, r_ind0, r_ind1,     \
                             r_ind2, r_ind3);
 
-// Matrix-Add helpers for BF16 input.
+// Matrix-Add helpers for DLP_BF16 input.
 #define BF16_F32_MATRIX_ADD_LOAD_YMM(scr, scl_fct, m_ind, n_ind)               \
     scr = (__m256)(_mm256_sllv_epi32(                                          \
         _mm256_cvtepi16_epi32(_mm_loadu_si128(                                 \
@@ -542,7 +542,7 @@ multiply with Beta, and add to alpha*A*B*/
     F32_MATRIX_MUL_4COL_YMM(scr0, scr1, scr2, scr3, m_ind, r_ind0, r_ind1,     \
                             r_ind2, r_ind3);
 
-// BF16->F32 Matrix Mul Helpers
+// DLP_BF16->DLP_F32 Matrix Mul Helpers
 #define BF16_F32_MATRIX_MUL_LOAD_XMM_1ELE(scr, scl_fct, m_ind, n_ind)          \
     BF16_F32_MATRIX_ADD_LOAD_XMM_1ELE(scr, scl_fct, m_ind, n_ind)
 
@@ -622,12 +622,12 @@ multiply with Beta, and add to alpha*A*B*/
                                                                                \
     TANHF_SSE(reg, r, r2, x, z, dn, q);
 
-// BF16 -> F32 helper
+// DLP_BF16 -> DLP_F32 helper
 #define CVT_BF16_F32_SHIFT_AVX2(in)                                            \
     (__m256)((__m256i)_mm256_sllv_epi32(_mm256_cvtepi16_epi32(in),             \
                                         _mm256_set1_epi32(16)));
 
-// BF16->F32 BIAS helpers
+// DLP_BF16->DLP_F32 BIAS helpers
 #define BF16_F32_BIAS_LOAD_AVX2(scr, n_ind)                                    \
     scr = (__m256)(_mm256_sllv_epi32(                                          \
         _mm256_cvtepi16_epi32(_mm_load_si128(                                  \
@@ -808,7 +808,7 @@ multiply with Beta, and add to alpha*A*B*/
         }                                                                      \
     }
 
-/*Downscale Zeropoint BF16->F32 Helpers*/
+/*Downscale Zeropoint DLP_BF16->DLP_F32 Helpers*/
 #define BF16_F32_ZP_SCALAR_BCAST_AVX2(scr)                                     \
     scr = (__m256)(_mm256_sllv_epi32(                                          \
         _mm256_cvtepi16_epi32(                                                 \
@@ -848,7 +848,7 @@ multiply with Beta, and add to alpha*A*B*/
 #define BF16_F32_ZP_VECTOR_1LOAD_SSE(scr, idx)                                 \
     BF16_F32_BIAS_LOAD_1BF16_AVX2(scr, idx)
 
-// BF16->F32 Store mask helper
+// DLP_BF16->DLP_F32 Store mask helper
 #define GET_STORE_MASK(mask, store_mask)                                       \
     {                                                                          \
         int32_t mask_vec[8] = { 0 };                                           \

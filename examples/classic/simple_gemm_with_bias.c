@@ -161,40 +161,39 @@ main()
     add_bias(c2, bias, m, n);
 
     // Method 2: Set up post-op for bias addition
-    aocl_post_op* post_ops = (aocl_post_op*)malloc(sizeof(aocl_post_op));
-    if (!post_ops) {
+    dlp_metadata_t* metadata = (dlp_metadata_t*)malloc(sizeof(dlp_metadata_t));
+    if (!metadata) {
         printf("Memory allocation for post-ops failed\n");
         goto cleanup;
     }
-    memset(post_ops, 0, sizeof(aocl_post_op));
+    memset(metadata, 0, sizeof(dlp_metadata_t));
 
     // Initialize post-ops structure
-    post_ops->seq_length = 1; // One operation: bias
+    metadata->seq_length = 1; // One operation: bias
 
     // Allocate sequence vector
-    post_ops->seq_vector =
-        (AOCL_POST_OP_TYPE*)malloc(sizeof(AOCL_POST_OP_TYPE));
-    if (!post_ops->seq_vector) {
+    metadata->seq_vector = (DLP_POST_OP_TYPE*)malloc(sizeof(DLP_POST_OP_TYPE));
+    if (!metadata->seq_vector) {
         printf("Memory allocation for sequence vector failed\n");
         goto cleanup;
     }
-    post_ops->seq_vector[0] = BIAS; // First operation is bias addition
+    metadata->seq_vector[0] = BIAS; // First operation is bias addition
 
     // Allocate and set up bias post-op
-    post_ops->bias = (aocl_post_op_bias*)malloc(sizeof(aocl_post_op_bias));
-    if (!post_ops->bias) {
+    metadata->bias = (dlp_post_op_bias*)malloc(sizeof(dlp_post_op_bias));
+    if (!metadata->bias) {
         printf("Memory allocation for bias post-op failed\n");
         goto cleanup;
     }
 
     // Set the bias vector and its storage type
-    post_ops->bias->bias      = bias;
-    post_ops->bias->stor_type = AOCL_GEMM_F32; // Bias is in f32 format
+    metadata->bias->bias      = bias;
+    metadata->bias->stor_type = DLP_F32; // Bias is in f32 format
 
     // Perform matrix multiplication with fused bias addition
     aocl_gemm_f32f32f32of32(order, transa, transb, m, n, k, alpha, a, lda,
                             mem_format_a, b, ldb, mem_format_b, beta, c1, ldc,
-                            post_ops // With bias post-operation
+                            metadata // With bias post-operation
     );
 
     // Print results for comparison
@@ -227,12 +226,12 @@ cleanup:
     free(bias);
 
     // Free post-ops memory
-    if (post_ops) {
-        if (post_ops->seq_vector)
-            free(post_ops->seq_vector);
-        if (post_ops->bias)
-            free(post_ops->bias);
-        free(post_ops);
+    if (metadata) {
+        if (metadata->seq_vector)
+            free(metadata->seq_vector);
+        if (metadata->bias)
+            free(metadata->bias);
+        free(metadata);
     }
 
     return 0;

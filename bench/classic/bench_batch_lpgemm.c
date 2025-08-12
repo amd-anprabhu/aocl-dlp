@@ -77,7 +77,7 @@ fill_array_int4_c_t(void* arr, md_t size)
         char* stor_order, char* transa, char* transb, char* op_a, char* op_b,  \
         md_t group_count, md_t* group_size, md_t* m, md_t* n, md_t* k,         \
         ACCUM_type* alpha, A_type** a, md_t* lda, B_type** b, md_t* ldb,       \
-        ACCUM_type* beta, C_type** c, md_t* ldc, aocl_post_op** post_op)       \
+        ACCUM_type* beta, C_type** c, md_t* ldc, dlp_metadata_t** post_op)     \
     {                                                                          \
         aocl_batch_gemm_##BLAS_SFX(stor_order, transa, transb, m, n, k, alpha, \
                                    (const A_type**)a, lda, (const B_type**)b,  \
@@ -151,7 +151,7 @@ print_result(const char* msg,
         int32_t n_repeats, md_t group_count, md_t* group_size, md_t* m,        \
         md_t* n, md_t* k, ACCUM_type* alpha, A_type** a, md_t* lda,            \
         B_type** b, md_t* ldb, ACCUM_type* beta, C_type** c, md_t* ldc,        \
-        aocl_post_op** post_op)                                                \
+        dlp_metadata_t** post_op)                                              \
     {                                                                          \
         double dtime;                                                          \
         double dtime_save = DBL_MAX;                                           \
@@ -401,7 +401,7 @@ GEN_GET_BIAS_POST_OP_VAL_f32(bf16bf16f32obf16) GEN_GET_BIAS_POST_OP_VAL_f32(
         md_t group_count, md_t* group_size, md_t* m, md_t* n, md_t* k,         \
         ACCUM_type* alpha, A_type** a, md_t* lda, B_type** b, md_t* ldb,       \
         ACCUM_type* beta, C_type** c, md_t* ldc, C_type** c_ref,               \
-        md_t* ldc_ref, aocl_post_op** post_op)                                 \
+        md_t* ldc_ref, dlp_metadata_t** post_op)                               \
     {                                                                          \
         md_t rs_a, cs_a;                                                       \
         md_t rs_b, cs_b;                                                       \
@@ -451,7 +451,7 @@ GEN_GET_BIAS_POST_OP_VAL_f32(bf16bf16f32obf16) GEN_GET_BIAS_POST_OP_VAL_f32(
                 rs_c_ref = 1;                                                  \
                 cs_c_ref = ldc_ref[gc_i];                                      \
             }                                                                  \
-            aocl_pre_op* a_pre_op = NULL;                                      \
+            dlp_pre_op* a_pre_op = NULL;                                       \
             if (post_op[gc_i] != NULL) {                                       \
                 a_pre_op = post_op[gc_i]->pre_ops;                             \
             }                                                                  \
@@ -574,8 +574,14 @@ GEN_GET_BIAS_POST_OP_VAL_f32(bf16bf16f32obf16) GEN_GET_BIAS_POST_OP_VAL_f32(
                                         mat_mul_accuracy_check_downscale_,     \
                                         BLAS_DOWNSCALE_SFX)(                   \
                                         post_temp_accum, post_op[gc_i], j,     \
-                                        (post_op[gc_i]->sum)->sf_stor_type,    \
-                                        (post_op[gc_i]->sum)->zp_stor_type);   \
+                                        (post_op[gc_i]->scale)->sf             \
+                                            ? (post_op[gc_i]->scale)           \
+                                                  ->sf->scale_factor_type      \
+                                            : DLP_INVALID,                     \
+                                        (post_op[gc_i]->scale)->zp             \
+                                            ? (post_op[gc_i]->scale)           \
+                                                  ->zp->zero_point_type        \
+                                            : DLP_INVALID);                    \
                                 } else if (post_op[mat_idx + gs_i]             \
                                                ->seq_vector[op_id]             \
                                            == MATRIX_ADD) {                    \
@@ -588,11 +594,16 @@ GEN_GET_BIAS_POST_OP_VAL_f32(bf16bf16f32obf16) GEN_GET_BIAS_POST_OP_VAL_f32(
                                         rs_m = 1;                              \
                                     }                                          \
                                     float* scl_fctr =                          \
-                                        (float*)((post_op[gc_i]->matrix_add)   \
-                                                     ->scale_factor);          \
+                                        (post_op[gc_i]->matrix_add)->sf        \
+                                            ? (float*)((post_op[gc_i]          \
+                                                            ->matrix_add)      \
+                                                           ->sf->scale_factor) \
+                                            : NULL;                            \
                                     md_t scl_fctr_len =                        \
-                                        (post_op[gc_i]->matrix_add)            \
-                                            ->scale_factor_len;                \
+                                        (post_op[gc_i]->matrix_add)->sf        \
+                                            ? (post_op[gc_i]->matrix_add)      \
+                                                  ->sf->scale_factor_len       \
+                                            : 0;                               \
                                     post_temp_accum += GEN_FUNC_NAME(          \
                                         get_matrix_add_post_op_val_,           \
                                         BLAS_SFX)(                             \
@@ -612,11 +623,16 @@ GEN_GET_BIAS_POST_OP_VAL_f32(bf16bf16f32obf16) GEN_GET_BIAS_POST_OP_VAL_f32(
                                         rs_m = 1;                              \
                                     }                                          \
                                     float* scl_fctr =                          \
-                                        (float*)((post_op[gc_i]->matrix_mul)   \
-                                                     ->scale_factor);          \
+                                        (post_op[gc_i]->matrix_mul)->sf        \
+                                            ? (float*)((post_op[gc_i]          \
+                                                            ->matrix_mul)      \
+                                                           ->sf->scale_factor) \
+                                            : NULL;                            \
                                     md_t scl_fctr_len =                        \
-                                        (post_op[gc_i]->matrix_mul)            \
-                                            ->scale_factor_len;                \
+                                        (post_op[gc_i]->matrix_mul)->sf        \
+                                            ? (post_op[gc_i]->matrix_mul)      \
+                                                  ->sf->scale_factor_len       \
+                                            : 0;                               \
                                     post_temp_accum *= GEN_FUNC_NAME(          \
                                         get_matrix_mul_post_op_val_,           \
                                         BLAS_SFX)(                             \
@@ -877,10 +893,10 @@ GEN_GET_BIAS_POST_OP_VAL_f32(bf16bf16f32obf16) GEN_GET_BIAS_POST_OP_VAL_f32(
             (C_type**)lpgemm_malloc(sizeof(C_type*) * total_size);             \
         B_type** b_gemm =                                                      \
             (B_type**)lpgemm_malloc(sizeof(B_type*) * total_size);             \
-        Sum_type       alpha[group_count];                                     \
-        Sum_type       beta[group_count];                                      \
-        aocl_post_op** post_op = (aocl_post_op**)lpgemm_malloc(                \
-            sizeof(aocl_post_op*) * group_count);                              \
+        Sum_type         alpha[group_count];                                   \
+        Sum_type         beta[group_count];                                    \
+        dlp_metadata_t** post_op = (dlp_metadata_t**)lpgemm_malloc(            \
+            sizeof(dlp_metadata_t*) * group_count);                            \
         bool int4_testing = ((strcmp(#BLAS_SFX, "bf16s4f32of32") == 0)         \
                              || (strcmp(#BLAS_SFX, "bf16s4f32obf16") == 0));   \
         for (md_t i = 0; i < group_count; i++) {                               \

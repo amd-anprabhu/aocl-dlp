@@ -78,32 +78,32 @@ getStorageDtFromAoclKernelDatatype(kernel_datatype_t kDtype)
 }
 
 DataType
-getStorageDtFromAoclStorageType(AOCL_STORAGE_TYPE st)
+getStorageDtFromAoclStorageType(DLP_TYPE st)
 {
     DataType dt = DataType::invalid;
     switch (st) {
-        case S8:
+        case DLP_S8:
             dt = DataType::s8;
             break;
-        case U8:
+        case DLP_U8:
             dt = DataType::u8;
             break;
-        case S16:
+        case DLP_S16:
             dt = DataType::s16;
             break;
-        case U16:
+        case DLP_U16:
             dt = DataType::u16;
             break;
-        case BF16:
+        case DLP_BF16:
             dt = DataType::bf16;
             break;
-        case S32:
+        case DLP_S32:
             dt = DataType::s32;
             break;
-        case U32:
+        case DLP_U32:
             dt = DataType::u32;
             break;
-        case F32:
+        case DLP_F32:
             dt = DataType::f32;
             break;
         default:
@@ -124,7 +124,7 @@ setKernelOps(kernelOpsMetaData* metaData,
         case POST_OPS_BIAS: {
             metaData->type           = kernelOps::bias;
             metaData->paramStorageDt = getStorageDtFromAoclStorageType(
-                static_cast<AOCL_STORAGE_TYPE>(post_op->stor_type));
+                static_cast<DLP_TYPE>(post_op->stor_type));
             char storFormatC =
                 std::tolower(*(static_cast<char*>(post_op->op_args2)));
             metaData->cMatFormat = (storFormatC == 'c')
@@ -173,20 +173,20 @@ setKernelOps(kernelOpsMetaData* metaData,
         case POST_OPS_DOWNSCALE: {
             metaData->type           = kernelOps::downscale;
             metaData->paramStorageDt = getStorageDtFromAoclStorageType(
-                static_cast<AOCL_STORAGE_TYPE>(post_op->stor_type));
+                static_cast<DLP_TYPE>(post_op->stor_type));
             char storFormatC =
                 std::tolower(*(static_cast<char*>(post_op->op_args2)));
             metaData->cMatFormat    = (storFormatC == 'c')
                                           ? storageFormat::colMajor
                                           : storageFormat::rowMajor;
             metaData->scaleFactorDt = getStorageDtFromAoclStorageType(
-                static_cast<AOCL_STORAGE_TYPE>(post_op->sf_stor_type));
+                static_cast<DLP_TYPE>(post_op->sf_stor_type));
             metaData->scalarScaleFactorRequired =
                 (post_op->scale_factor_len == 1) ? true : false;
             metaData->vectorScaleFactorRequired =
                 (post_op->scale_factor_len > 1) ? true : false;
             metaData->zeroPointDt = getStorageDtFromAoclStorageType(
-                static_cast<AOCL_STORAGE_TYPE>(post_op->zp_stor_type));
+                static_cast<DLP_TYPE>(post_op->zp_stor_type));
             metaData->scalarZeroPointRequired =
                 (*(static_cast<md_t*>(post_op->op_args3)) == 1) ? true : false;
             metaData->vectorZeroPointRequired =
@@ -196,14 +196,14 @@ setKernelOps(kernelOpsMetaData* metaData,
         case POST_OPS_MATRIX_ADD: {
             metaData->type           = kernelOps::matAdd;
             metaData->paramStorageDt = getStorageDtFromAoclStorageType(
-                static_cast<AOCL_STORAGE_TYPE>(post_op->stor_type));
+                static_cast<DLP_TYPE>(post_op->stor_type));
             char storFormatC =
                 std::tolower(*(static_cast<char*>(post_op->op_args2)));
             metaData->cMatFormat = (storFormatC == 'c')
                                        ? storageFormat::colMajor
                                        : storageFormat::rowMajor;
             metaData->scaleFactorDt =
-                DataType::f32; // TODO: Always F32 for mat add
+                DataType::f32; // TODO: Always DLP_F32 for mat add
             metaData->scalarScaleFactorRequired =
                 (post_op->scale_factor_len == 1) ? true : false;
             metaData->vectorScaleFactorRequired =
@@ -213,14 +213,14 @@ setKernelOps(kernelOpsMetaData* metaData,
         case POST_OPS_MATRIX_MUL: {
             metaData->type           = kernelOps::matMul;
             metaData->paramStorageDt = getStorageDtFromAoclStorageType(
-                static_cast<AOCL_STORAGE_TYPE>(post_op->stor_type));
+                static_cast<DLP_TYPE>(post_op->stor_type));
             char storFormatC =
                 std::tolower(*(static_cast<char*>(post_op->op_args2)));
             metaData->cMatFormat = (storFormatC == 'c')
                                        ? storageFormat::colMajor
                                        : storageFormat::rowMajor;
             metaData->scaleFactorDt =
-                DataType::f32; // TODO: Always F32 for mat mul
+                DataType::f32; // TODO: Always DLP_F32 for mat mul
             metaData->scalarScaleFactorRequired =
                 (post_op->scale_factor_len == 1) ? true : false;
             metaData->vectorScaleFactorRequired =
@@ -245,7 +245,7 @@ getKernelInfoForJitIntelligence(kernel_datatype_t k_dtype,
                                 md_t              k,
                                 void*             alpha,
                                 void*             beta,
-                                lpgemm_post_op*   post_ops,
+                                lpgemm_post_op*   metadata,
                                 md_t              mr_hint,
                                 md_t              nr_hint)
 {
@@ -259,15 +259,15 @@ getKernelInfoForJitIntelligence(kernel_datatype_t k_dtype,
         return std::nullopt;
     }
 
-    if (post_ops == nullptr) {
+    if (metadata == nullptr) {
         kernelInfo kI{
             mr, nr, k_unroll, false, false, nullptr, 0, anyKOpsOrder
         };
         return std::make_optional(kI);
     } else {
-        // Iterate over the post_ops list to get the number of post-ops.
+        // Iterate over the metadata list to get the number of post-ops.
         md_t            numPostOps    = 0;
-        lpgemm_post_op* temp_post_ops = post_ops;
+        lpgemm_post_op* temp_post_ops = metadata;
         while ((temp_post_ops != NULL)
                && (temp_post_ops->op_code != POST_OPS_DISABLE)) {
             temp_post_ops = temp_post_ops->next;
@@ -285,7 +285,7 @@ getKernelInfoForJitIntelligence(kernel_datatype_t k_dtype,
             kI.kOpsArr     = kernelInfo::allocateKernelOpsArray(numPostOps);
 
             md_t ii       = 0;
-            temp_post_ops = post_ops;
+            temp_post_ops = metadata;
             while ((temp_post_ops != NULL)
                    && (temp_post_ops->op_code != POST_OPS_DISABLE)) {
                 setKernelOps(std::addressof(kI.kOpsArr[ii]), temp_post_ops,
@@ -307,7 +307,7 @@ dlp_init_and_get_kernel_hndl(kernel_datatype_t k_dtype,
                              md_t              k,
                              void*             alpha,
                              void*             beta,
-                             lpgemm_post_op*   post_ops,
+                             lpgemm_post_op*   metadata,
                              md_t              mr_hint,
                              md_t              nr_hint)
 {
@@ -315,7 +315,7 @@ dlp_init_and_get_kernel_hndl(kernel_datatype_t k_dtype,
 
     // TODO: Generate the jitIntelligence via pseudo DecisionEngine.
     auto optKI = getKernelInfoForJitIntelligence(k_dtype, m, n, k, alpha, beta,
-                                                 post_ops, mr_hint, nr_hint);
+                                                 metadata, mr_hint, nr_hint);
     if (!optKI.has_value()) {
         return kernel_hndl;
     }

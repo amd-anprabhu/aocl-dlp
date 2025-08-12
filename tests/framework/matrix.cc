@@ -478,7 +478,7 @@ namespace dlp { namespace testing { namespace framework {
                 }
             }
         } else if (m_type == MatrixType::bf16) {
-            // For BF16, compare as uint16_t for now
+            // For DLP_BF16, compare as uint16_t for now
             return std::memcmp(m_data.get(), other.m_data.get(),
                                m_dataSizeBytes)
                    == 0;
@@ -570,7 +570,7 @@ namespace dlp { namespace testing { namespace framework {
                 break;
             }
             case MatrixType::bf16: {
-                // For BF16, fill with random uint16_t values
+                // For DLP_BF16, fill with random uint16_t values
                 std::uniform_int_distribution<uint16_t> dis(0, 65535);
                 uint16_t* data = reinterpret_cast<uint16_t*>(m_data.get());
                 size_t    elementCount = m_dataSizeBytes / sizeof(uint16_t);

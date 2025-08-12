@@ -81,14 +81,14 @@ lpgemm_stop_logger_fn(FILE* fd)
     } while (0);
 
 void
-lpgemm_get_pre_ops_str(aocl_post_op* post_ops, char* ops_str)
+lpgemm_get_pre_ops_str(dlp_metadata_t* metadata, char* ops_str)
 {
-    if (post_ops == NULL) {
+    if (metadata == NULL) {
         strcpy(ops_str, "none");
         return;
     }
 
-    aocl_pre_op* pre_ops = post_ops->pre_ops;
+    dlp_pre_op* pre_ops = metadata->pre_ops;
     if ((pre_ops == NULL) || (pre_ops->seq_length <= 0)) {
         strcpy(ops_str, "none");
         return;
@@ -138,13 +138,13 @@ lpgemm_get_pre_ops_str(aocl_post_op* post_ops, char* ops_str)
 }
 
 void
-lpgemm_get_post_ops_str(aocl_post_op* post_ops, char* ops_str)
+lpgemm_get_post_ops_str(dlp_metadata_t* metadata, char* ops_str)
 {
-    if ((post_ops == NULL) || (post_ops->seq_length <= 0)) {
+    if ((metadata == NULL) || (metadata->seq_length <= 0)) {
         strcpy(ops_str, "none");
         return;
     }
-    if ((post_ops->seq_length > AOCL_MAX_POST_OPS)) {
+    if ((metadata->seq_length > AOCL_MAX_POST_OPS)) {
         strcpy(ops_str, "ops over-limit");
         return;
     }
@@ -154,13 +154,13 @@ lpgemm_get_post_ops_str(aocl_post_op* post_ops, char* ops_str)
     md_t   s_i           = 0; // Multiple sum/scale supported.
     char*  delim_str     = "#";
     size_t delim_str_len = strlen(delim_str);
-    for (md_t i = 0; i < post_ops->seq_length; ++i) {
+    for (md_t i = 0; i < metadata->seq_length; ++i) {
         // Dispatcher code
-        switch (*(post_ops->seq_vector + i)) {
+        switch (*(metadata->seq_vector + i)) {
             case ELTWISE: {
                 LPGEMM_POST_OPS_STR_COPY(ops_str, ops_str_len, "eltwise=");
                 // Eltwise algo dispatcher.
-                switch ((post_ops->eltwise + e_i)->algo.algo_type) {
+                switch ((metadata->eltwise + e_i)->algo.algo_type) {
                     case RELU: {
                         LPGEMM_POST_OPS_STR_COPY(ops_str, ops_str_len, "relu");
                     } break;
@@ -198,7 +198,8 @@ lpgemm_get_post_ops_str(aocl_post_op* post_ops, char* ops_str)
             } break;
             case SCALE: {
                 LPGEMM_POST_OPS_STR_COPY(ops_str, ops_str_len, "scale=");
-                if ((post_ops->sum + s_i)->scale_factor_len == 1) {
+                if ((metadata->scale + s_i)->sf
+                    && (metadata->scale + s_i)->sf->scale_factor_len == 1) {
                     LPGEMM_POST_OPS_STR_COPY(ops_str, ops_str_len,
                                              "scalar_scale_factor,");
                 } else {
@@ -206,7 +207,8 @@ lpgemm_get_post_ops_str(aocl_post_op* post_ops, char* ops_str)
                                              "vector_scale_factor,");
                 }
 
-                if ((post_ops->sum + s_i)->zero_point_len == 1) {
+                if ((metadata->scale + s_i)->zp
+                    && (metadata->scale + s_i)->zp->zero_point_len == 1) {
                     LPGEMM_POST_OPS_STR_COPY(ops_str, ops_str_len,
                                              "scalar_zero_point,");
                 } else {
@@ -232,57 +234,57 @@ lpgemm_get_post_ops_str(aocl_post_op* post_ops, char* ops_str)
 }
 
 void
-lpgemm_write_logger_gemm_fn(FILE*         fd,
-                            char*         op_type,
-                            const char    order,
-                            const char    transa,
-                            const char    transb,
-                            const md_t    m,
-                            const md_t    n,
-                            const md_t    k,
-                            const float   alpha,
-                            const md_t    lda,
-                            const char    mem_format_a,
-                            const md_t    ldb,
-                            const char    mem_format_b,
-                            const float   beta,
-                            const md_t    ldc,
-                            aocl_post_op* post_op_unparsed)
+lpgemm_write_logger_gemm_fn(FILE*           fd,
+                            char*           op_type,
+                            const char      order,
+                            const char      transa,
+                            const char      transb,
+                            const md_t      m,
+                            const md_t      n,
+                            const md_t      k,
+                            const float     alpha,
+                            const md_t      lda,
+                            const char      mem_format_a,
+                            const md_t      ldb,
+                            const char      mem_format_b,
+                            const float     beta,
+                            const md_t      ldc,
+                            dlp_metadata_t* metadata)
 {
     if ((lpgemm_logger_enabled == TRUE) && (fd != NULL)) {
         char pre_ops_str[1024] = { 0 };
-        lpgemm_get_pre_ops_str(post_op_unparsed, pre_ops_str);
+        lpgemm_get_pre_ops_str(metadata, pre_ops_str);
 
         char post_ops_str[2048] = { 0 };
-        lpgemm_get_post_ops_str(post_op_unparsed, post_ops_str);
+        lpgemm_get_post_ops_str(metadata, post_ops_str);
 
         fprintf(fd,
                 "%c %c %c %c %c %ld %ld %ld %ld %ld %ld "
-                "%s:pre_ops=[%s]:post_ops=[%s] %f %f ",
+                "%s:pre_ops=[%s]:metadata=[%s] %f %f ",
                 order, transa, transb, mem_format_a, mem_format_b, m, n, k, lda,
                 ldb, ldc, op_type, pre_ops_str, post_ops_str, alpha, beta);
     }
 }
 
 void
-batch_lpgemm_write_logger_gemm_fn(FILE*          fd,
-                                  char*          op_type,
-                                  const char*    order,
-                                  const char*    transa,
-                                  const char*    transb,
-                                  const md_t     group_count,
-                                  const md_t*    group_size,
-                                  const md_t*    m,
-                                  const md_t*    n,
-                                  const md_t*    k,
-                                  const float*   alpha,
-                                  const md_t*    lda,
-                                  const char*    mem_format_a,
-                                  const md_t*    ldb,
-                                  const char*    mem_format_b,
-                                  const float*   beta,
-                                  const md_t*    ldc,
-                                  aocl_post_op** post_op_unparsed)
+batch_lpgemm_write_logger_gemm_fn(FILE*            fd,
+                                  char*            op_type,
+                                  const char*      order,
+                                  const char*      transa,
+                                  const char*      transb,
+                                  const md_t       group_count,
+                                  const md_t*      group_size,
+                                  const md_t*      m,
+                                  const md_t*      n,
+                                  const md_t*      k,
+                                  const float*     alpha,
+                                  const md_t*      lda,
+                                  const char*      mem_format_a,
+                                  const md_t*      ldb,
+                                  const char*      mem_format_b,
+                                  const float*     beta,
+                                  const md_t*      ldc,
+                                  dlp_metadata_t** metadata)
 {
     if ((lpgemm_logger_enabled == TRUE) && (fd != NULL)) {
         char pre_ops_str[1024] = { 0 };
@@ -291,11 +293,11 @@ batch_lpgemm_write_logger_gemm_fn(FILE*          fd,
 
         fprintf(fd, "%s:group_count=%ld\n", op_type, group_count);
         for (md_t i = 0; i < group_count; i++) {
-            lpgemm_get_pre_ops_str(post_op_unparsed[i], pre_ops_str);
-            lpgemm_get_post_ops_str(post_op_unparsed[i], post_ops_str);
+            lpgemm_get_pre_ops_str(metadata[i], pre_ops_str);
+            lpgemm_get_post_ops_str(metadata[i], post_ops_str);
             fprintf(fd,
                     "%c %c %c %c %c %ld %ld %ld %ld %ld %ld "
-                    ":pre_ops=[%s]:post_ops=[%s] %f %f %ld\n",
+                    ":pre_ops=[%s]:metadata=[%s] %f %f %ld\n",
                     order[i], transa[i], transb[i], mem_format_a[i],
                     mem_format_b[i], m[i], n[i], k[i], lda[i], ldb[i], ldc[i],
                     pre_ops_str, post_ops_str, (float)(alpha[i]),

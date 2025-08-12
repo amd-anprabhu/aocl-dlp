@@ -43,7 +43,7 @@ AOCL_GEMM_MATMUL(bfloat16, int8_t, float, float, bf16s4f32of32)
     LPGEMM_START_LOGGER();
     LPGEMM_WRITE_LOGGER("bf16s4f32of32", order, transa, transb, m, n, k,
                         ((float)alpha), lda, mem_format_a, ldb, mem_format_b,
-                        ((float)beta), ldc, post_op_unparsed);
+                        ((float)beta), ldc, metadata);
 
     dlp_trans_t dlp_transa;
     dlp_trans_t dlp_transb;
@@ -144,16 +144,16 @@ AOCL_GEMM_MATMUL(bfloat16, int8_t, float, float, bf16s4f32of32)
 
     // Convert pre op struct to pre op linked list format.
     lpgemm_pre_op  pre_op_list[AOCL_MAX_PRE_OPS];
-    dlp_clsc_err_t err = lpgemm_translate_to_pre_ops_list(
-        post_op_unparsed->pre_ops, pre_op_list, m, n, k);
+    dlp_clsc_err_t err = lpgemm_translate_to_pre_ops_list(metadata->pre_ops,
+                                                          pre_op_list, m, n, k);
     if (err != DLP_CLSC_SUCCESS) {
         goto err_hndl;
     }
 
     // Convert post op struct to post op linked list format.
     lpgemm_post_op post_op_list[AOCL_MAX_POST_OPS];
-    err = lpgemm_translate_to_post_ops_list(post_op_unparsed, post_op_list,
-                                            (void*)c, (void*)(&order), m, n);
+    err = lpgemm_translate_to_post_ops_list(metadata, post_op_list, (void*)c,
+                                            (void*)(&order), m, n);
     if (err != DLP_CLSC_SUCCESS) {
         goto err_hndl;
     }
@@ -177,7 +177,7 @@ AOCL_GEMM_MATMUL(bfloat16, int8_t, float, float, bf16s4f32of32)
         lpgemm_bf16s4f32of32_openmp_thread_decorator(
             m, n, k, a, rs_a, cs_a, mtag_a, b, rs_b, cs_b, mtag_b, c, rs_c,
             cs_c, alpha, beta, &rntm_g, lcntx_g, pre_op_list, post_op_list,
-            F32);
+            DLP_F32);
     }
 #else
     // Swapping inputs to induce row major computation for column major inputs.
@@ -188,10 +188,10 @@ AOCL_GEMM_MATMUL(bfloat16, int8_t, float, float, bf16s4f32of32)
             __FILE__, __LINE__);
         goto err_hndl;
     } else {
-        lpgemm_bf16s4f32of32_thread_decorator(m, n, k, a, rs_a, cs_a, mtag_a, b,
-                                              rs_b, cs_b, mtag_b, c, rs_c, cs_c,
-                                              alpha, beta, &rntm_g, lcntx_g,
-                                              pre_op_list, post_op_list, F32);
+        lpgemm_bf16s4f32of32_thread_decorator(
+            m, n, k, a, rs_a, cs_a, mtag_a, b, rs_b, cs_b, mtag_b, c, rs_c,
+            cs_c, alpha, beta, &rntm_g, lcntx_g, pre_op_list, post_op_list,
+            DLP_F32);
     }
 #endif
 
@@ -204,7 +204,7 @@ AOCL_GEMM_MATMUL(bfloat16, int8_t, bfloat16, float, bf16s4f32obf16)
     LPGEMM_START_LOGGER();
     LPGEMM_WRITE_LOGGER("bf16s4f32obf16", order, transa, transb, m, n, k,
                         ((float)alpha), lda, mem_format_a, ldb, mem_format_b,
-                        ((float)beta), ldc, post_op_unparsed);
+                        ((float)beta), ldc, metadata);
 
     dlp_trans_t dlp_transa;
     dlp_trans_t dlp_transb;
@@ -306,8 +306,8 @@ AOCL_GEMM_MATMUL(bfloat16, int8_t, bfloat16, float, bf16s4f32obf16)
 
     // Convert post op struct to post op linked list format.
     lpgemm_pre_op  pre_op_list[AOCL_MAX_PRE_OPS];
-    dlp_clsc_err_t err = lpgemm_translate_to_pre_ops_list(
-        post_op_unparsed->pre_ops, pre_op_list, m, n, k);
+    dlp_clsc_err_t err = lpgemm_translate_to_pre_ops_list(metadata->pre_ops,
+                                                          pre_op_list, m, n, k);
 
     if (err != DLP_CLSC_SUCCESS) {
         goto err_hndl;
@@ -315,8 +315,8 @@ AOCL_GEMM_MATMUL(bfloat16, int8_t, bfloat16, float, bf16s4f32obf16)
 
     // Convert post op struct to post op linked list format.
     lpgemm_post_op post_op_list[AOCL_MAX_POST_OPS];
-    err = lpgemm_translate_to_post_ops_list(post_op_unparsed, post_op_list,
-                                            (void*)c, (void*)(&order), m, n);
+    err = lpgemm_translate_to_post_ops_list(metadata, post_op_list, (void*)c,
+                                            (void*)(&order), m, n);
 
     if (err != DLP_CLSC_SUCCESS) {
         goto err_hndl;
@@ -341,7 +341,7 @@ AOCL_GEMM_MATMUL(bfloat16, int8_t, bfloat16, float, bf16s4f32obf16)
         lpgemm_bf16s4f32of32_openmp_thread_decorator(
             m, n, k, a, rs_a, cs_a, mtag_a, b, rs_b, cs_b, mtag_b, (float*)c,
             rs_c, cs_c, alpha, beta, &rntm_g, lcntx_g, pre_op_list,
-            post_op_list, BF16);
+            post_op_list, DLP_BF16);
     }
 #else
     // Swapping inputs to induce row major computation for column major inputs.
@@ -355,7 +355,7 @@ AOCL_GEMM_MATMUL(bfloat16, int8_t, bfloat16, float, bf16s4f32obf16)
         lpgemm_bf16s4f32of32_thread_decorator(
             m, n, k, a, rs_a, cs_a, mtag_a, b, rs_b, cs_b, mtag_b, (float*)c,
             rs_c, cs_c, alpha, beta, &rntm_g, lcntx_g, pre_op_list,
-            post_op_list, BF16);
+            post_op_list, DLP_BF16);
     }
 #endif
 

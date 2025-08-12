@@ -467,7 +467,7 @@ namespace dlp { namespace testing { namespace framework {
                     uint16_t* data = reinterpret_cast<uint16_t*>(targetData);
                     for (size_t i = 0; i < count; ++i) {
                         float floatVal = static_cast<float>(source[i]);
-                        // Convert float to BF16 by truncating mantissa
+                        // Convert float to DLP_BF16 by truncating mantissa
                         // Use union to avoid strict-aliasing issues
                         union
                         {

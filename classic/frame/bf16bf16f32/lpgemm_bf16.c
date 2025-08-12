@@ -75,7 +75,7 @@ LPGEMV(bfloat16, bfloat16, float, bf16bf16f32of32)
 
     lpgemm_post_op_attr post_ops_attr;
     post_ops_attr.c_stor_type = c_downscale;
-    if (c_downscale < F32)
+    if (c_downscale < DLP_F32)
         post_ops_attr.buf_downscale = c;
     else
         post_ops_attr.buf_downscale = NULL;
@@ -321,7 +321,7 @@ LPGEMM_5LOOP_AVX512BF16(bfloat16, bfloat16, float, bf16bf16f32of32)
 
     lpgemm_post_op_attr post_ops_attr;
     post_ops_attr.c_stor_type = c_downscale;
-    if (c_downscale < F32) {
+    if (c_downscale < DLP_F32) {
         post_ops_attr.buf_downscale = c;
     } else {
         post_ops_attr.buf_downscale = NULL;
@@ -353,11 +353,11 @@ LPGEMM_5LOOP_AVX512BF16(bfloat16, bfloat16, float, bf16bf16f32of32)
                 &n_sub_updated);
         }
 
-        if (c_downscale == F32) {
+        if (c_downscale == DLP_F32) {
             c_use_jc = c + jc;
         }
         // Temp accumulaton buffer for C allocation.
-        else if (c_downscale < F32) {
+        else if (c_downscale < DLP_F32) {
             // Buffer memory is only required if output needs to be
             // persisted across iterations of the pc/KC loop.
             // It was observed that the locks used while checking out
@@ -484,7 +484,7 @@ LPGEMM_5LOOP_AVX512BF16(bfloat16, bfloat16, float, bf16bf16f32of32)
 
                 // Only per thread C matrix is stored in temp buffer, so both
                 // per thread jc and ic start should be normalized to zero.
-                if (c_downscale < F32) {
+                if (c_downscale < DLP_F32) {
                     c_use_ic = c_use_jc + (rs_c_use * (ic - ic_start));
                 } else {
                     c_use_ic = c_use_jc + (rs_c_use * ic);
@@ -556,7 +556,7 @@ LPGEMM_5LOOP_AVX512BF16(bfloat16, bfloat16, float, bf16bf16f32of32)
             dlp_free_page_aligned(pack_a_buffer_bf16);
         }
     }
-    if (c_downscale < F32) {
+    if (c_downscale < DLP_F32) {
         if (temp_scal_c_buffer_bf16 != NULL) {
             dlp_free_page_aligned(temp_scal_c_buffer_bf16);
         }
@@ -626,14 +626,14 @@ typedef void (*lpgemv_n_one_ker_ft)(const md_t,
 
 LPGEMV_AVX2(bfloat16, bfloat16, float, bf16bf16f32of32)
 {
-    // BF16 Contexts
+    // DLP_BF16 Contexts
     md_t NC = lcntx->blksz.NC;
     md_t KC = lcntx->blksz.KC;
     md_t MC = lcntx->blksz.MC;
     md_t NR = lcntx->blksz.NR;
     md_t MR = lcntx->blksz.MR;
 
-    // F32 contexts for the GEMM
+    // DLP_F32 contexts for the GEMM
     lpgemm_cntx_t*  lcntx_f32 = lpgemm_get_global_cntx_obj(F32F32F32OF32);
     md_t            f32_MR; // This will be modified
     md_t            f32_NR = lcntx_f32->blksz.NR;
@@ -658,12 +658,12 @@ LPGEMV_AVX2(bfloat16, bfloat16, float, bf16bf16f32of32)
 
     lpgemm_post_op_attr post_ops_attr;
     post_ops_attr.c_stor_type = c_downscale;
-    if (c_downscale < F32) {
+    if (c_downscale < DLP_F32) {
         post_ops_attr.buf_downscale = c;
     } else {
         post_ops_attr.buf_downscale = NULL;
     }
-    /* The thread calculations would still follow BF16 dimensions*/
+    /* The thread calculations would still follow DLP_BF16 dimensions*/
     // Generate thrinfo objects for jc and ic loops from lpgemm_thrinfo_t.
     dlp_task_id_t thread_jc;
     dlp_task_id_t thread_ic;
@@ -732,7 +732,7 @@ LPGEMV_AVX2(bfloat16, bfloat16, float, bf16bf16f32of32)
             mem_a_size_req               = sizeof(float) * mc0 * k;
 
             // For packed or unpacked A matrix, the mc0 * kc0 block is
-            // converted to F32, i.e., packing has to be done by default
+            // converted to DLP_F32, i.e., packing has to be done by default
             if (cvt_a_buffer_bf16_f32 == NULL) {
                 dlp_clsc_err_t ret_err;
                 cvt_a_buffer_bf16_f32 =
@@ -794,7 +794,7 @@ LPGEMV_AVX2(bfloat16, bfloat16, float, bf16bf16f32of32)
         mem_a_size_req = sizeof(float) * k;
 
         // For packed or unpacked A matrix, the mc0 * kc0 block is
-        // converted to F32, i.e., packing has to be done by default
+        // converted to DLP_F32, i.e., packing has to be done by default
         if (cvt_a_buffer_bf16_f32 == NULL) {
             dlp_clsc_err_t ret_err;
             cvt_a_buffer_bf16_f32 =
@@ -863,8 +863,8 @@ LPGEMV_AVX2(bfloat16, bfloat16, float, bf16bf16f32of32)
                                  kc0, nc0, rs_b_use, cs_b_use);
                     b_use = cvt_b_buffer_bf16_f32;
                 }
-                /* BF16 inputs when converted to F32, from a re-ordered or
-                 packed form gets back to the original matrix dimensions,
+                /* DLP_BF16 inputs when converted to DLP_F32, from a re-ordered
+                 or packed form gets back to the original matrix dimensions,
                  i.e., the block sizes of matrix will not be known while
                  unpacking/un-reordering. Hence, resetting mtag_b before
                  calling the kernels to ensure the strides are taken correctly.
@@ -906,14 +906,14 @@ LPGEMM_5LOOP_AVX2(bfloat16, bfloat16, float, bf16bf16f32of32)
     //     return;
     // }
 #endif
-    // BF16 Contexts
+    // DLP_BF16 Contexts
     md_t NC = lcntx->blksz.NC;
     md_t KC = lcntx->blksz.KC;
     md_t MC = lcntx->blksz.MC;
     md_t NR = lcntx->blksz.NR;
     md_t MR = lcntx->blksz.MR;
 
-    // F32 contexts for the GEMM
+    // DLP_F32 contexts for the GEMM
     lpgemm_cntx_t* lcntx_f32 = lpgemm_get_global_cntx_obj(F32F32F32OF32);
     md_t           f32_MR    = lcntx_f32->blksz.MR;
     md_t           f32_NR    = lcntx_f32->blksz.NR;
@@ -958,12 +958,12 @@ LPGEMM_5LOOP_AVX2(bfloat16, bfloat16, float, bf16bf16f32of32)
 
     lpgemm_post_op_attr post_ops_attr;
     post_ops_attr.c_stor_type = c_downscale;
-    if (c_downscale < F32) {
+    if (c_downscale < DLP_F32) {
         post_ops_attr.buf_downscale = c;
     } else {
         post_ops_attr.buf_downscale = NULL;
     }
-    /* The thread calculations would still follow BF16 dimensions*/
+    /* The thread calculations would still follow DLP_BF16 dimensions*/
     // Generate thrinfo objects for jc and ic loops from lpgemm_thrinfo_t.
     dlp_task_id_t thread_jc;
     dlp_task_id_t thread_ic;
@@ -989,11 +989,11 @@ LPGEMM_5LOOP_AVX2(bfloat16, bfloat16, float, bf16bf16f32of32)
                 &n_sub_updated);
         }
 
-        if (c_downscale == F32) {
+        if (c_downscale == DLP_F32) {
             c_use_jc = c + jc;
         }
         // Temp accumulaton buffer for C allocation.
-        else if (c_downscale < F32) {
+        else if (c_downscale < DLP_F32) {
             // Buffer memory is only required if output needs to be
             // persisted across iterations of the pc/KC loop.
             // It was observed that the locks used while checking out
@@ -1108,8 +1108,8 @@ LPGEMM_5LOOP_AVX2(bfloat16, bfloat16, float, bf16bf16f32of32)
                 // packed B panel is required, since the jc loop split can
                 // result in per thread start offset inside the panel, instead
                 // of panel boundaries.
-                // If B is re-ordered, for F32 input, the BF16 data has to be
-                // unreordered and coverted to F32.
+                // If B is re-ordered, for DLP_F32 input, the DLP_BF16 data has
+                // to be unreordered and coverted to DLP_F32.
 
                 float* b_unreorder =
                     (float*)thread->comm[jc_work_id].sent_object;
@@ -1142,7 +1142,7 @@ LPGEMM_5LOOP_AVX2(bfloat16, bfloat16, float, bf16bf16f32of32)
 
                 // Only per thread C matrix is stored in temp buffer, so both
                 // per thread jc and ic start should be normalized to zero.
-                if (c_downscale < F32) {
+                if (c_downscale < DLP_F32) {
                     c_use_ic = c_use_jc + (rs_c_use * (ic - ic_start));
                 } else {
                     c_use_ic = c_use_jc + (rs_c_use * ic);
@@ -1151,7 +1151,7 @@ LPGEMM_5LOOP_AVX2(bfloat16, bfloat16, float, bf16bf16f32of32)
                 mem_a_size_req = sizeof(float) * mc0 * kc0;
 
                 // For packed or unpacked A matrix, the mc0 * kc0 block is
-                // converted to F32, i.e., packing has to be done by default
+                // converted to DLP_F32, i.e., packing has to be done by default
                 if (cvt_a_buffer_bf16_f32 == NULL) {
                     dlp_clsc_err_t ret_err;
                     cvt_a_buffer_bf16_f32 =
@@ -1167,7 +1167,7 @@ LPGEMM_5LOOP_AVX2(bfloat16, bfloat16, float, bf16bf16f32of32)
                 a_use          = cvt_a_buffer_bf16_f32;
                 a_block_stride = f32_MR * kc0;
 
-                /*The NR loop should use the F32 kernel dimesnions*/
+                /*The NR loop should use the DLP_F32 kernel dimesnions*/
                 for (md_t jr = 0; jr < nc0; jr += f32_NR) {
                     md_t nr0 = dlp_min((nc0 - jr), f32_NR);
 
@@ -1176,7 +1176,7 @@ LPGEMM_5LOOP_AVX2(bfloat16, bfloat16, float, bf16bf16f32of32)
                     post_ops_attr.post_op_c_j    = (jc + jr);
                     post_ops_attr.rs_c_downscale = rs_c_downscale;
 
-                    /*To support AVX2, the F32 kernels are called.*/
+                    /*To support AVX2, the DLP_F32 kernels are called.*/
                     ((lpgemm_rowvar_f32)lcntx_f32->kern_fun_ptr)(
                         mc0, nr0, kc0, a_use, rs_a_use, cs_a_use,
                         a_block_stride, (b_use + jr), rs_b_use, cs_b_use,
@@ -1208,7 +1208,7 @@ LPGEMM_5LOOP_AVX2(bfloat16, bfloat16, float, bf16bf16f32of32)
         dlp_free_page_aligned(cvt_a_buffer_bf16_f32);
     }
 
-    if (c_downscale < F32) {
+    if (c_downscale < DLP_F32) {
         if (temp_scal_c_buffer_bf16 != NULL) {
             dlp_free_page_aligned(temp_scal_c_buffer_bf16);
         }

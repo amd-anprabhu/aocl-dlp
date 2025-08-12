@@ -73,7 +73,7 @@ AOCL_GEMM_GET_REORDER_BUF_SIZE(bf16s4f32of32);
 #define AOCL_GEMM_GET_REORDER_BUF_SIZE_SYM_QUANT(LP_SFX)                       \
     DLP_CLASSIC_EXPORT msz_t aocl_get_reorder_buf_size_##LP_SFX(               \
         const char order, const char trans, const char mat_type, const md_t k, \
-        const md_t n, AOCL_SYMM_STAT_QUANT* meta_data)
+        const md_t n, DLP_SYMM_STAT_QUANT* meta_data)
 
 AOCL_GEMM_GET_REORDER_BUF_SIZE_SYM_QUANT(s8s8s32os32_sym_quant);
 
@@ -125,7 +125,7 @@ AOCL_GEMM_REORDER(int8_t, bf16s4f32of32);
     DLP_CLASSIC_EXPORT void aocl_reorder_##LP_SFX(                             \
         const char order, const char trans, const char mat_type,               \
         const B_type* input_buf_addr, B_type* reorder_buf_addr, const md_t k,  \
-        const md_t n, const md_t ldb, AOCL_SYMM_STAT_QUANT* meta_data)
+        const md_t n, const md_t ldb, DLP_SYMM_STAT_QUANT* meta_data)
 
 AOCL_GEMM_REORDER_SYM_QUANT(int8_t, s8s8s32os32_sym_quant);
 
@@ -192,7 +192,7 @@ AOCL_GEMM_UNREORDER(int8_t, s8s8s32os32_reference);
  * @param[in] beta Scalar multiplier for matrix C.
  * @param[out] c Pointer to matrix C.
  * @param[in] ldc Leading dimension of matrix C.
- * @param[in] post_op_unparsed Pointer to post-operation structures.
+ * @param[in] metadata Pointer to post-operation structures.
  */
 #define AOCL_GEMM_MATMUL(A_type, B_type, C_type, Sum_type, LP_SFX)             \
     DLP_CLASSIC_EXPORT void aocl_gemm_##LP_SFX(                                \
@@ -200,7 +200,7 @@ AOCL_GEMM_UNREORDER(int8_t, s8s8s32os32_reference);
         const md_t n, const md_t k, const Sum_type alpha, const A_type* a,     \
         const md_t lda, const char mem_format_a, const B_type* b,              \
         const md_t ldb, const char mem_format_b, const Sum_type beta,          \
-        C_type* c, const md_t ldc, aocl_post_op* post_op_unparsed)
+        C_type* c, const md_t ldc, dlp_metadata_t* metadata)
 
 AOCL_GEMM_MATMUL(uint8_t, int8_t, int32_t, int32_t, u8s8s32os32);
 AOCL_GEMM_MATMUL(uint8_t, int8_t, int8_t, int32_t, u8s8s32os8);
@@ -247,7 +247,7 @@ AOCL_GEMM_MATMUL(float, float, float, float, f32f32f32of32);
  * @param[in] beta Array of scalar multipliers for C matrices.
  * @param[out] c Array of pointers to C matrices.
  * @param[in] ldc Array of leading dimensions for C matrices.
- * @param[in] post_op_unparsed Array of pointers to post-operation structures.
+ * @param[in] metadata Array of pointers to post-operation structures.
  */
 #define AOCL_BGEMM_MATMUL(A_type, B_type, C_type, Sum_type, LP_SFX)            \
     DLP_CLASSIC_EXPORT void aocl_batch_gemm_##LP_SFX(                          \
@@ -257,7 +257,7 @@ AOCL_GEMM_MATMUL(float, float, float, float, f32f32f32of32);
         const Sum_type* beta, C_type** c, const md_t* ldc,                     \
         const md_t group_count, const md_t* group_size,                        \
         const char* mem_format_a, const char* mem_format_b,                    \
-        aocl_post_op** post_op_unparsed)
+        dlp_metadata_t** metadata)
 
 // bf16 APIs
 AOCL_BGEMM_MATMUL(bfloat16, bfloat16, float, float, bf16bf16f32of32);

@@ -34,25 +34,6 @@
 #include "classic/dlp_macros.h"
 #include <stdint.h>
 
-// Enum to denote the storage data type (output matrix).
-// It is expected that the enum entries are in ascending order of
-// storage data type size.
-typedef enum
-{
-    S8   = 0,
-    U8   = 1,
-    S16  = 2,
-    U16  = 3,
-    BF16 = 4,
-    S32  = 5,
-    U32  = 6,
-    F32  = 7,
-    S64  = 8,
-    U64  = 9,
-    F64  = 10,
-    NONE = 11 // when we want to use default case.
-} AOCL_STORAGE_TYPE;
-
 // Post-ops codes.
 typedef enum
 {
@@ -82,7 +63,6 @@ typedef struct lpgemm_post_op_t
     void*                    op_args3; // beta, zero_point_len
     void*                    scale_factor;
     md_t                     scale_factor_len;
-    bool                     is_power_of_2;
     uint64_t                 stor_type;
     uint64_t                 zp_stor_type;
     uint64_t                 sf_stor_type; // Introduced for sf store type
@@ -135,7 +115,7 @@ dlp_init_and_get_kernel_hndl(kernel_datatype_t kDtype,
                              md_t              k,
                              void*             alpha,
                              void*             beta,
-                             lpgemm_post_op*   post_ops,
+                             lpgemm_post_op*   metadata,
                              md_t              mr_hint,
                              md_t              nr_hint);
 

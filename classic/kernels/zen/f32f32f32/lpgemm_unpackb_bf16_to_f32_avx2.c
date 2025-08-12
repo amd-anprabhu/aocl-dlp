@@ -30,7 +30,7 @@
 #include <immintrin.h>
 #include <string.h>
 
-// BF16 -> F32 convert helpers. reg: __m256 - CVT_BF16_F32_SHIFT_AVX2
+// DLP_BF16 -> DLP_F32 convert helpers. reg: __m256 - CVT_BF16_F32_SHIFT_AVX2
 #include "lpgemm_kernel_macros_f32_avx2.h"
 
 #define LOAD_AND_CONVERT_FIRST32_NR64_BF16_NR32_AVX2(k)                        \
@@ -357,9 +357,9 @@ unpackb_nrlt16_bf16_f32_row_major(const bfloat16* b,
     __m256 a_reg[4], b_reg[4];
 
     /*
-    In case of BF16 re-ordered buffer padding would enable availability of 16
-    elements even though NR < 16. Hence, masks isn't neeeded for loading. But
-    after the conversion to F32 only max of 8 elements could be stored at a
+    In case of DLP_BF16 re-ordered buffer padding would enable availability of
+    16 elements even though NR < 16. Hence, masks isn't neeeded for loading. But
+    after the conversion to DLP_F32 only max of 8 elements could be stored at a
     time. For ex., if n0_partial_rem = 11 after the conversion and permute there
     would be 8 elements in a_reg[i] and 3 elements in a_reg[i+1]. Hence, there
     is a need for 2 store masks calculated based on the n0_partial_rem.

@@ -68,7 +68,7 @@ AOCL_GEMM_MATMUL(bfloat16, bfloat16, bfloat16, float, bf16bf16f32obf16)
     LPGEMM_START_LOGGER();
     LPGEMM_WRITE_LOGGER("bf16bf16f32obf16", order, transa, transb, m, n, k,
                         ((float)alpha), lda, mem_format_a, ldb, mem_format_b,
-                        ((float)beta), ldc, post_op_unparsed);
+                        ((float)beta), ldc, metadata);
 
     dlp_trans_t dlp_transa;
     dlp_trans_t dlp_transb;
@@ -176,7 +176,7 @@ AOCL_GEMM_MATMUL(bfloat16, bfloat16, bfloat16, float, bf16bf16f32obf16)
     // Convert post op struct to post op linked list format.
     lpgemm_post_op post_op_list[AOCL_MAX_POST_OPS];
     dlp_clsc_err_t err = lpgemm_translate_to_post_ops_list(
-        post_op_unparsed, post_op_list, (void*)c, (void*)(&order), m, n);
+        metadata, post_op_list, (void*)c, (void*)(&order), m, n);
 
     if (err != DLP_CLSC_SUCCESS) {
         goto err_hndl;
@@ -190,9 +190,9 @@ AOCL_GEMM_MATMUL(bfloat16, bfloat16, bfloat16, float, bf16bf16f32obf16)
     lpgemm_cntx_t* lcntx_g = lpgemm_get_global_cntx_obj(BF16BF16F32OF32);
 #if (defined(DLP_KERNELS_ZEN4) && (!defined(LPGEMM_BF16_JIT)))
     /* While AOCL_ENABLE_INSTRUCTIONS=AVX2 is enabled in machines that supports
-     * BF16/VNNI with only the ISA check the exeution could enter tiny path and
-     * result in seg fault as the tiny path for BF16->FP32 is not available.
-     * Hence the arch_id also has to be verified here.
+     * DLP_BF16/VNNI with only the ISA check the exeution could enter tiny path
+     * and result in seg fault as the tiny path for DLP_BF16->FP32 is not
+     * available. Hence the arch_id also has to be verified here.
      */
     dlp_arch_t arch_id = dlp_get_arch();
     if (((arch_id == DLP_ARCH_ZEN4) || (arch_id == DLP_ARCH_ZEN5))
@@ -203,14 +203,14 @@ AOCL_GEMM_MATMUL(bfloat16, bfloat16, bfloat16, float, bf16bf16f32obf16)
             lpgemm_rowvar_tiny_bf16bf16f32of32(m, n, k, a, rs_a, cs_a, mtag_a,
                                                b, rs_b, cs_b, mtag_b, (float*)c,
                                                rs_c, cs_c, alpha, beta, lcntx_g,
-                                               post_op_list, BF16);
+                                               post_op_list, DLP_BF16);
             return;
         } else if ((is_column_major == TRUE)
                    && (is_tiny_input_bf16obf16(n, m, k, lcntx_g) == TRUE)) {
             lpgemm_rowvar_tiny_bf16bf16f32of32(n, m, k, b, rs_b, cs_b, mtag_b,
                                                a, rs_a, cs_a, mtag_a, (float*)c,
                                                rs_c, cs_c, alpha, beta, lcntx_g,
-                                               post_op_list, BF16);
+                                               post_op_list, DLP_BF16);
             return;
         }
     }
@@ -220,22 +220,22 @@ AOCL_GEMM_MATMUL(bfloat16, bfloat16, bfloat16, float, bf16bf16f32obf16)
     if (is_column_major == TRUE) {
         lpgemm_bf16bf16f32of32_openmp_thread_decorator(
             n, m, k, b, rs_b, cs_b, mtag_b, a, rs_a, cs_a, mtag_a, (float*)c,
-            rs_c, cs_c, alpha, beta, &rntm_g, lcntx_g, post_op_list, BF16);
+            rs_c, cs_c, alpha, beta, &rntm_g, lcntx_g, post_op_list, DLP_BF16);
     } else {
         lpgemm_bf16bf16f32of32_openmp_thread_decorator(
             m, n, k, a, rs_a, cs_a, mtag_a, b, rs_b, cs_b, mtag_b, (float*)c,
-            rs_c, cs_c, alpha, beta, &rntm_g, lcntx_g, post_op_list, BF16);
+            rs_c, cs_c, alpha, beta, &rntm_g, lcntx_g, post_op_list, DLP_BF16);
     }
 #else
     // Swapping inputs to induce row major computation for column major inputs.
     if (is_column_major == TRUE) {
         lpgemm_bf16bf16f32of32_thread_decorator(
             n, m, k, b, rs_b, cs_b, mtag_b, a, rs_a, cs_a, mtag_a, (float*)c,
-            rs_c, cs_c, alpha, beta, &rntm_g, lcntx_g, post_op_list, BF16);
+            rs_c, cs_c, alpha, beta, &rntm_g, lcntx_g, post_op_list, DLP_BF16);
     } else {
         lpgemm_bf16bf16f32of32_thread_decorator(
             m, n, k, a, rs_a, cs_a, mtag_a, b, rs_b, cs_b, mtag_b, (float*)c,
-            rs_c, cs_c, alpha, beta, &rntm_g, lcntx_g, post_op_list, BF16);
+            rs_c, cs_c, alpha, beta, &rntm_g, lcntx_g, post_op_list, DLP_BF16);
     }
 #endif
 

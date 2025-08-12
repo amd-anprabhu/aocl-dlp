@@ -60,7 +60,7 @@ enum class kernelDatatype : uint8_t
     max_kernel_datatypes
 };
 
-// Enum for individual datatypes (similar to AOCL_STORAGE_TYPE)
+// Enum for individual datatypes (similar to DLP_TYPE)
 enum class DataType : uint8_t
 {
     invalid = 0,

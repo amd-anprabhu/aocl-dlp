@@ -137,7 +137,7 @@ packsclb_nr48_bf16s4f32of32(bfloat16*          packb_bf16,
             _mm512_permutex2var_epi8(zero_point, mask_zp1, zero_point);
 
         if (pre_ops_attr.scale_factor_len > 1) {
-            if (pre_ops_attr.scale_factor_type == F32) {
+            if (pre_ops_attr.scale_factor_type == DLP_F32) {
                 zmm4 = _mm512_loadu_ps((float*)(pre_ops_attr.scale_factor)
                                        + pre_op_off);
                 zmm6 = _mm512_loadu_ps((float*)(pre_ops_attr.scale_factor)
@@ -145,7 +145,7 @@ packsclb_nr48_bf16s4f32of32(bfloat16*          packb_bf16,
                 zmm8 = _mm512_loadu_ps((float*)(pre_ops_attr.scale_factor)
                                        + pre_op_off + 32);
             } else {
-                // load and convert scale factor vectors to F32 type
+                // load and convert scale factor vectors to DLP_F32 type
                 zmm4 = CVT_BF16_F32_INT_SHIFT(_mm256_loadu_epi16(
                     (bfloat16*)(pre_ops_attr.scale_factor) + pre_op_off));
                 zmm6 = CVT_BF16_F32_INT_SHIFT(_mm256_loadu_epi16(
@@ -161,7 +161,7 @@ packsclb_nr48_bf16s4f32of32(bfloat16*          packb_bf16,
             zmm9 = _mm512_permutex2var_ps(zmm8, mask_scale2, zmm8);
             zmm8 = _mm512_permutex2var_ps(zmm8, mask_scale1, zmm8);
         } else {
-            if (pre_ops_attr.scale_factor_type == F32) {
+            if (pre_ops_attr.scale_factor_type == DLP_F32) {
                 zmm4 = _mm512_set1_ps(
                     *((float*)pre_ops_attr.scale_factor + group));
             } else {
@@ -335,13 +335,13 @@ packsclb_nr32_bf16s4f32of32(bfloat16*          packb_bf16,
             _mm512_permutex2var_epi8(zero_point, mask_zp1, zero_point);
 
         if (pre_ops_attr.scale_factor_len > 1) {
-            if (pre_ops_attr.scale_factor_type == F32) {
+            if (pre_ops_attr.scale_factor_type == DLP_F32) {
                 zmm4 = _mm512_loadu_ps((float*)(pre_ops_attr.scale_factor)
                                        + pre_op_off);
                 zmm6 = _mm512_loadu_ps((float*)(pre_ops_attr.scale_factor)
                                        + pre_op_off + 16);
             } else {
-                // load and convert scale factor vectors to F32 type
+                // load and convert scale factor vectors to DLP_F32 type
                 zmm4 = CVT_BF16_F32_INT_SHIFT(_mm256_loadu_epi16(
                     (bfloat16*)(pre_ops_attr.scale_factor) + pre_op_off));
                 zmm6 = CVT_BF16_F32_INT_SHIFT(_mm256_loadu_epi16(
@@ -353,7 +353,7 @@ packsclb_nr32_bf16s4f32of32(bfloat16*          packb_bf16,
             zmm7 = _mm512_permutex2var_ps(zmm6, mask_scale2, zmm6);
             zmm6 = _mm512_permutex2var_ps(zmm6, mask_scale1, zmm6);
         } else {
-            if (pre_ops_attr.scale_factor_type == F32) {
+            if (pre_ops_attr.scale_factor_type == DLP_F32) {
                 zmm4 = _mm512_set1_ps(
                     *((float*)pre_ops_attr.scale_factor + group));
             } else {
@@ -498,18 +498,18 @@ packsclb_nr16_bf16s4f32of32(bfloat16*          packb_bf16,
             _mm512_permutex2var_epi8(zero_point, mask_zp1, zero_point);
 
         if (pre_ops_attr.scale_factor_len > 1) {
-            if (pre_ops_attr.scale_factor_type == F32) {
+            if (pre_ops_attr.scale_factor_type == DLP_F32) {
                 zmm4 = _mm512_loadu_ps((float*)(pre_ops_attr.scale_factor)
                                        + pre_op_off);
             } else {
-                // load and convert scale factor vectors to F32 type
+                // load and convert scale factor vectors to DLP_F32 type
                 zmm4 = CVT_BF16_F32_INT_SHIFT(_mm256_loadu_epi16(
                     (bfloat16*)(pre_ops_attr.scale_factor) + pre_op_off));
             }
             zmm5 = _mm512_permutex2var_ps(zmm4, mask_scale2, zmm4);
             zmm4 = _mm512_permutex2var_ps(zmm4, mask_scale1, zmm4);
         } else {
-            if (pre_ops_attr.scale_factor_type == F32) {
+            if (pre_ops_attr.scale_factor_type == DLP_F32) {
                 zmm4 = _mm512_set1_ps(
                     *((float*)pre_ops_attr.scale_factor + group));
             } else {
@@ -649,11 +649,11 @@ packsclb_nrlt16_bf16s4f32of32(bfloat16*          packb_bf16,
             _mm512_permutex2var_epi8(zero_point, mask_zp1, zero_point);
 
         if (pre_ops_attr.scale_factor_len > 1) {
-            if (pre_ops_attr.scale_factor_type == F32) {
+            if (pre_ops_attr.scale_factor_type == DLP_F32) {
                 zmm4 = _mm512_maskz_loadu_ps(
                     lmask, (float*)(pre_ops_attr.scale_factor) + pre_op_off);
             } else {
-                // load and convert scale factor vectors to F32 type
+                // load and convert scale factor vectors to DLP_F32 type
                 zmm4 = CVT_BF16_F32_INT_SHIFT(_mm256_maskz_loadu_epi16(
                     lmask,
                     (bfloat16*)(pre_ops_attr.scale_factor) + pre_op_off));
@@ -661,7 +661,7 @@ packsclb_nrlt16_bf16s4f32of32(bfloat16*          packb_bf16,
             zmm5 = _mm512_permutex2var_ps(zmm4, mask_scale2, zmm4);
             zmm4 = _mm512_permutex2var_ps(zmm4, mask_scale1, zmm4);
         } else {
-            if (pre_ops_attr.scale_factor_type == F32) {
+            if (pre_ops_attr.scale_factor_type == DLP_F32) {
                 zmm4 = _mm512_set1_ps(
                     *((float*)pre_ops_attr.scale_factor + group));
             } else {
@@ -752,7 +752,7 @@ packsclb_nr64_bf16s4f32of32(bfloat16*          packb_bf16,
 
     /* Regs to store bf16 elems */
     __m512bh zmm0, zmm1, zmm2, zmm3;
-    /* Regs to store F32 scale */
+    /* Regs to store DLP_F32 scale */
     __m512 zmm4, zmm5, zmm6, zmm7, zmm8, zmm9, zmm10, zmm11;
     /* Regs to store int8 elems zero-point values */
     __m512i zero_point, zero_point0, zero_point1;
@@ -822,7 +822,7 @@ packsclb_nr64_bf16s4f32of32(bfloat16*          packb_bf16,
 
             /* load scale factor values */
             if (pre_ops_attr.scale_factor_len > 1) {
-                if (pre_ops_attr.scale_factor_type == F32) {
+                if (pre_ops_attr.scale_factor_type == DLP_F32) {
                     // load and interleave scale factor vectors
                     zmm4  = _mm512_loadu_ps((float*)(pre_ops_attr.scale_factor)
                                             + pre_op_off + jr);
@@ -833,7 +833,7 @@ packsclb_nr64_bf16s4f32of32(bfloat16*          packb_bf16,
                     zmm10 = _mm512_loadu_ps((float*)(pre_ops_attr.scale_factor)
                                             + pre_op_off + jr + 48);
                 } else {
-                    // load and convert scale factor vectors to F32 type
+                    // load and convert scale factor vectors to DLP_F32 type
                     zmm4  = CVT_BF16_F32_INT_SHIFT(_mm256_loadu_epi16(
                         (bfloat16*)(pre_ops_attr.scale_factor) + pre_op_off
                         + jr));
@@ -858,7 +858,7 @@ packsclb_nr64_bf16s4f32of32(bfloat16*          packb_bf16,
                 zmm10 = _mm512_permutex2var_ps(zmm10, mask_scale1, zmm10);
 
             } else {
-                if (pre_ops_attr.scale_factor_type == F32) {
+                if (pre_ops_attr.scale_factor_type == DLP_F32) {
                     zmm4 = _mm512_set1_ps(
                         *((float*)pre_ops_attr.scale_factor + group));
                 } else {

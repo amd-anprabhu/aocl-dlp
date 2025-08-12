@@ -298,55 +298,68 @@ main()
            c_zero_point);
 
     // Step 6: Set up post-op for output quantization
-    aocl_post_op* post_ops = (aocl_post_op*)malloc(sizeof(aocl_post_op));
-    if (!post_ops) {
+    dlp_metadata_t* metadata = (dlp_metadata_t*)malloc(sizeof(dlp_metadata_t));
+    if (!metadata) {
         printf("Memory allocation for post-ops failed\n");
         goto cleanup;
     }
-    memset(post_ops, 0, sizeof(aocl_post_op));
+    memset(metadata, 0, sizeof(dlp_metadata_t));
 
     // Initialize post-ops structure
-    post_ops->seq_length = 1; // One operation: scale
+    metadata->seq_length = 1; // One operation: scale
 
     // Allocate sequence vector
-    post_ops->seq_vector =
-        (AOCL_POST_OP_TYPE*)malloc(sizeof(AOCL_POST_OP_TYPE));
-    if (!post_ops->seq_vector) {
+    metadata->seq_vector = (DLP_POST_OP_TYPE*)malloc(sizeof(DLP_POST_OP_TYPE));
+    if (!metadata->seq_vector) {
         printf("Memory allocation for sequence vector failed\n");
         goto cleanup;
     }
-    post_ops->seq_vector[0] = SCALE; // First operation is scaling
+    metadata->seq_vector[0] = SCALE; // First operation is scaling
 
     // Allocate and set up sum post-op for scaling
-    post_ops->sum = (aocl_post_op_sum*)malloc(sizeof(aocl_post_op_sum));
-    if (!post_ops->sum) {
+    metadata->scale = (dlp_scale_t*)malloc(sizeof(dlp_scale_t));
+    if (!metadata->scale) {
         printf("Memory allocation for sum post-op failed\n");
         goto cleanup;
     }
 
     // Set up scale parameters
-    post_ops->sum->is_power_of_2 = 0;
-    post_ops->sum->scale_factor  = malloc(sizeof(float));
-    if (!post_ops->sum->scale_factor) {
-        printf("Memory allocation for scale factor failed\n");
+    metadata->scale->buff = NULL;
+
+    // Allocate and set up scale factor structure
+    metadata->scale->sf = malloc(sizeof(dlp_sf_t));
+    if (!metadata->scale->sf) {
+        printf("Memory allocation for scale factor structure failed\n");
+        goto cleanup;
+    }
+
+    metadata->scale->sf->scale_factor = malloc(sizeof(float));
+    if (!metadata->scale->sf->scale_factor) {
+        printf("Memory allocation for scale factor data failed\n");
         goto cleanup;
     }
 
     // Set scalefactor for C to properly quantize the result.
-    *((float*)post_ops->sum->scale_factor) = 1.0f / c_scale;
-    post_ops->sum->scale_factor_len        = 1;
+    *((float*)metadata->scale->sf->scale_factor) = 1.0f / c_scale;
+    metadata->scale->sf->scale_factor_len        = 1;
+    metadata->scale->sf->scale_factor_type       = DLP_F32;
 
-    // Set up zero point parameters
-    post_ops->sum->zero_point = malloc(sizeof(int8_t));
-    if (!post_ops->sum->zero_point) {
-        printf("Memory allocation for zero point failed\n");
+    // Allocate and set up zero point structure
+    metadata->scale->zp = malloc(sizeof(dlp_zp_t));
+    if (!metadata->scale->zp) {
+        printf("Memory allocation for zero point structure failed\n");
         goto cleanup;
     }
-    *((int8_t*)post_ops->sum->zero_point) = c_zero_point;
-    post_ops->sum->zero_point_len         = 1;
-    post_ops->sum->zp_stor_type           = AOCL_GEMM_INT8;
-    post_ops->sum->sf_stor_type           = AOCL_GEMM_F32;
-    post_ops->sum->buff                   = NULL;
+
+    metadata->scale->zp->zero_point = malloc(sizeof(int8_t));
+    if (!metadata->scale->zp->zero_point) {
+        printf("Memory allocation for zero point data failed\n");
+        goto cleanup;
+    }
+
+    *((int8_t*)metadata->scale->zp->zero_point) = c_zero_point;
+    metadata->scale->zp->zero_point_len         = 1;
+    metadata->scale->zp->zero_point_type        = DLP_S8;
 
     // Step 7: Perform quantized matrix multiplication with output as s8
     printf("Performing quantized matrix multiplication...\n");
@@ -358,7 +371,7 @@ main()
                          m, n, k, alpha, a_u8, lda, 'N', // Input A (uint8_t)
                          b_s8, ldb, 'N',                 // Input B (int8_t)
                          beta, c_s8, ldc,                // Output C (int8_t)
-                         post_ops // Scaling post-operation
+                         metadata // Scaling post-operation
     );
 
     // Print a small section of the quantized output
@@ -414,17 +427,17 @@ cleanup:
     free(c_s8);
 
     // Free post-ops memory
-    if (post_ops) {
-        if (post_ops->seq_vector)
-            free(post_ops->seq_vector);
-        if (post_ops->sum) {
-            if (post_ops->sum->scale_factor)
-                free(post_ops->sum->scale_factor);
-            if (post_ops->sum->zero_point)
-                free(post_ops->sum->zero_point);
-            free(post_ops->sum);
+    if (metadata) {
+        if (metadata->seq_vector)
+            free(metadata->seq_vector);
+        if (metadata->scale) {
+            if (metadata->scale->sf)
+                free(metadata->scale->sf);
+            if (metadata->scale->zp)
+                free(metadata->scale->zp);
+            free(metadata->scale);
         }
-        free(post_ops);
+        free(metadata);
     }
 
     return 0;

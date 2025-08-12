@@ -213,8 +213,8 @@ main()
     }
 
     // Array for post-operations (NULL for each operation in this example)
-    aocl_post_op** post_ops_array =
-        (aocl_post_op**)malloc(total_matrices * sizeof(aocl_post_op*));
+    dlp_metadata_t** post_ops_array =
+        (dlp_metadata_t**)malloc(total_matrices * sizeof(dlp_metadata_t*));
     if (!post_ops_array) {
         printf("Memory allocation for post-ops array failed\n");
         return -1;

@@ -61,21 +61,21 @@ namespace dlp::testing::classic::ref {
  */
 
 void
-aocl_gemm_f32f32f32of32_ref(const char    order,
-                            const char    transa,
-                            const char    transb,
-                            const md_t    m,
-                            const md_t    n,
-                            const md_t    k,
-                            float         alpha,
-                            const float*  A,
-                            int           lda,
-                            const float*  B,
-                            int           ldb,
-                            float         beta,
-                            float*        C,
-                            int           ldc,
-                            aocl_post_op* post_ops)
+aocl_gemm_f32f32f32of32_ref(const char      order,
+                            const char      transa,
+                            const char      transb,
+                            const md_t      m,
+                            const md_t      n,
+                            const md_t      k,
+                            float           alpha,
+                            const float*    A,
+                            int             lda,
+                            const float*    B,
+                            int             ldb,
+                            float           beta,
+                            float*          C,
+                            int             ldc,
+                            dlp_metadata_t* metadata)
 {
 
     md_t i, j, l;

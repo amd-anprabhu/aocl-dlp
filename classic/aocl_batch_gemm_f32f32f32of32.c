@@ -43,7 +43,7 @@ AOCL_BGEMM_MATMUL(float, float, float, float, f32f32f32of32)
     BATCH_LPGEMM_WRITE_LOGGER("f32f32f32of32", order, transa, transb,
                               group_count, group_size, m, n, k, ((float*)alpha),
                               lda, mem_format_a, ldb, mem_format_b,
-                              ((float*)beta), ldc, post_op_unparsed);
+                              ((float*)beta), ldc, metadata);
 
     // Check if AVX2 ISA is supported, lpgemm fp32 matmul only works with it.
     if (dlp_cpuid_is_avx2fma3_supported() == FALSE) {
@@ -99,7 +99,7 @@ AOCL_BGEMM_MATMUL(float, float, float, float, f32f32f32of32)
         lpgemm_post_op post_op_list[AOCL_MAX_POST_OPS];
 
         dlp_clsc_err_t err = lpgemm_translate_to_post_ops_list(
-            post_op_unparsed[gc_i], post_op_list, (void*)c[gc_i],
+            metadata[gc_i], post_op_list, (void*)c[gc_i],
             (void*)((order + gc_i)), m[gc_i], n[gc_i]);
 
         if (err != DLP_CLSC_SUCCESS)
@@ -233,14 +233,14 @@ AOCL_BGEMM_MATMUL(float, float, float, float, f32f32f32of32)
             g_sz, m_local, n_local, k_local, (const float**)a_local, rs_a, cs_a,
             mtag_a, (const float**)b_local, rs_b, cs_b, mtag_b, &c[mat_idx],
             rs_c, cs_c, alpha[gc_i], beta[gc_i], &rntm_g, lcntx_g, post_op_list,
-            F32);
+            DLP_F32);
 
 #else
         batch_lpgemm_f32f32f32of32_thread_decorator(
             g_sz, m_local, n_local, k_local, (const float**)a_local, rs_a, cs_a,
             mtag_a, (const float**)b_local, rs_b, cs_b, mtag_b, &c[mat_idx],
             rs_c, cs_c, alpha[gc_i], beta[gc_i], &rntm_g, lcntx_g, post_op_list,
-            F32);
+            DLP_F32);
 #endif
         // Increment the matrix index to get the next matrix in the group.
         mat_idx += g_sz;

@@ -201,7 +201,7 @@ LPGEMM_M_FRINGE_KERN(float, float, float, f32f32f32of32_avx512_256_5x32)
 POST_OPS_BIAS_5x32F: {
     if ((*(char*)post_ops_list_temp->op_args2 == 'r')
         || (*(char*)post_ops_list_temp->op_args2 == 'R')) {
-        if (post_ops_list_temp->stor_type == BF16) {
+        if (post_ops_list_temp->stor_type == DLP_BF16) {
             BF16_F32_BIAS_LOAD_AVX2(ymm0, 0)
             BF16_F32_BIAS_LOAD_AVX2(ymm1, 1)
             BF16_F32_BIAS_LOAD_AVX2(ymm2, 2)
@@ -243,7 +243,7 @@ POST_OPS_BIAS_5x32F: {
         ymm26 = _mm256_add_ps(ymm26, ymm2);
         ymm27 = _mm256_add_ps(ymm27, ymm3);
     } else {
-        if (post_ops_list_temp->stor_type == BF16) {
+        if (post_ops_list_temp->stor_type == DLP_BF16) {
             BF16_F32_BIAS_BCAST_AVX2(ymm0, 0)
             BF16_F32_BIAS_BCAST_AVX2(ymm1, 1)
             BF16_F32_BIAS_BCAST_AVX2(ymm2, 2)
@@ -453,9 +453,9 @@ POST_OPS_DOWNSCALE_5x32F: {
     __m256 zero_point3 = _mm256_setzero_ps();
     __m256 zero_point4 = _mm256_setzero_ps();
 
-    bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                   || ((post_ops_list_temp->stor_type == NONE)
-                       && (post_ops_attr.c_stor_type == BF16));
+    bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                   || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                       && (post_ops_attr.c_stor_type == DLP_BF16));
 
     if (post_ops_list_temp->scale_factor_len == 1) {
         selector1 = _mm256_set1_ps(*((float*)post_ops_list_temp->scale_factor));
@@ -624,9 +624,9 @@ POST_OPS_MATRIX_ADD_5x32F: {
     __m256 scl_fctr4 = _mm256_setzero_ps();
     __m256 scl_fctr5 = _mm256_setzero_ps();
 
-    bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                   || ((post_ops_list_temp->stor_type == NONE)
-                       && (post_ops_attr.c_stor_type == BF16));
+    bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                   || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                       && (post_ops_attr.c_stor_type == DLP_BF16));
 
     // Even though different registers are used for scalar in column and
     // row major case, all those registers will contain the same value.
@@ -751,9 +751,9 @@ POST_OPS_MATRIX_MUL_5x32F: {
     __m256 scl_fctr4 = _mm256_setzero_ps();
     __m256 scl_fctr5 = _mm256_setzero_ps();
 
-    bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                   || ((post_ops_list_temp->stor_type == NONE)
-                       && (post_ops_attr.c_stor_type == BF16));
+    bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                   || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                       && (post_ops_attr.c_stor_type == DLP_BF16));
 
     // Even though different registers are used for scalar in column and
     // row major case, all those registers will contain the same value.
@@ -1176,7 +1176,7 @@ LPGEMM_M_FRINGE_KERN(float, float, float, f32f32f32of32_avx512_256_4x32)
 POST_OPS_BIAS_4x32F: {
     if ((*(char*)post_ops_list_temp->op_args2 == 'r')
         || (*(char*)post_ops_list_temp->op_args2 == 'R')) {
-        if (post_ops_list_temp->stor_type == BF16) {
+        if (post_ops_list_temp->stor_type == DLP_BF16) {
             BF16_F32_BIAS_LOAD_AVX2(ymm0, 0)
             BF16_F32_BIAS_LOAD_AVX2(ymm1, 1)
             BF16_F32_BIAS_LOAD_AVX2(ymm2, 2)
@@ -1381,9 +1381,9 @@ POST_OPS_DOWNSCALE_4x32F: {
     __m256 zero_point2 = _mm256_setzero_ps();
     __m256 zero_point3 = _mm256_setzero_ps();
 
-    bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                   || ((post_ops_list_temp->stor_type == NONE)
-                       && (post_ops_attr.c_stor_type == BF16));
+    bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                   || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                       && (post_ops_attr.c_stor_type == DLP_BF16));
 
     if (post_ops_list_temp->scale_factor_len == 1) {
         selector1 = _mm256_set1_ps(*((float*)post_ops_list_temp->scale_factor));
@@ -1530,9 +1530,9 @@ POST_OPS_MATRIX_ADD_4x32F: {
     __m256 scl_fctr3 = _mm256_setzero_ps();
     __m256 scl_fctr4 = _mm256_setzero_ps();
 
-    bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                   || ((post_ops_list_temp->stor_type == NONE)
-                       && (post_ops_attr.c_stor_type == BF16));
+    bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                   || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                       && (post_ops_attr.c_stor_type == DLP_BF16));
 
     // Even though different registers are used for scalar in column and
     // row major case, all those registers will contain the same value.
@@ -1640,9 +1640,9 @@ POST_OPS_MATRIX_MUL_4x32F: {
     __m256 scl_fctr3 = _mm256_setzero_ps();
     __m256 scl_fctr4 = _mm256_setzero_ps();
 
-    bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                   || ((post_ops_list_temp->stor_type == NONE)
-                       && (post_ops_attr.c_stor_type == BF16));
+    bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                   || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                       && (post_ops_attr.c_stor_type == DLP_BF16));
 
     // Even though different registers are used for scalar in column and
     // row major case, all those registers will contain the same value.
@@ -2001,7 +2001,7 @@ LPGEMM_M_FRINGE_KERN(float, float, float, f32f32f32of32_avx512_256_3x32)
 POST_OPS_BIAS_3x32F: {
     if ((*(char*)post_ops_list_temp->op_args2 == 'r')
         || (*(char*)post_ops_list_temp->op_args2 == 'R')) {
-        if (post_ops_list_temp->stor_type == BF16) {
+        if (post_ops_list_temp->stor_type == DLP_BF16) {
             BF16_F32_BIAS_LOAD_AVX2(ymm0, 0)
             BF16_F32_BIAS_LOAD_AVX2(ymm1, 1)
             BF16_F32_BIAS_LOAD_AVX2(ymm2, 2)
@@ -2169,9 +2169,9 @@ POST_OPS_DOWNSCALE_3x32F: {
     __m256 zero_point2 = _mm256_setzero_ps();
     __m256 zero_point3 = _mm256_setzero_ps();
 
-    bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                   || ((post_ops_list_temp->stor_type == NONE)
-                       && (post_ops_attr.c_stor_type == BF16));
+    bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                   || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                       && (post_ops_attr.c_stor_type == DLP_BF16));
 
     if (post_ops_list_temp->scale_factor_len == 1) {
         selector1 = _mm256_set1_ps(*((float*)post_ops_list_temp->scale_factor));
@@ -2300,9 +2300,9 @@ POST_OPS_MATRIX_ADD_3x32F: {
     __m256 scl_fctr3 = _mm256_setzero_ps();
     __m256 scl_fctr4 = _mm256_setzero_ps();
 
-    bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                   || ((post_ops_list_temp->stor_type == NONE)
-                       && (post_ops_attr.c_stor_type == BF16));
+    bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                   || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                       && (post_ops_attr.c_stor_type == DLP_BF16));
 
     // Even though different registers are used for scalar in column and
     // row major case, all those registers will contain the same value.
@@ -2395,9 +2395,9 @@ POST_OPS_MATRIX_MUL_3x32F: {
     __m256 scl_fctr3 = _mm256_setzero_ps();
     __m256 scl_fctr4 = _mm256_setzero_ps();
 
-    bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                   || ((post_ops_list_temp->stor_type == NONE)
-                       && (post_ops_attr.c_stor_type == BF16));
+    bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                   || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                       && (post_ops_attr.c_stor_type == DLP_BF16));
 
     // Even though different registers are used for scalar in column and
     // row major case, all those registers will contain the same value.
@@ -2692,7 +2692,7 @@ LPGEMM_M_FRINGE_KERN(float, float, float, f32f32f32of32_avx512_256_2x32)
 POST_OPS_BIAS_2x32F: {
     if ((*(char*)post_ops_list_temp->op_args2 == 'r')
         || (*(char*)post_ops_list_temp->op_args2 == 'R')) {
-        if (post_ops_list_temp->stor_type == BF16) {
+        if (post_ops_list_temp->stor_type == DLP_BF16) {
             BF16_F32_BIAS_LOAD_AVX2(ymm0, 0)
             BF16_F32_BIAS_LOAD_AVX2(ymm1, 1)
             BF16_F32_BIAS_LOAD_AVX2(ymm2, 2)
@@ -2718,7 +2718,7 @@ POST_OPS_BIAS_2x32F: {
         ymm14 = _mm256_add_ps(ymm14, ymm2);
         ymm15 = _mm256_add_ps(ymm15, ymm3);
     } else {
-        if (post_ops_list_temp->stor_type == BF16) {
+        if (post_ops_list_temp->stor_type == DLP_BF16) {
             BF16_F32_BIAS_BCAST_AVX2(ymm0, 0)
             BF16_F32_BIAS_BCAST_AVX2(ymm1, 1)
         } else {
@@ -2827,9 +2827,9 @@ POST_OPS_DOWNSCALE_2x32F: {
     __m256 zero_point2 = _mm256_setzero_ps();
     __m256 zero_point3 = _mm256_setzero_ps();
 
-    bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                   || ((post_ops_list_temp->stor_type == NONE)
-                       && (post_ops_attr.c_stor_type == BF16));
+    bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                   || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                       && (post_ops_attr.c_stor_type == DLP_BF16));
 
     if (post_ops_list_temp->scale_factor_len == 1) {
         selector1 = _mm256_set1_ps(*((float*)post_ops_list_temp->scale_factor));
@@ -2942,9 +2942,9 @@ POST_OPS_MATRIX_ADD_2x32F: {
     __m256 scl_fctr3 = _mm256_setzero_ps();
     __m256 scl_fctr4 = _mm256_setzero_ps();
 
-    bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                   || ((post_ops_list_temp->stor_type == NONE)
-                       && (post_ops_attr.c_stor_type == BF16));
+    bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                   || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                       && (post_ops_attr.c_stor_type == DLP_BF16));
 
     // Even though different registers are used for scalar in column and
     // row major case, all those registers will contain the same value.
@@ -3021,9 +3021,9 @@ POST_OPS_MATRIX_MUL_2x32F: {
     __m256 scl_fctr3 = _mm256_setzero_ps();
     __m256 scl_fctr4 = _mm256_setzero_ps();
 
-    bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                   || ((post_ops_list_temp->stor_type == NONE)
-                       && (post_ops_attr.c_stor_type == BF16));
+    bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                   || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                       && (post_ops_attr.c_stor_type == DLP_BF16));
 
     // Even though different registers are used for scalar in column and
     // row major case, all those registers will contain the same value.
@@ -3254,7 +3254,7 @@ LPGEMM_M_FRINGE_KERN(float, float, float, f32f32f32of32_avx512_256_1x32)
 POST_OPS_BIAS_1x32F: {
     if ((*(char*)post_ops_list_temp->op_args2 == 'r')
         || (*(char*)post_ops_list_temp->op_args2 == 'R')) {
-        if (post_ops_list_temp->stor_type == BF16) {
+        if (post_ops_list_temp->stor_type == DLP_BF16) {
             BF16_F32_BIAS_LOAD_AVX2(ymm0, 0)
             BF16_F32_BIAS_LOAD_AVX2(ymm1, 1)
             BF16_F32_BIAS_LOAD_AVX2(ymm2, 2)
@@ -3275,7 +3275,7 @@ POST_OPS_BIAS_1x32F: {
         ymm10 = _mm256_add_ps(ymm10, ymm2);
         ymm11 = _mm256_add_ps(ymm11, ymm3);
     } else {
-        if (post_ops_list_temp->stor_type == BF16) {
+        if (post_ops_list_temp->stor_type == DLP_BF16) {
             BF16_F32_BIAS_BCAST_AVX2(ymm0, 1)
         } else {
             ymm0 = _mm256_broadcast_ss((float*)post_ops_list_temp->op_args1
@@ -3351,9 +3351,9 @@ POST_OPS_DOWNSCALE_1x32F: {
     __m256 zero_point2 = _mm256_setzero_ps();
     __m256 zero_point3 = _mm256_setzero_ps();
 
-    bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                   || ((post_ops_list_temp->stor_type == NONE)
-                       && (post_ops_attr.c_stor_type == BF16));
+    bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                   || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                       && (post_ops_attr.c_stor_type == DLP_BF16));
 
     if (post_ops_list_temp->scale_factor_len == 1) {
         selector1 = _mm256_set1_ps(*((float*)post_ops_list_temp->scale_factor));
@@ -3449,9 +3449,9 @@ POST_OPS_MATRIX_ADD_1x32F: {
     __m256 scl_fctr3 = _mm256_setzero_ps();
     __m256 scl_fctr4 = _mm256_setzero_ps();
 
-    bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                   || ((post_ops_list_temp->stor_type == NONE)
-                       && (post_ops_attr.c_stor_type == BF16));
+    bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                   || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                       && (post_ops_attr.c_stor_type == DLP_BF16));
 
     // Even though different registers are used for scalar in column and
     // row major case, all those registers will contain the same value.
@@ -3514,9 +3514,9 @@ POST_OPS_MATRIX_MUL_1x32F: {
     __m256 scl_fctr3 = _mm256_setzero_ps();
     __m256 scl_fctr4 = _mm256_setzero_ps();
 
-    bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                   || ((post_ops_list_temp->stor_type == NONE)
-                       && (post_ops_attr.c_stor_type == BF16));
+    bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                   || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                       && (post_ops_attr.c_stor_type == DLP_BF16));
 
     // Even though different registers are used for scalar in column and
     // row major case, all those registers will contain the same value.

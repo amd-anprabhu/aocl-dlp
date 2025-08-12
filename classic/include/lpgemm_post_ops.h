@@ -47,23 +47,23 @@ typedef struct lpgemm_pre_op_t
 
 typedef struct lpgemm_grp_post_op_attr_t
 {
-    void*             a_scale_factor;
-    uint64_t          a_scale_factor_len;
-    void*             a_zp;
-    uint64_t          a_zp_len;
-    void*             b_scale_factor;
-    uint64_t          b_scale_factor_len;
-    void*             b_zp;
-    uint64_t          b_zp_len;
-    uint64_t          group_size;
-    uint64_t          grp_post_op_i;
-    uint64_t          grp_post_op_j;
-    uint64_t          grp_post_op_k;
-    uint64_t          grp_post_op_lda;
-    uint64_t          grp_post_op_ldb;
-    uint64_t          grp_post_op_sum_ld;
-    AOCL_STORAGE_TYPE sf_stor_type;
-    AOCL_STORAGE_TYPE zp_stor_type;
+    void*    a_scale_factor;
+    uint64_t a_scale_factor_len;
+    void*    a_zp;
+    uint64_t a_zp_len;
+    void*    b_scale_factor;
+    uint64_t b_scale_factor_len;
+    void*    b_zp;
+    uint64_t b_zp_len;
+    uint64_t group_size;
+    uint64_t grp_post_op_i;
+    uint64_t grp_post_op_j;
+    uint64_t grp_post_op_k;
+    uint64_t grp_post_op_lda;
+    uint64_t grp_post_op_ldb;
+    uint64_t grp_post_op_sum_ld;
+    DLP_TYPE sf_stor_type;
+    DLP_TYPE zp_stor_type;
 } lpgemm_grp_post_op_attr;
 
 // Used as an internal structure
@@ -78,8 +78,8 @@ typedef struct lpgemm_group_post_op_t
     uint64_t                       b_scale_factor_len;
     void*                          b_zp;
     uint64_t                       b_zp_len;
-    AOCL_STORAGE_TYPE              sf_stor_type;
-    AOCL_STORAGE_TYPE              zp_stor_type;
+    DLP_TYPE                       sf_stor_type;
+    DLP_TYPE                       zp_stor_type;
     struct lpgemm_group_post_op_t* next;
 } lpgemm_group_post_op;
 
@@ -97,7 +97,7 @@ typedef struct lpgemm_pre_op_attr_t
 } lpgemm_pre_op_attr;
 
 dlp_clsc_err_t
-lpgemm_translate_to_post_ops_list(aocl_post_op*   post_op_unparsed,
+lpgemm_translate_to_post_ops_list(dlp_metadata_t* metadata,
                                   lpgemm_post_op* post_op_list,
                                   void*           scale_buffer,
                                   void*           meta_arg,
@@ -105,14 +105,14 @@ lpgemm_translate_to_post_ops_list(aocl_post_op*   post_op_unparsed,
                                   md_t            n);
 
 dlp_clsc_err_t
-lpgemm_translate_to_pre_ops_list(aocl_pre_op*   pre_op_unparsed,
+lpgemm_translate_to_pre_ops_list(dlp_pre_op*    pre_op_unparsed,
                                  lpgemm_pre_op* pre_op_list,
                                  md_t           m,
                                  md_t           n,
                                  md_t           k);
 
 dlp_clsc_err_t
-lpgemm_translate_to_group_postops_list(aocl_group_post_op*   post_op_unparsed,
+lpgemm_translate_to_group_postops_list(dlp_group_post_op*    metadata,
                                        lpgemm_group_post_op* post_op_list,
                                        md_t                  m,
                                        md_t                  n,

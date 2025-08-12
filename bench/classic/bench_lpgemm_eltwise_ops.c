@@ -133,94 +133,98 @@ GEN_SIGMOID_POSTOP_FLOAT(f32os8)
 GEN_SIGMOID_POSTOP_FLOAT(f32ou8)
 
 static inline float
-eltwise_ops_accuracy_check_downscale_bf16of32(
-    float                     temp_accum,
-    aocl_post_op*             post_op,
-    md_t                      j,
-    AOCL_PARAMS_STORAGE_TYPES zp_stor_type)
+eltwise_ops_accuracy_check_downscale_bf16of32(float           temp_accum,
+                                              dlp_metadata_t* post_op,
+                                              md_t            j,
+                                              DLP_TYPE        zp_stor_type)
 {
     md_t j_scale = j;
-    if ((post_op->sum)->scale_factor_len == 1) {
+    if (((post_op->scale)->sf ? (post_op->scale)->sf->scale_factor_len : 0)
+        == 1) {
         j_scale = 0;
     }
 
     md_t j_zp = j;
-    if ((post_op->sum)->zero_point_len == 1) {
+    if (((post_op->scale)->zp ? (post_op->scale)->zp->zero_point_len : 0)
+        == 1) {
         j_zp = 0;
     }
 
-    float zp_float = *((float*)(post_op->sum)->zero_point + j_zp);
+    float zp_float = *((float*)((post_op->scale)->zp->zero_point) + j_zp);
     float out_temp_accum =
-        (temp_accum * (*((float*)(post_op->sum)->scale_factor + j_scale))
+        (temp_accum * (*((float*)(post_op->scale)->sf->scale_factor + j_scale))
          + zp_float);
     return out_temp_accum;
 }
 
 static inline float
-eltwise_ops_accuracy_check_downscale_bf16obf16(
-    float                     temp_accum,
-    aocl_post_op*             post_op,
-    md_t                      j,
-    AOCL_PARAMS_STORAGE_TYPES zp_stor_type)
+eltwise_ops_accuracy_check_downscale_bf16obf16(float           temp_accum,
+                                               dlp_metadata_t* post_op,
+                                               md_t            j,
+                                               DLP_TYPE        zp_stor_type)
 {
     md_t j_scale = j;
-    if ((post_op->sum)->scale_factor_len == 1) {
+    if (((post_op->scale)->sf ? (post_op->scale)->sf->scale_factor_len : 0)
+        == 1) {
         j_scale = 0;
     }
 
     md_t j_zp = j;
-    if ((post_op->sum)->zero_point_len == 1) {
+    if (((post_op->scale)->zp ? (post_op->scale)->zp->zero_point_len : 0)
+        == 1) {
         j_zp = 0;
     }
 
     float zp_float = 0.0;
-    bfloat16_to_float(*((bfloat16*)(post_op->sum)->zero_point + j_zp),
+    bfloat16_to_float(*((bfloat16*)((post_op->scale)->zp->zero_point) + j_zp),
                       &zp_float);
     float out_temp_accum =
-        (temp_accum * (*((float*)(post_op->sum)->scale_factor + j_scale))
+        (temp_accum * (*((float*)(post_op->scale)->sf->scale_factor + j_scale))
          + zp_float);
     return out_temp_accum;
 }
 
 static inline float
-eltwise_ops_accuracy_check_downscale_f32of32(
-    float                     temp_accum,
-    aocl_post_op*             post_op,
-    md_t                      j,
-    AOCL_PARAMS_STORAGE_TYPES zp_stor_type)
+eltwise_ops_accuracy_check_downscale_f32of32(float           temp_accum,
+                                             dlp_metadata_t* post_op,
+                                             md_t            j,
+                                             DLP_TYPE        zp_stor_type)
 {
     md_t j_scale = j;
-    if ((post_op->sum)->scale_factor_len == 1) {
+    if (((post_op->scale)->sf ? (post_op->scale)->sf->scale_factor_len : 0)
+        == 1) {
         j_scale = 0;
     }
 
     md_t j_zp = j;
-    if ((post_op->sum)->zero_point_len == 1) {
+    if (((post_op->scale)->zp ? (post_op->scale)->zp->zero_point_len : 0)
+        == 1) {
         j_zp = 0;
     }
     float zp_float =
         convert_zp_store_type_to_float(post_op, zp_stor_type, j_zp);
 
     float out_temp_accum =
-        (temp_accum * (*((float*)(post_op->sum)->scale_factor + j_scale))
+        (temp_accum * (*((float*)(post_op->scale)->sf->scale_factor + j_scale))
          + zp_float);
     return out_temp_accum;
 }
 
 static inline float
-eltwise_ops_accuracy_check_downscale_f32os32(
-    float                     temp_accum,
-    aocl_post_op*             post_op,
-    md_t                      j,
-    AOCL_PARAMS_STORAGE_TYPES zp_stor_type)
+eltwise_ops_accuracy_check_downscale_f32os32(float           temp_accum,
+                                             dlp_metadata_t* post_op,
+                                             md_t            j,
+                                             DLP_TYPE        zp_stor_type)
 {
     md_t j_scale = j;
-    if ((post_op->sum)->scale_factor_len == 1) {
+    if (((post_op->scale)->sf ? (post_op->scale)->sf->scale_factor_len : 0)
+        == 1) {
         j_scale = 0;
     }
 
     md_t j_zp = j;
-    if ((post_op->sum)->zero_point_len == 1) {
+    if (((post_op->scale)->zp ? (post_op->scale)->zp->zero_point_len : 0)
+        == 1) {
         j_zp = 0;
     }
 
@@ -228,25 +232,26 @@ eltwise_ops_accuracy_check_downscale_f32os32(
         convert_zp_store_type_to_float(post_op, zp_stor_type, j_zp);
 
     float out_temp_accum =
-        (temp_accum * (*((float*)(post_op->sum)->scale_factor + j_scale))
+        (temp_accum * (*((float*)(post_op->scale)->sf->scale_factor + j_scale))
          + zp_float);
     return out_temp_accum;
 }
 
 static inline float
-eltwise_ops_accuracy_check_downscale_f32os8(
-    float                     temp_accum,
-    aocl_post_op*             post_op,
-    md_t                      j,
-    AOCL_PARAMS_STORAGE_TYPES zp_stor_type)
+eltwise_ops_accuracy_check_downscale_f32os8(float           temp_accum,
+                                            dlp_metadata_t* post_op,
+                                            md_t            j,
+                                            DLP_TYPE        zp_stor_type)
 {
     md_t j_scale = j;
-    if ((post_op->sum)->scale_factor_len == 1) {
+    if (((post_op->scale)->sf ? (post_op->scale)->sf->scale_factor_len : 0)
+        == 1) {
         j_scale = 0;
     }
 
     md_t j_zp = j;
-    if ((post_op->sum)->zero_point_len == 1) {
+    if (((post_op->scale)->zp ? (post_op->scale)->zp->zero_point_len : 0)
+        == 1) {
         j_zp = 0;
     }
 
@@ -254,8 +259,9 @@ eltwise_ops_accuracy_check_downscale_f32os8(
         convert_zp_store_type_to_float(post_op, zp_stor_type, j_zp);
 
     float out_temp_accum = (float)min(
-        max(nearbyintf((float)(temp_accum)
-                       * (*((float*)(post_op->sum)->scale_factor + j_scale)))
+        max(nearbyintf(
+                (float)(temp_accum)
+                * (*((float*)(post_op->scale)->sf->scale_factor + j_scale)))
                 + zp_float,
             DSCALE_CLIP_MIN),
         DSCALE_CLIP_MAX);
@@ -263,19 +269,20 @@ eltwise_ops_accuracy_check_downscale_f32os8(
 }
 
 static inline float
-eltwise_ops_accuracy_check_downscale_f32ou8(
-    float                     temp_accum,
-    aocl_post_op*             post_op,
-    md_t                      j,
-    AOCL_PARAMS_STORAGE_TYPES zp_stor_type)
+eltwise_ops_accuracy_check_downscale_f32ou8(float           temp_accum,
+                                            dlp_metadata_t* post_op,
+                                            md_t            j,
+                                            DLP_TYPE        zp_stor_type)
 {
     md_t j_scale = j;
-    if ((post_op->sum)->scale_factor_len == 1) {
+    if (((post_op->scale)->sf ? (post_op->scale)->sf->scale_factor_len : 0)
+        == 1) {
         j_scale = 0;
     }
 
     md_t j_zp = j;
-    if ((post_op->sum)->zero_point_len == 1) {
+    if (((post_op->scale)->zp ? (post_op->scale)->zp->zero_point_len : 0)
+        == 1) {
         j_zp = 0;
     }
 
@@ -283,8 +290,9 @@ eltwise_ops_accuracy_check_downscale_f32ou8(
         convert_zp_store_type_to_float(post_op, zp_stor_type, j_zp);
 
     float out_temp_accum = (float)min(
-        max(nearbyintf((float)(temp_accum)
-                       * (*((float*)(post_op->sum)->scale_factor + j_scale)))
+        max(nearbyintf(
+                (float)(temp_accum)
+                * (*((float*)(post_op->scale)->sf->scale_factor + j_scale)))
                 + zp_float,
             DSCALE_CLIP_MIN),
         DSCALE_CLIP_MAX);
@@ -293,19 +301,20 @@ eltwise_ops_accuracy_check_downscale_f32ou8(
 }
 
 static inline float
-eltwise_ops_accuracy_check_downscale_f32obf16(
-    float                     temp_accum,
-    aocl_post_op*             post_op,
-    md_t                      j,
-    AOCL_PARAMS_STORAGE_TYPES zp_stor_type)
+eltwise_ops_accuracy_check_downscale_f32obf16(float           temp_accum,
+                                              dlp_metadata_t* post_op,
+                                              md_t            j,
+                                              DLP_TYPE        zp_stor_type)
 {
     md_t j_scale = j;
-    if ((post_op->sum)->scale_factor_len == 1) {
+    if (((post_op->scale)->sf ? (post_op->scale)->sf->scale_factor_len : 0)
+        == 1) {
         j_scale = 0;
     }
 
     md_t j_zp = j;
-    if ((post_op->sum)->zero_point_len == 1) {
+    if (((post_op->scale)->zp ? (post_op->scale)->zp->zero_point_len : 0)
+        == 1) {
         j_zp = 0;
     }
 
@@ -313,7 +322,7 @@ eltwise_ops_accuracy_check_downscale_f32obf16(
         convert_zp_store_type_to_float(post_op, zp_stor_type, j_zp);
 
     float out_temp_accum =
-        (temp_accum * (*((float*)(post_op->sum)->scale_factor + j_scale))
+        (temp_accum * (*((float*)(post_op->scale)->sf->scale_factor + j_scale))
          + zp_float);
     return out_temp_accum;
 }
@@ -351,7 +360,7 @@ GEN_MAT_MUL_GET_OUTPUT_TYPE_VALUE(uint8_t, float)
     void eltwise_ops_accuracy_check_driver_##LP_SFX(                           \
         FILE* fout, const char stor_order, char transa, char transb, md_t m,   \
         md_t n, A_type* a, md_t lda, B_type* b, md_t ldb,                      \
-        aocl_post_op* post_op, char* post_ops_str)                             \
+        dlp_metadata_t* post_op, char* post_ops_str)                           \
     {                                                                          \
         md_t rs_a, cs_a;                                                       \
         if ((transa == 'n') || (transa == 'N')) {                              \
@@ -475,8 +484,11 @@ GEN_MAT_MUL_GET_OUTPUT_TYPE_VALUE(uint8_t, float)
                         } else if (post_op->seq_vector[op_id] == SCALE) {      \
                             temp_accum = GEN_FUNC_NAME(                        \
                                 eltwise_ops_accuracy_check_downscale_,         \
-                                LP_SFX)(temp_accum, post_op, j,                \
-                                        (post_op->sum)->zp_stor_type);         \
+                                LP_SFX)(                                       \
+                                temp_accum, post_op, j,                        \
+                                (post_op->scale)->zp                           \
+                                    ? (post_op->scale)->zp->zero_point_type    \
+                                    : DLP_INVALID);                            \
                         } else if (post_op->seq_vector[op_id] == MATRIX_ADD) { \
                             md_t rs_m = (post_op->matrix_add)->ldm;            \
                             md_t cs_m = 1;                                     \
@@ -485,9 +497,15 @@ GEN_MAT_MUL_GET_OUTPUT_TYPE_VALUE(uint8_t, float)
                                 rs_m = 1;                                      \
                             }                                                  \
                             float* scl_fctr =                                  \
-                                (float*)((post_op->matrix_add)->scale_factor); \
+                                (post_op->matrix_add)->sf                      \
+                                    ? (float*)((post_op->matrix_add)           \
+                                                   ->sf->scale_factor)         \
+                                    : NULL;                                    \
                             md_t scl_fctr_len =                                \
-                                (post_op->matrix_add)->scale_factor_len;       \
+                                (post_op->matrix_add)->sf                      \
+                                    ? (post_op->matrix_add)                    \
+                                          ->sf->scale_factor_len               \
+                                    : 0;                                       \
                             temp_accum += GEN_FUNC_NAME(                       \
                                 get_matrix_add_post_op_val_,                   \
                                 LP_SFX)((post_op->matrix_add)->matrix, i, j,   \
@@ -501,9 +519,15 @@ GEN_MAT_MUL_GET_OUTPUT_TYPE_VALUE(uint8_t, float)
                                 rs_m = 1;                                      \
                             }                                                  \
                             float* scl_fctr =                                  \
-                                (float*)((post_op->matrix_mul)->scale_factor); \
+                                (post_op->matrix_mul)->sf                      \
+                                    ? (float*)((post_op->matrix_mul)           \
+                                                   ->sf->scale_factor)         \
+                                    : NULL;                                    \
                             md_t scl_fctr_len =                                \
-                                (post_op->matrix_mul)->scale_factor_len;       \
+                                (post_op->matrix_mul)->sf                      \
+                                    ? (post_op->matrix_mul)                    \
+                                          ->sf->scale_factor_len               \
+                                    : 0;                                       \
                             temp_accum *= GEN_FUNC_NAME(                       \
                                 get_matrix_mul_post_op_val_,                   \
                                 LP_SFX)((post_op->matrix_mul)->matrix, i, j,   \
@@ -528,14 +552,14 @@ GEN_MAT_MUL_GET_OUTPUT_TYPE_VALUE(uint8_t, float)
                         fprintf(fout,                                          \
                                 "%s Failure input m: %ld, n: %ld,"             \
                                 " lda: %ld, ldb: %ld, computed:%f, ref:%f, "   \
-                                "diff:%f, post_ops:%s\n",                      \
+                                "diff:%f, metadata:%s\n",                      \
                                 XSTR(LP_SFX), m, n, lda, ldb, comp_float,      \
                                 ref_float, comp_float - ref_float,             \
                                 post_ops_str);                                 \
                         fflush(fout);                                          \
                     }                                                          \
                     printf("failure, m: %ld, n: %ld, computed:%f, ref:%f, "    \
-                           "diff:%f, post_ops:%s\n",                           \
+                           "diff:%f, metadata:%s\n",                           \
                            i, j, comp_float, ref_float,                        \
                            comp_float - ref_float, post_ops_str);              \
                     goto cleanup_acc;                                          \
@@ -558,7 +582,7 @@ GEN_ELTWISE_OPS_ACC_CHK_DRV_FUNC(float, uint8_t, float, f32ou8)
     void eltwise_ops_bench_driver_##LP_SFX(                                    \
         char stor_order, char transa, char transb, int32_t n_repeats, md_t m,  \
         md_t n, A_type* a, md_t lda, B_type* b, md_t ldb,                      \
-        aocl_post_op* post_op)                                                 \
+        dlp_metadata_t* post_op)                                               \
     {                                                                          \
         double dtime;                                                          \
         double dtime_save = DBL_MAX;                                           \
@@ -628,7 +652,7 @@ GEN_MAT_MUL_POST_OPS_CREATOR(float, bfloat16, float, float, f32obf16)
             n_repeats = 1;                                                     \
         }                                                                      \
                                                                                \
-        aocl_post_op* post_op = NULL;                                          \
+        dlp_metadata_t* post_op = NULL;                                        \
         if (((post_ops_str != NULL) && (strcmp(post_ops_str, "none") != 0))    \
             || (global_dscale_out == 'y')) {                                   \
             post_op = GEN_FUNC_NAME(lpgemm_create_post_ops_struct_, LP_SFX)(   \

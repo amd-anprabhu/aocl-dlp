@@ -45,47 +45,47 @@ lpgemm_start_logger_fn(void);
 void
 lpgemm_stop_logger_fn(FILE* fd);
 void
-lpgemm_get_post_ops_str(aocl_post_op* post_ops, char* ops_str);
+lpgemm_get_post_ops_str(dlp_metadata_t* metadata, char* ops_str);
 void
-lpgemm_get_pre_ops_str(aocl_post_op* post_ops, char* ops_str);
+lpgemm_get_pre_ops_str(dlp_metadata_t* metadata, char* ops_str);
 bool
 is_logger_enabled();
 void
-lpgemm_write_logger_gemm_fn(FILE*         fd,
-                            char*         op_type,
-                            const char    order,
-                            const char    transa,
-                            const char    transb,
-                            const md_t    m,
-                            const md_t    n,
-                            const md_t    k,
-                            const float   alpha,
-                            const md_t    lda,
-                            const char    mem_format_a,
-                            const md_t    ldb,
-                            const char    mem_format_b,
-                            const float   beta,
-                            const md_t    ldc,
-                            aocl_post_op* post_op_unparsed);
+lpgemm_write_logger_gemm_fn(FILE*           fd,
+                            char*           op_type,
+                            const char      order,
+                            const char      transa,
+                            const char      transb,
+                            const md_t      m,
+                            const md_t      n,
+                            const md_t      k,
+                            const float     alpha,
+                            const md_t      lda,
+                            const char      mem_format_a,
+                            const md_t      ldb,
+                            const char      mem_format_b,
+                            const float     beta,
+                            const md_t      ldc,
+                            dlp_metadata_t* metadata);
 void
-batch_lpgemm_write_logger_gemm_fn(FILE*          fd,
-                                  char*          op_type,
-                                  const char*    order,
-                                  const char*    transa,
-                                  const char*    transb,
-                                  const md_t     group_count,
-                                  const md_t*    group_size,
-                                  const md_t*    m,
-                                  const md_t*    n,
-                                  const md_t*    k,
-                                  const float*   alpha,
-                                  const md_t*    lda,
-                                  const char*    mem_format_a,
-                                  const md_t*    ldb,
-                                  const char*    mem_format_b,
-                                  const float*   beta,
-                                  const md_t*    ldc,
-                                  aocl_post_op** post_op_unparsed);
+batch_lpgemm_write_logger_gemm_fn(FILE*            fd,
+                                  char*            op_type,
+                                  const char*      order,
+                                  const char*      transa,
+                                  const char*      transb,
+                                  const md_t       group_count,
+                                  const md_t*      group_size,
+                                  const md_t*      m,
+                                  const md_t*      n,
+                                  const md_t*      k,
+                                  const float*     alpha,
+                                  const md_t*      lda,
+                                  const char*      mem_format_a,
+                                  const md_t*      ldb,
+                                  const char*      mem_format_b,
+                                  const float*     beta,
+                                  const md_t*      ldc,
+                                  dlp_metadata_t** metadata);
 void
 lpgemm_write_logger_time_break_fn(FILE* fd, double stime);
 
@@ -104,7 +104,7 @@ lpgemm_write_logger_time_break_fn(FILE* fd, double stime);
 
 #define BATCH_LPGEMM_WRITE_LOGGER(                                             \
     op_type, order, transa, transb, group_count, group_size, m, n, k, alpha,   \
-    lda, mem_format_a, ldb, mem_format_b, beta, ldc, post_op_unparsed)         \
+    lda, mem_format_a, ldb, mem_format_b, beta, ldc, metadata)                 \
     {                                                                          \
         if ((is_logger_enabled()) && (fd != NULL)) {                           \
             char pre_ops_str[1024] = { 0 };                                    \
@@ -113,11 +113,11 @@ lpgemm_write_logger_time_break_fn(FILE* fd, double stime);
                                                                                \
             fprintf(fd, "%s:group_count=%ld\n", op_type, group_count);         \
             for (md_t i = 0; i < group_count; i++) {                           \
-                lpgemm_get_pre_ops_str(post_op_unparsed[i], pre_ops_str);      \
-                lpgemm_get_post_ops_str(post_op_unparsed[i], post_ops_str);    \
+                lpgemm_get_pre_ops_str(metadata[i], pre_ops_str);              \
+                lpgemm_get_post_ops_str(metadata[i], post_ops_str);            \
                 fprintf(fd,                                                    \
                         "%ld %c %c %c %c %c %ld %ld %ld %ld %ld %ld "          \
-                        ":pre_ops=[%s]:post_ops=[%s] %f %f\n",                 \
+                        ":pre_ops=[%s]:metadata=[%s] %f %f\n",                 \
                         group_size[i], order[i], transa[i], transb[i],         \
                         mem_format_a[i], mem_format_b[i], m[i], n[i], k[i],    \
                         lda[i], ldb[i], ldc[i], pre_ops_str, post_ops_str,     \
@@ -136,7 +136,7 @@ lpgemm_write_logger_time_break_fn(FILE* fd, double stime);
 
 #define BATCH_LPGEMM_WRITE_LOGGER(op_type, order, transa, transb, batch_size,  \
                                   m, n, k, alpha, lda, mem_format_a, ldb,      \
-                                  mem_format_b, beta, ldc, post_op_unparsed)
+                                  mem_format_b, beta, ldc, metadata)
 
 #endif
 

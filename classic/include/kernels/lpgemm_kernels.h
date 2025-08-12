@@ -32,8 +32,8 @@
 #include "classic/aocl_bf16_type.h"
 #include "lpgemm_post_ops.h"
 
-// Disable BF16 kernel in cases where compilers support other avx 512
-// features except BF16 ISA.
+// Disable DLP_BF16 kernel in cases where compilers support other avx 512
+// features except DLP_BF16 ISA.
 #if (defined(DLP_GCC)                                                          \
      && ((__GNUC__ < 11) || ((__GNUC__ == 11) && (__GNUC_MINOR__ < 2)))        \
      && defined(DLP_KERNELS_ZEN4))

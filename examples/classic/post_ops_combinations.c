@@ -194,86 +194,101 @@ main()
     apply_scale(c2, m, n, scale_factor);
 
     // Method 2: Set up post-ops for combined operations: bias + ReLU + scale
-    aocl_post_op* post_ops = (aocl_post_op*)malloc(sizeof(aocl_post_op));
-    if (!post_ops) {
+    dlp_metadata_t* metadata = (dlp_metadata_t*)malloc(sizeof(dlp_metadata_t));
+    if (!metadata) {
         printf("Memory allocation for post-ops failed\n");
         goto cleanup;
     }
-    memset(post_ops, 0, sizeof(aocl_post_op));
+    memset(metadata, 0, sizeof(dlp_metadata_t));
 
     // Initialize post-ops structure for 3 operations
-    post_ops->seq_length = 3; // Three operations: bias + ReLU + scale
+    metadata->seq_length = 3; // Three operations: bias + ReLU + scale
 
     // Allocate sequence vector
-    post_ops->seq_vector =
-        (AOCL_POST_OP_TYPE*)malloc(3 * sizeof(AOCL_POST_OP_TYPE));
-    if (!post_ops->seq_vector) {
+    metadata->seq_vector =
+        (DLP_POST_OP_TYPE*)malloc(3 * sizeof(DLP_POST_OP_TYPE));
+    if (!metadata->seq_vector) {
         printf("Memory allocation for sequence vector failed\n");
         goto cleanup;
     }
 
     // Set operation sequence: bias, then ReLU, then scale
-    post_ops->seq_vector[0] = BIAS;    // First operation
-    post_ops->seq_vector[1] = ELTWISE; // Second operation
-    post_ops->seq_vector[2] = SCALE;   // Third operation
+    metadata->seq_vector[0] = BIAS;    // First operation
+    metadata->seq_vector[1] = ELTWISE; // Second operation
+    metadata->seq_vector[2] = SCALE;   // Third operation
 
     // 1. Set up bias operation
-    post_ops->bias = (aocl_post_op_bias*)malloc(sizeof(aocl_post_op_bias));
-    if (!post_ops->bias) {
+    metadata->bias = (dlp_post_op_bias*)malloc(sizeof(dlp_post_op_bias));
+    if (!metadata->bias) {
         printf("Memory allocation for bias post-op failed\n");
         goto cleanup;
     }
 
     // Set the bias vector and its storage type
-    post_ops->bias->bias      = bias;
-    post_ops->bias->stor_type = AOCL_GEMM_F32; // Bias is in f32 format
+    metadata->bias->bias      = bias;
+    metadata->bias->stor_type = DLP_F32; // Bias is in f32 format
 
     // 2. Set up ReLU operation (elementwise)
-    post_ops->eltwise =
-        (aocl_post_op_eltwise*)malloc(sizeof(aocl_post_op_eltwise));
-    if (!post_ops->eltwise) {
+    metadata->eltwise =
+        (dlp_post_op_eltwise*)malloc(sizeof(dlp_post_op_eltwise));
+    if (!metadata->eltwise) {
         printf("Memory allocation for eltwise post-op failed\n");
         goto cleanup;
     }
 
-    post_ops->eltwise->is_power_of_2    = 0;
-    post_ops->eltwise->scale_factor     = NULL;
-    post_ops->eltwise->scale_factor_len = 0;
-    post_ops->eltwise->algo.alpha       = NULL;
-    post_ops->eltwise->algo.beta        = NULL;
-    post_ops->eltwise->algo.algo_type   = RELU; // Use ReLU activation
+    metadata->eltwise->sf             = NULL; // No scaling for this example
+    metadata->eltwise->algo.alpha     = NULL;
+    metadata->eltwise->algo.beta      = NULL;
+    metadata->eltwise->algo.algo_type = RELU; // Use ReLU activation
 
     // 3. Set up scale operation
-    post_ops->sum = (aocl_post_op_sum*)malloc(sizeof(aocl_post_op_sum));
-    if (!post_ops->sum) {
+    metadata->scale = (dlp_scale_t*)malloc(sizeof(dlp_scale_t));
+    if (!metadata->scale) {
         printf("Memory allocation for sum/scale post-op failed\n");
         goto cleanup;
     }
 
     // Set up scaling factor
-    post_ops->sum->is_power_of_2 = 0; // Not a power of 2
-    post_ops->sum->scale_factor  = malloc(sizeof(float));
-    if (!post_ops->sum->scale_factor) {
-        printf("Memory allocation for scale factor failed\n");
-        goto cleanup;
-    }
-    *((float*)post_ops->sum->scale_factor) = scale_factor;
-    post_ops->sum->scale_factor_len        = 1;
+    metadata->scale->buff = NULL;
 
-    // Set up zero point parameters
-    post_ops->sum->zero_point = malloc(sizeof(int8_t));
-    if (!post_ops->sum->zero_point) {
-        printf("Memory allocation for zero point failed\n");
+    // Allocate and set up scale factor structure
+    metadata->scale->sf = malloc(sizeof(dlp_sf_t));
+    if (!metadata->scale->sf) {
+        printf("Memory allocation for scale factor structure failed\n");
         goto cleanup;
     }
-    *((int8_t*)post_ops->sum->zero_point) = 0;
-    post_ops->sum->zero_point_len         = 1;
-    post_ops->sum->buff                   = NULL;
+
+    metadata->scale->sf->scale_factor = malloc(sizeof(float));
+    if (!metadata->scale->sf->scale_factor) {
+        printf("Memory allocation for scale factor data failed\n");
+        goto cleanup;
+    }
+
+    *((float*)metadata->scale->sf->scale_factor) = scale_factor;
+    metadata->scale->sf->scale_factor_len        = 1;
+    metadata->scale->sf->scale_factor_type       = DLP_F32;
+
+    // Allocate and set up zero point structure
+    metadata->scale->zp = malloc(sizeof(dlp_zp_t));
+    if (!metadata->scale->zp) {
+        printf("Memory allocation for zero point structure failed\n");
+        goto cleanup;
+    }
+
+    metadata->scale->zp->zero_point = malloc(sizeof(int8_t));
+    if (!metadata->scale->zp->zero_point) {
+        printf("Memory allocation for zero point data failed\n");
+        goto cleanup;
+    }
+
+    *((int8_t*)metadata->scale->zp->zero_point) = 0;
+    metadata->scale->zp->zero_point_len         = 1;
+    metadata->scale->zp->zero_point_type        = DLP_S8;
 
     // Perform matrix multiplication with fused operations
     aocl_gemm_f32f32f32of32(order, transa, transb, m, n, k, alpha, a, lda,
                             mem_format_a, b, ldb, mem_format_b, beta, c1, ldc,
-                            post_ops // With fused operations
+                            metadata // With fused operations
     );
 
     // Print results for comparison
@@ -309,13 +324,13 @@ main()
     memset(c2, 0, m * n * sizeof(float));
 
     // Reset the post-ops structure for the new example
-    post_ops->eltwise->algo.algo_type =
+    metadata->eltwise->algo.algo_type =
         GELU_TANH; // Change to GeLU_Tanh activation
 
     // Perform matrix multiplication with fused operations using GeLU_Tanh
     aocl_gemm_f32f32f32of32(order, transa, transb, m, n, k, alpha, a, lda,
                             mem_format_a, b, ldb, mem_format_b, beta, c1, ldc,
-                            post_ops // With fused operations using GeLU_Tanh
+                            metadata // With fused operations using GeLU_Tanh
     );
 
     // Print result with GeLU_Tanh
@@ -332,21 +347,21 @@ cleanup:
     free(bias);
 
     // Free post-ops memory
-    if (post_ops) {
-        if (post_ops->seq_vector)
-            free(post_ops->seq_vector);
-        if (post_ops->bias)
-            free(post_ops->bias);
-        if (post_ops->eltwise)
-            free(post_ops->eltwise);
-        if (post_ops->sum) {
-            if (post_ops->sum->scale_factor)
-                free(post_ops->sum->scale_factor);
-            if (post_ops->sum->zero_point)
-                free(post_ops->sum->zero_point);
-            free(post_ops->sum);
+    if (metadata) {
+        if (metadata->seq_vector)
+            free(metadata->seq_vector);
+        if (metadata->bias)
+            free(metadata->bias);
+        if (metadata->eltwise)
+            free(metadata->eltwise);
+        if (metadata->scale) {
+            if (metadata->scale->sf)
+                free(metadata->scale->sf);
+            if (metadata->scale->zp)
+                free(metadata->scale->zp);
+            free(metadata->scale);
         }
-        free(post_ops);
+        free(metadata);
     }
 
     return 0;

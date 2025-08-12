@@ -354,7 +354,7 @@ LPGEMM_MAIN_KERN(float, float, float, f32f32f32of32_avx512_6x64m)
     POST_OPS_BIAS_6x64F: {
         if ((*(char*)post_ops_list_temp->op_args2 == 'r')
             || (*(char*)post_ops_list_temp->op_args2 == 'R')) {
-            if (post_ops_list_temp->stor_type == BF16) {
+            if (post_ops_list_temp->stor_type == DLP_BF16) {
                 __mmask16 bias_mask = _cvtu32_mask16(0xFFFF);
                 BF16_F32_BIAS_LOAD(zmm1, bias_mask, 0)
                 BF16_F32_BIAS_LOAD(zmm2, bias_mask, 1)
@@ -448,7 +448,7 @@ LPGEMM_MAIN_KERN(float, float, float, f32f32f32of32_avx512_6x64m)
             // the ic index, and each bias element corresponds to an
             // entire row of the transposed output array, instead of an
             // entire column.
-            if (post_ops_list_temp->stor_type == BF16) {
+            if (post_ops_list_temp->stor_type == DLP_BF16) {
                 __mmask16 bias_mask = _cvtu32_mask16(0xFFFF);
 
                 BF16_F32_BIAS_BCAST(zmm1, bias_mask, 0)
@@ -942,9 +942,9 @@ LPGEMM_MAIN_KERN(float, float, float, f32f32f32of32_avx512_6x64m)
         __m512 zero_point2 = _mm512_setzero_ps();
         __m512 zero_point3 = _mm512_setzero_ps();
 
-        bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                       || ((post_ops_list_temp->stor_type == NONE)
-                           && (post_ops_attr.c_stor_type == BF16));
+        bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                       || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                           && (post_ops_attr.c_stor_type == DLP_BF16));
 
         // Need to account for row vs column major swaps. For scalars
         // scale and zero point, no implications.
@@ -1244,9 +1244,9 @@ LPGEMM_MAIN_KERN(float, float, float, f32f32f32of32_avx512_6x64m)
         __m512 scl_fctr5 = _mm512_setzero_ps();
         __m512 scl_fctr6 = _mm512_setzero_ps();
 
-        bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                       || ((post_ops_list_temp->stor_type == NONE)
-                           && (post_ops_attr.c_stor_type == BF16));
+        bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                       || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                           && (post_ops_attr.c_stor_type == DLP_BF16));
 
         // Even though different registers are used for scalar in column and
         // row major case, all those registers will contain the same value.
@@ -1447,9 +1447,9 @@ LPGEMM_MAIN_KERN(float, float, float, f32f32f32of32_avx512_6x64m)
         __m512 scl_fctr5 = _mm512_setzero_ps();
         __m512 scl_fctr6 = _mm512_setzero_ps();
 
-        bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                       || ((post_ops_list_temp->stor_type == NONE)
-                           && (post_ops_attr.c_stor_type == BF16));
+        bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                       || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                           && (post_ops_attr.c_stor_type == DLP_BF16));
 
         // Even though different registers are used for scalar in column and
         // row major case, all those registers will contain the same value.
@@ -2180,7 +2180,7 @@ LPGEMM_N_FRINGE_KERN(float, float, float, f32f32f32of32_avx512_6x48m)
     POST_OPS_BIAS_6x48F: {
         if ((*(char*)post_ops_list_temp->op_args2 == 'r')
             || (*(char*)post_ops_list_temp->op_args2 == 'R')) {
-            if (post_ops_list_temp->stor_type == BF16) {
+            if (post_ops_list_temp->stor_type == DLP_BF16) {
                 __mmask16 bias_mask = _cvtu32_mask16(0xFFFF);
                 BF16_F32_BIAS_LOAD(zmm1, bias_mask, 0)
                 BF16_F32_BIAS_LOAD(zmm2, bias_mask, 1)
@@ -2253,7 +2253,7 @@ LPGEMM_N_FRINGE_KERN(float, float, float, f32f32f32of32_avx512_6x48m)
             // the ic index, and each bias element corresponds to an
             // entire row of the transposed output array, instead of an
             // entire column.
-            if (post_ops_list_temp->stor_type == BF16) {
+            if (post_ops_list_temp->stor_type == DLP_BF16) {
                 __mmask16 bias_mask = _cvtu32_mask16(0xFFFF);
 
                 BF16_F32_BIAS_BCAST(zmm1, bias_mask, 0)
@@ -2639,9 +2639,9 @@ LPGEMM_N_FRINGE_KERN(float, float, float, f32f32f32of32_avx512_6x48m)
         __m512 zero_point2 = _mm512_setzero_ps();
         __m512 zero_point3 = _mm512_setzero_ps();
 
-        bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                       || ((post_ops_list_temp->stor_type == NONE)
-                           && (post_ops_attr.c_stor_type == BF16));
+        bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                       || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                           && (post_ops_attr.c_stor_type == DLP_BF16));
 
         // Need to account for row vs column major swaps. For scalars
         // scale and zero point, no implications.
@@ -2899,9 +2899,9 @@ LPGEMM_N_FRINGE_KERN(float, float, float, f32f32f32of32_avx512_6x48m)
         __m512 scl_fctr5 = _mm512_setzero_ps();
         __m512 scl_fctr6 = _mm512_setzero_ps();
 
-        bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                       || ((post_ops_list_temp->stor_type == NONE)
-                           && (post_ops_attr.c_stor_type == BF16));
+        bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                       || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                           && (post_ops_attr.c_stor_type == DLP_BF16));
 
         // Even though different registers are used for scalar in column and
         // row major case, all those registers will contain the same value.
@@ -3632,7 +3632,7 @@ LPGEMM_N_FRINGE_KERN(float, float, float, f32f32f32of32_avx512_6x32m)
     POST_OPS_BIAS_6x32F: {
         if ((*(char*)post_ops_list_temp->op_args2 == 'r')
             || (*(char*)post_ops_list_temp->op_args2 == 'R')) {
-            if (post_ops_list_temp->stor_type == BF16) {
+            if (post_ops_list_temp->stor_type == DLP_BF16) {
                 __mmask16 bias_mask = _cvtu32_mask16(0xFFFF);
                 BF16_F32_BIAS_LOAD(zmm1, bias_mask, 0)
                 BF16_F32_BIAS_LOAD(zmm2, bias_mask, 1)
@@ -3684,7 +3684,7 @@ LPGEMM_N_FRINGE_KERN(float, float, float, f32f32f32of32_avx512_6x32m)
             // the ic index, and each bias element corresponds to an
             // entire row of the transposed output array, instead of an
             // entire column.
-            if (post_ops_list_temp->stor_type == BF16) {
+            if (post_ops_list_temp->stor_type == DLP_BF16) {
                 __mmask16 bias_mask = _cvtu32_mask16(0xFFFF);
 
                 BF16_F32_BIAS_BCAST(zmm1, bias_mask, 0)
@@ -3966,9 +3966,9 @@ LPGEMM_N_FRINGE_KERN(float, float, float, f32f32f32of32_avx512_6x32m)
         __m512 zero_point4 = _mm512_setzero_ps();
         __m512 zero_point5 = _mm512_setzero_ps();
 
-        bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                       || ((post_ops_list_temp->stor_type == NONE)
-                           && (post_ops_attr.c_stor_type == BF16));
+        bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                       || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                           && (post_ops_attr.c_stor_type == DLP_BF16));
 
         // Need to account for row vs column major swaps. For scalars
         // scale and zero point, no implications.
@@ -4188,9 +4188,9 @@ LPGEMM_N_FRINGE_KERN(float, float, float, f32f32f32of32_avx512_6x32m)
         __m512 scl_fctr5 = _mm512_setzero_ps();
         __m512 scl_fctr6 = _mm512_setzero_ps();
 
-        bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                       || ((post_ops_list_temp->stor_type == NONE)
-                           && (post_ops_attr.c_stor_type == BF16));
+        bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                       || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                           && (post_ops_attr.c_stor_type == DLP_BF16));
 
         // Even though different registers are used for scalar in column and
         // row major case, all those registers will contain the same value.
@@ -4359,9 +4359,9 @@ LPGEMM_N_FRINGE_KERN(float, float, float, f32f32f32of32_avx512_6x32m)
         __m512 scl_fctr5 = _mm512_setzero_ps();
         __m512 scl_fctr6 = _mm512_setzero_ps();
 
-        bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                       || ((post_ops_list_temp->stor_type == NONE)
-                           && (post_ops_attr.c_stor_type == BF16));
+        bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                       || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                           && (post_ops_attr.c_stor_type == DLP_BF16));
 
         // Even though different registers are used for scalar in column and
         // row major case, all those registers will contain the same value.
@@ -4845,7 +4845,7 @@ LPGEMM_N_FRINGE_KERN(float, float, float, f32f32f32of32_avx512_6x16m)
     POST_OPS_BIAS_6x16F: {
         if ((*(char*)post_ops_list_temp->op_args2 == 'r')
             || (*(char*)post_ops_list_temp->op_args2 == 'R')) {
-            if (post_ops_list_temp->stor_type == BF16) {
+            if (post_ops_list_temp->stor_type == DLP_BF16) {
                 __mmask16 bias_mask = _cvtu32_mask16(0xFFFF);
                 BF16_F32_BIAS_LOAD(zmm1, bias_mask, 0)
             } else {
@@ -4877,7 +4877,7 @@ LPGEMM_N_FRINGE_KERN(float, float, float, f32f32f32of32_avx512_6x16m)
             // the ic index, and each bias element corresponds to an
             // entire row of the transposed output array, instead of an
             // entire column.
-            if (post_ops_list_temp->stor_type == BF16) {
+            if (post_ops_list_temp->stor_type == DLP_BF16) {
                 __mmask16 bias_mask = _cvtu32_mask16(0xFFFF);
 
                 BF16_F32_BIAS_BCAST(zmm1, bias_mask, 0)
@@ -5051,9 +5051,9 @@ LPGEMM_N_FRINGE_KERN(float, float, float, f32f32f32of32_avx512_6x16m)
         __m512 zero_point4 = _mm512_setzero_ps();
         __m512 zero_point5 = _mm512_setzero_ps();
 
-        bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                       || ((post_ops_list_temp->stor_type == NONE)
-                           && (post_ops_attr.c_stor_type == BF16));
+        bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                       || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                           && (post_ops_attr.c_stor_type == DLP_BF16));
 
         // Need to account for row vs column major swaps. For scalars
         // scale and zero point, no implications.
@@ -5229,9 +5229,9 @@ LPGEMM_N_FRINGE_KERN(float, float, float, f32f32f32of32_avx512_6x16m)
         __m512 scl_fctr5 = _mm512_setzero_ps();
         __m512 scl_fctr6 = _mm512_setzero_ps();
 
-        bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                       || ((post_ops_list_temp->stor_type == NONE)
-                           && (post_ops_attr.c_stor_type == BF16));
+        bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                       || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                           && (post_ops_attr.c_stor_type == DLP_BF16));
 
         // Even though different registers are used for scalar in column and
         // row major case, all those registers will contain the same value.
@@ -5348,9 +5348,9 @@ LPGEMM_N_FRINGE_KERN(float, float, float, f32f32f32of32_avx512_6x16m)
         __m512 scl_fctr5 = _mm512_setzero_ps();
         __m512 scl_fctr6 = _mm512_setzero_ps();
 
-        bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                       || ((post_ops_list_temp->stor_type == NONE)
-                           && (post_ops_attr.c_stor_type == BF16));
+        bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                       || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                           && (post_ops_attr.c_stor_type == DLP_BF16));
 
         // Even though different registers are used for scalar in column and
         // row major case, all those registers will contain the same value.
@@ -5744,7 +5744,7 @@ LPGEMM_N_LT_NR0_FRINGE_KERN(float, float, float, f32f32f32of32_avx512_6xlt16m)
     POST_OPS_BIAS_6xlt16F: {
         if ((*(char*)post_ops_list_temp->op_args2 == 'r')
             || (*(char*)post_ops_list_temp->op_args2 == 'R')) {
-            if (post_ops_list_temp->stor_type == BF16) {
+            if (post_ops_list_temp->stor_type == DLP_BF16) {
                 BF16_F32_BIAS_LOAD(zmm1, mask16, 0)
             } else {
                 zmm1 = _mm512_maskz_loadu_ps(
@@ -5776,7 +5776,7 @@ LPGEMM_N_LT_NR0_FRINGE_KERN(float, float, float, f32f32f32of32_avx512_6xlt16m)
             // the ic index, and each bias element corresponds to an
             // entire row of the transposed output array, instead of an
             // entire column.
-            if (post_ops_list_temp->stor_type == BF16) {
+            if (post_ops_list_temp->stor_type == DLP_BF16) {
                 __mmask16 bias_mask = _cvtu32_mask16(0xFFFF);
 
                 BF16_F32_BIAS_BCAST(zmm1, bias_mask, 0)
@@ -5950,9 +5950,9 @@ LPGEMM_N_LT_NR0_FRINGE_KERN(float, float, float, f32f32f32of32_avx512_6xlt16m)
         __m512 zero_point4 = _mm512_setzero_ps();
         __m512 zero_point5 = _mm512_setzero_ps();
 
-        bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                       || ((post_ops_list_temp->stor_type == NONE)
-                           && (post_ops_attr.c_stor_type == BF16));
+        bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                       || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                           && (post_ops_attr.c_stor_type == DLP_BF16));
 
         // Need to account for row vs column major swaps. For scalars
         // scale and zero point, no implications.
@@ -6130,9 +6130,9 @@ LPGEMM_N_LT_NR0_FRINGE_KERN(float, float, float, f32f32f32of32_avx512_6xlt16m)
         __m512 scl_fctr5 = _mm512_setzero_ps();
         __m512 scl_fctr6 = _mm512_setzero_ps();
 
-        bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                       || ((post_ops_list_temp->stor_type == NONE)
-                           && (post_ops_attr.c_stor_type == BF16));
+        bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                       || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                           && (post_ops_attr.c_stor_type == DLP_BF16));
 
         // Even though different registers are used for scalar in column and
         // row major case, all those registers will contain the same value.
@@ -6273,9 +6273,9 @@ LPGEMM_N_LT_NR0_FRINGE_KERN(float, float, float, f32f32f32of32_avx512_6xlt16m)
         __m512 scl_fctr5 = _mm512_setzero_ps();
         __m512 scl_fctr6 = _mm512_setzero_ps();
 
-        bool is_bf16 = (post_ops_list_temp->stor_type == BF16)
-                       || ((post_ops_list_temp->stor_type == NONE)
-                           && (post_ops_attr.c_stor_type == BF16));
+        bool is_bf16 = (post_ops_list_temp->stor_type == DLP_BF16)
+                       || ((post_ops_list_temp->stor_type == DLP_INVALID)
+                           && (post_ops_attr.c_stor_type == DLP_BF16));
 
         // Even though different registers are used for scalar in column and
         // row major case, all those registers will contain the same value.

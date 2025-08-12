@@ -78,10 +78,11 @@ LPGEMM_ELTWISE_OPS_IFACE(float, float, f32of32)
     // handled using this same frame, so the strides needs to be
     // updated on the actual b matrix datatype or the c_downscale value.
     md_t dsize = sizeof(float);
-    if (post_ops_attr.c_stor_type == BF16) {
+    if (post_ops_attr.c_stor_type == DLP_BF16) {
         dsize = sizeof(bfloat16);
     }
-    if (post_ops_attr.c_stor_type == S8 || post_ops_attr.c_stor_type == U8) {
+    if (post_ops_attr.c_stor_type == DLP_S8
+        || post_ops_attr.c_stor_type == DLP_U8) {
         dsize = sizeof(int8_t);
     }
     int8_t* b_i = (int8_t*)b;
