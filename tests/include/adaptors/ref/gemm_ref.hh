@@ -26,6 +26,7 @@
  *
  */
 
+#include "classic/aocl_bf16_type.h"
 #include "classic/aocl_gemm_post_ops.h"
 #include "classic/dlp_base_types.h"
 
@@ -45,5 +46,39 @@ aocl_gemm_f32f32f32of32_ref(const char      order,
                             float           beta,
                             float*          C,
                             int             ldc,
-                            dlp_metadata_t* metadata);
+                            dlp_metadata_t* post_ops);
+
+void
+aocl_gemm_bf16bf16f32of32_ref(const char      order,
+                              const char      transa,
+                              const char      transb,
+                              const md_t      m,
+                              const md_t      n,
+                              const md_t      k,
+                              float           alpha,
+                              const bfloat16* A,
+                              int             lda,
+                              const bfloat16* B,
+                              int             ldb,
+                              float           beta,
+                              float*          C,
+                              int             ldc,
+                              dlp_metadata_t* post_ops);
+
+void
+aocl_gemm_bf16bf16f32obf16_ref(const char      order,
+                               const char      transa,
+                               const char      transb,
+                               const md_t      m,
+                               const md_t      n,
+                               const md_t      k,
+                               float           alpha,
+                               const bfloat16* A,
+                               int             lda,
+                               const bfloat16* B,
+                               int             ldb,
+                               float           beta,
+                               bfloat16*       C,
+                               int             ldc,
+                               dlp_metadata_t* post_ops);
 } // namespace dlp::testing::classic::ref

@@ -105,9 +105,18 @@ UalDlp::reorder(const Matrix& in, Matrix& out, MatrixType accType)
     md_t effective_rows = in.getEffectiveRows();
     md_t effective_cols = in.getEffectiveCols();
 
-    md_t alloc_bytes = aocl_get_reorder_buf_size_f32f32f32of32(
-        in.getLayout() == MatrixLayout::ROW_MAJOR ? 'r' : 'c',
-        in.isTransposed() ? 't' : 'n', 'B', effective_rows, effective_cols);
+    md_t alloc_bytes = 0;
+    if (in.getMatrixType() == MatrixType::f32) {
+        alloc_bytes = aocl_get_reorder_buf_size_f32f32f32of32(
+            in.getLayout() == MatrixLayout::ROW_MAJOR ? 'r' : 'c',
+            in.isTransposed() ? 't' : 'n', 'B', effective_rows, effective_cols);
+    } else if (in.getMatrixType() == MatrixType::bf16) {
+        alloc_bytes = aocl_get_reorder_buf_size_bf16bf16f32of32(
+            in.getLayout() == MatrixLayout::ROW_MAJOR ? 'r' : 'c',
+            in.isTransposed() ? 't' : 'n', 'B', effective_rows, effective_cols);
+    } else {
+        return false;
+    }
 
     // Create output matrix with dimensions that preserve the logical operation
     // If input was transposed, the reordered output should have physical
@@ -133,6 +142,14 @@ UalDlp::reorder(const Matrix& in, Matrix& out, MatrixType accType)
                 reinterpret_cast<const float*>(
                     in.getMatrixData().getMatrixPtr()),
                 reinterpret_cast<float*>(out.getMatrixData().getMatrixPtr()),
+                effective_rows, effective_cols, in.getLeadingDimension());
+            break;
+        case MatrixType::bf16:
+            aocl_reorder_bf16bf16f32of32(
+                layout, in.isTransposed() ? 't' : 'n', 'B',
+                reinterpret_cast<const bfloat16*>(
+                    in.getMatrixData().getMatrixPtr()),
+                reinterpret_cast<bfloat16*>(out.getMatrixData().getMatrixPtr()),
                 effective_rows, effective_cols, in.getLeadingDimension());
             break;
         default:
@@ -308,6 +325,42 @@ UalDlp::gemm(const Matrix& A,
             return true;
         }
 
+        case encode_types<MatrixType::bf16, MatrixType::bf16, MatrixType::f32,
+                          MatrixType::f32>(): {
+            float alpha_f32 = static_cast<float>(alpha);
+            float beta_f32  = static_cast<float>(beta);
+
+            aocl_gemm_bf16bf16f32of32(
+                layoutA, transA, transB, A.getEffectiveRows(),
+                B.getEffectiveCols(), A.getEffectiveCols(), alpha_f32,
+                reinterpret_cast<bfloat16*>(A.getMatrixData().getMatrixPtr()),
+                A.getLeadingDimension(), memFormatA,
+                reinterpret_cast<bfloat16*>(B.getMatrixData().getMatrixPtr()),
+                B.getLeadingDimension(), memFormatB, beta_f32,
+                reinterpret_cast<float*>(C.getMatrixData().getMatrixPtr()),
+                C.getLeadingDimension(), nullptr);
+
+            return true;
+        }
+
+        case encode_types<MatrixType::bf16, MatrixType::bf16, MatrixType::bf16,
+                          MatrixType::f32>(): {
+            float alpha_f32 = static_cast<float>(alpha);
+            float beta_f32  = static_cast<float>(beta);
+
+            aocl_gemm_bf16bf16f32obf16(
+                layoutA, transA, transB, A.getEffectiveRows(),
+                B.getEffectiveCols(), A.getEffectiveCols(), alpha_f32,
+                reinterpret_cast<bfloat16*>(A.getMatrixData().getMatrixPtr()),
+                A.getLeadingDimension(), memFormatA,
+                reinterpret_cast<bfloat16*>(B.getMatrixData().getMatrixPtr()),
+                B.getLeadingDimension(), memFormatB, beta_f32,
+                reinterpret_cast<bfloat16*>(C.getMatrixData().getMatrixPtr()),
+                C.getLeadingDimension(), nullptr);
+
+            return true;
+        }
+
         default:
             return false;
     }
@@ -399,6 +452,42 @@ UalDlp::gemm(const Matrix&                      A,
                 reinterpret_cast<float*>(B.getMatrixData().getMatrixPtr()),
                 B.getLeadingDimension(), memFormatB, beta_f32,
                 reinterpret_cast<float*>(C.getMatrixData().getMatrixPtr()),
+                C.getLeadingDimension(), aocl_postops);
+
+            return true;
+        }
+
+        case encode_types<MatrixType::bf16, MatrixType::bf16, MatrixType::f32,
+                          MatrixType::f32>(): {
+            float alpha_f32 = static_cast<float>(alpha);
+            float beta_f32  = static_cast<float>(beta);
+
+            aocl_gemm_bf16bf16f32of32(
+                layoutA, transA, transB, A.getEffectiveRows(),
+                B.getEffectiveCols(), A.getEffectiveCols(), alpha_f32,
+                reinterpret_cast<bfloat16*>(A.getMatrixData().getMatrixPtr()),
+                A.getLeadingDimension(), memFormatA,
+                reinterpret_cast<bfloat16*>(B.getMatrixData().getMatrixPtr()),
+                B.getLeadingDimension(), memFormatB, beta_f32,
+                reinterpret_cast<float*>(C.getMatrixData().getMatrixPtr()),
+                C.getLeadingDimension(), aocl_postops);
+
+            return true;
+        }
+
+        case encode_types<MatrixType::bf16, MatrixType::bf16, MatrixType::bf16,
+                          MatrixType::f32>(): {
+            float alpha_f32 = static_cast<float>(alpha);
+            float beta_f32  = static_cast<float>(beta);
+
+            aocl_gemm_bf16bf16f32obf16(
+                layoutA, transA, transB, A.getEffectiveRows(),
+                B.getEffectiveCols(), A.getEffectiveCols(), alpha_f32,
+                reinterpret_cast<bfloat16*>(A.getMatrixData().getMatrixPtr()),
+                A.getLeadingDimension(), memFormatA,
+                reinterpret_cast<bfloat16*>(B.getMatrixData().getMatrixPtr()),
+                B.getLeadingDimension(), memFormatB, beta_f32,
+                reinterpret_cast<bfloat16*>(C.getMatrixData().getMatrixPtr()),
                 C.getLeadingDimension(), aocl_postops);
 
             return true;

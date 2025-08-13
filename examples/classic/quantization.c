@@ -323,9 +323,6 @@ main()
         goto cleanup;
     }
 
-    // Set up scale parameters
-    metadata->scale->buff = NULL;
-
     // Allocate and set up scale factor structure
     metadata->scale->sf = malloc(sizeof(dlp_sf_t));
     if (!metadata->scale->sf) {

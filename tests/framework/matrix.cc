@@ -37,6 +37,7 @@
  */
 
 #include "framework/matrix.hh"
+#include "classic/aocl_bf16_type.h"
 #include "classic/dlp_base_types.h"
 #include <any>
 #include <chrono>   // For time-based seeding
@@ -45,6 +46,41 @@
 #include <iostream> // For std::cout
 #include <random>   // For random number generation
 #include <stdexcept>
+
+namespace {
+// Helper: BF16 to F32 conversion (uses upper 16 bits as BF16)
+inline float
+bf16_to_f32(bfloat16 value)
+{
+    union
+    {
+        float    f;
+        uint32_t u;
+    } bits;
+    bits.u = static_cast<uint32_t>(static_cast<uint16_t>(value)) << 16U;
+    return bits.f;
+}
+
+// Helper F32 to BF16 conversion.
+inline bfloat16
+f32_to_bf16(float value)
+{
+    union
+    {
+        float    f;
+        uint32_t u;
+    } bits;
+    bits.f = value;
+
+    // Round to nearest even (banker's rounding) for better accuracy
+    // Add 0x8000 (2^15) to round, but only if the lower 16 bits are > 0x8000
+    // or if they equal 0x8000 and the bit above is 1 (round to even)
+    uint32_t rounding_bias = 0x7FFF + ((bits.u >> 16) & 1);
+
+    // Add rounding bias and extract upper 16 bits
+    return static_cast<bfloat16>((bits.u + rounding_bias) >> 16);
+}
+} // namespace
 
 namespace dlp { namespace testing { namespace framework {
 
@@ -478,10 +514,19 @@ namespace dlp { namespace testing { namespace framework {
                 }
             }
         } else if (m_type == MatrixType::bf16) {
-            // For DLP_BF16, compare as uint16_t for now
-            return std::memcmp(m_data.get(), other.m_data.get(),
-                               m_dataSizeBytes)
-                   == 0;
+            const bfloat16* thisData =
+                reinterpret_cast<const bfloat16*>(m_data.get());
+            const bfloat16* otherData =
+                reinterpret_cast<const bfloat16*>(other.m_data.get());
+            size_t elementCount = m_dataSizeBytes / sizeof(bfloat16);
+
+            for (size_t i = 0; i < elementCount; ++i) {
+                float thisFloat  = bf16_to_f32(thisData[i]);
+                float otherFloat = bf16_to_f32(otherData[i]);
+                if (std::abs(thisFloat - otherFloat) > tolerance) {
+                    return false;
+                }
+            }
         }
 
         return true;
@@ -570,12 +615,12 @@ namespace dlp { namespace testing { namespace framework {
                 break;
             }
             case MatrixType::bf16: {
-                // For DLP_BF16, fill with random uint16_t values
-                std::uniform_int_distribution<uint16_t> dis(0, 65535);
+                // For BF16, fill with random uint16_t values
+                std::uniform_real_distribution<float> dis(-1.0f, 1.0f);
                 uint16_t* data = reinterpret_cast<uint16_t*>(m_data.get());
                 size_t    elementCount = m_dataSizeBytes / sizeof(uint16_t);
                 for (size_t i = 0; i < elementCount; ++i) {
-                    data[i] = dis(gen);
+                    data[i] = f32_to_bf16(dis(gen));
                 }
                 break;
             }
