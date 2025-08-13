@@ -26,19 +26,21 @@
  *
  */
 
-#include "kernel_op_handler.hh"
-#include "avx512_generator_utils.hh"
+#include "avx512_kernel_ops_generator.hh"
+#include "jit_generator_utils.hh"
 
-namespace avx512gen::generator {
+namespace amdzen::avx512gen {
 
+using namespace dlp::kernel_frame;
+using namespace dlp::jit;
 using namespace Xbyak;
 
-kernelOpHandler::kernelOpHandler(Xbyak::CodeGenerator* jit,
-                                 int                   MR,
-                                 int                   NR,
-                                 bool                  useMask,
-                                 int                   cRegStartIdx,
-                                 int                   cRegCount)
+kernelOpsGeneratorAvx512::kernelOpsGeneratorAvx512(Xbyak::CodeGenerator* jit,
+                                                   int                   MR,
+                                                   int                   NR,
+                                                   bool useMask,
+                                                   int  cRegStartIdx,
+                                                   int  cRegCount)
     : MR(MR)
     , NR(NR)
     , useMask(useMask)
@@ -60,7 +62,41 @@ kernelOpHandler::kernelOpHandler(Xbyak::CodeGenerator* jit,
 }
 
 jitGeneratorError
-kernelOpHandler::allocateRegs()
+kernelOpsGeneratorAvx512::generateKernelOps(
+    std::vector<kernelOpsMetaData>& kernelOps,
+    const Xbyak::Reg64&             postOpsArgWrapperPtrReg)
+{
+    RETURN_IF_ERROR((setPostOpsContext()));
+
+    // Save registers used by this generator.
+    utils::registerGuard<Xbyak::Reg64> rG{ jit_ };
+    rG.saveRegister(regkernelOpsList);
+    rG.saveRegister(regkernelOpsAttr);
+    rG.saveRegister(regTmp1);
+    rG.saveRegister(regTmp2);
+    rG.saveRegister(regTmp3);
+    rG.saveRegister(regTmp4);
+    rG.saveRegister(regTmp5);
+    rG.saveRegister(regTmp6);
+    rG.saveRegister(regTmp7);
+
+    // Load the post-ops node and post-ops attr pointers.
+    jit_->mov(regkernelOpsList,
+              jit_->ptr[postOpsArgWrapperPtrReg
+                        + offsetof(dlp::kernels::gemmParams, kernelOpsList)]);
+
+    // Load pointer to kernelOpsAttr struct instead of the struct itself.
+    jit_->lea(regkernelOpsAttr,
+              jit_->ptr[postOpsArgWrapperPtrReg
+                        + offsetof(dlp::kernels::gemmParams, kernelOpsAttr)]);
+
+    auto retVal = this->dispatchKernelOps<kernelOpsGeneratorAvx512>(kernelOps);
+
+    return retVal;
+}
+
+jitGeneratorError
+kernelOpsGeneratorAvx512::setPostOpsContext()
 {
     int numElemsPerReg = RegBytes / sizeof(float);
     numFullRegsPerRow  = NR / numElemsPerReg;
@@ -100,82 +136,15 @@ kernelOpHandler::allocateRegs()
     return jitGeneratorError::success;
 }
 
-jitGeneratorError
-kernelOpHandler::generatekernelOps(std::vector<kernelOpsMetaData>& kernelOps,
-                                   const Xbyak::Reg64&             stackPtr)
+void
+kernelOpsGeneratorAvx512::advancePostOpsPtr()
 {
-    utils::registerGuard<Xbyak::Reg64> rG{ jit_ };
-    rG.saveRegister(regkernelOpsList);
-    rG.saveRegister(regkernelOpsAttr);
-    rG.saveRegister(regTmp1);
-    rG.saveRegister(regTmp2);
-    rG.saveRegister(regTmp3);
-    rG.saveRegister(regTmp4);
-    rG.saveRegister(regTmp5);
-    rG.saveRegister(regTmp6);
-    rG.saveRegister(regTmp7);
-
     jit_->mov(regkernelOpsList,
-              jit_->ptr[stackPtr
-                        + offsetof(dlp::kernels::gemmParams, kernelOpsList)]);
-
-    // Load pointer to kernelOpsAttr struct instead of the struct itself
-    jit_->lea(regkernelOpsAttr,
-              jit_->ptr[stackPtr
-                        + offsetof(dlp::kernels::gemmParams, kernelOpsAttr)]);
-
-    RETURN_IF_ERROR((allocateRegs()));
-    for (auto& op : kernelOps) {
-        switch (op.type) {
-            case kernelOps::bias:
-                biasZmm(op);
-                break;
-            case kernelOps::relu:
-                reluZmm();
-                break;
-            case kernelOps::reluScale:
-                reluScale(op);
-                break;
-            case kernelOps::geluTanh:
-                geluTanh(op);
-                break;
-            case kernelOps::geluErf:
-                geluErf(op);
-                break;
-            case kernelOps::clip:
-                clip(op);
-                break;
-            case kernelOps::downscale:
-                downscaleZmm(op);
-                break;
-            case kernelOps::matAdd:
-                mataddZmm(op);
-                break;
-            case kernelOps::matMul:
-                matmulZmm(op);
-                break;
-            case kernelOps::swish:
-                swish(op);
-                break;
-            case kernelOps::tanh:
-                tanh(op);
-                break;
-            case kernelOps::sigmoid:
-                sigmoid(op);
-                break;
-            default:
-                return jitGeneratorError::notSupported;
-                break;
-        }
-        jit_->mov(regkernelOpsList,
-                  jit_->ptr[regkernelOpsList + offsetof(lpgemm_post_op, next)]);
-    }
-
-    return jitGeneratorError::success;
+              jit_->ptr[regkernelOpsList + offsetof(lpgemm_post_op, next)]);
 }
 
 jitGeneratorError
-kernelOpHandler::generateTableStores()
+kernelOpsGeneratorAvx512::embedKernelOpsAttributes()
 {
     // The extra jump is to ensure none of the embedded gelu contants are
     // executed like they are instructions.
@@ -192,7 +161,7 @@ kernelOpHandler::generateTableStores()
 }
 
 jitGeneratorError
-kernelOpHandler::reluZmm()
+kernelOpsGeneratorAvx512::relu(kernelOpsMetaData& op)
 {
     int zeroReg = scratchBcstRegIdx;
     jit_->vpxorq(Zmm(zeroReg), Zmm(zeroReg), Zmm(zeroReg));
@@ -205,7 +174,7 @@ kernelOpHandler::reluZmm()
 
 template<>
 void
-kernelOpHandler::biasRowMajorZmm<float>()
+kernelOpsGeneratorAvx512::biasRowMajorZmm<float>()
 {
     // Add code to load bias pointer and offset after deciding the
     // structure definition for post-op run-time parameters
@@ -229,9 +198,10 @@ kernelOpHandler::biasRowMajorZmm<float>()
         }
     }
 }
+
 template<>
 void
-kernelOpHandler::biasColMajorZmm<float>()
+kernelOpsGeneratorAvx512::biasColMajorZmm<float>()
 {
     // Add code to load bias pointer and offset after deciding the
     // structure definition for post-op run-time parameters
@@ -248,7 +218,7 @@ kernelOpHandler::biasColMajorZmm<float>()
 }
 
 jitGeneratorError
-kernelOpHandler::biasZmm(kernelOpsMetaData& op)
+kernelOpsGeneratorAvx512::bias(kernelOpsMetaData& op)
 {
     // bias pointer is in op_args1 of lpgemm_post_op struct
     // load bias pointer to regTmp1
@@ -288,7 +258,7 @@ kernelOpHandler::biasZmm(kernelOpsMetaData& op)
 
 template<>
 void
-kernelOpHandler::reluScaleZmm<float>()
+kernelOpsGeneratorAvx512::reluScaleZmm<float>()
 {
     int zeroReg  = scratchBcstRegIdx;
     int scaleReg = scratchLoadRegIdx;
@@ -309,7 +279,7 @@ kernelOpHandler::reluScaleZmm<float>()
 }
 
 jitGeneratorError
-kernelOpHandler::reluScale(kernelOpsMetaData& op)
+kernelOpsGeneratorAvx512::reluScale(kernelOpsMetaData& op)
 {
     if (op.paramStorageDt == DataType::f32) {
         reluScaleZmm<float>();
@@ -320,7 +290,7 @@ kernelOpHandler::reluScale(kernelOpsMetaData& op)
 }
 
 void
-kernelOpHandler::store_zmms_in_stack(md_t reg_start_idx, md_t num_regs)
+kernelOpsGeneratorAvx512::store_zmms_in_stack(md_t reg_start_idx, md_t num_regs)
 {
     jit_->sub(jit_->rsp, (num_regs * 64));
     for (md_t idx = 0; idx < num_regs; idx++) {
@@ -330,7 +300,7 @@ kernelOpHandler::store_zmms_in_stack(md_t reg_start_idx, md_t num_regs)
 }
 
 void
-kernelOpHandler::get_zmms_from_stack(md_t reg_start_idx, md_t num_regs)
+kernelOpsGeneratorAvx512::get_zmms_from_stack(md_t reg_start_idx, md_t num_regs)
 {
     for (md_t idx = 0; idx < num_regs; idx++) {
         jit_->vmovups(Zmm(reg_start_idx + idx),
@@ -340,7 +310,7 @@ kernelOpHandler::get_zmms_from_stack(md_t reg_start_idx, md_t num_regs)
 }
 
 void
-kernelOpHandler::apply_post_ops_in_high_reg_pressure(
+kernelOpsGeneratorAvx512::apply_post_ops_in_high_reg_pressure(
     const md_t num_post_op_regs, std::function<void(md_t)> op_fn)
 {
     md_t num_push_regs = num_post_op_regs - cRegStartIdx;
@@ -385,7 +355,7 @@ kernelOpHandler::apply_post_ops_in_high_reg_pressure(
 // r2 and z, q are scratch regs
 // r will be passed in and out of parent function.
 void
-kernelOpHandler::POLY_EVAL_6_AVX512()
+kernelOpsGeneratorAvx512::POLY_EVAL_6_AVX512()
 {
     jit_->vmulps(Zmm(r2), Zmm(r), Zmm(r));
 
@@ -420,7 +390,7 @@ kernelOpHandler::POLY_EVAL_6_AVX512()
 // z, r, dn is a scratch register
 // takes 'x' as input and returns 'q' to the parent
 void
-kernelOpHandler::EXPF_AVX512()
+kernelOpsGeneratorAvx512::EXPF_AVX512()
 {
     jit_->vbroadcastss(Zmm(const1), get_constant(gelu_macros_off, 0));
 
@@ -461,7 +431,7 @@ kernelOpHandler::EXPF_AVX512()
 // passes r to child macro and gets q
 // takes x_tanh as input and gives back x_tanh
 void
-kernelOpHandler::TANHF_AVX512()
+kernelOpsGeneratorAvx512::TANHF_AVX512()
 {
     jit_->vbroadcastss(Zmm(const1), get_constant(gelu_consts_off, 2));
 
@@ -495,7 +465,7 @@ kernelOpHandler::TANHF_AVX512()
 }
 
 void
-kernelOpHandler::GELU_TANH_F32_AVX512_DEF(md_t reg)
+kernelOpsGeneratorAvx512::GELU_TANH_F32_AVX512_DEF(md_t reg)
 {
     jit_->vmulps(Zmm(r2), Zmm(reg), Zmm(reg));
     jit_->vmulps(Zmm(r2), Zmm(r2), Zmm(reg));
@@ -519,15 +489,16 @@ kernelOpHandler::GELU_TANH_F32_AVX512_DEF(md_t reg)
 
 template<>
 void
-kernelOpHandler::geluTanhZmm<float>()
+kernelOpsGeneratorAvx512::geluTanhZmm<float>()
 {
     apply_post_ops_in_high_reg_pressure(
-        num_gelu_regs, std::bind(&kernelOpHandler::GELU_TANH_F32_AVX512_DEF,
-                                 this, std::placeholders::_1));
+        num_gelu_regs,
+        std::bind(&kernelOpsGeneratorAvx512::GELU_TANH_F32_AVX512_DEF, this,
+                  std::placeholders::_1));
 }
 
 jitGeneratorError
-kernelOpHandler::geluTanh(kernelOpsMetaData& op)
+kernelOpsGeneratorAvx512::geluTanh(kernelOpsMetaData& op)
 {
     if (op.paramStorageDt == DataType::f32) {
         geluTanhZmm<float>();
@@ -538,7 +509,7 @@ kernelOpHandler::geluTanh(kernelOpsMetaData& op)
 }
 
 void
-kernelOpHandler::POLY_EVAL_HORNER_16_0_AVX512()
+kernelOpsGeneratorAvx512::POLY_EVAL_HORNER_16_0_AVX512()
 {
     jit_->vbroadcastss(Zmm(const1), get_constant(lpgemm_erf_off, 15));
     jit_->vbroadcastss(Zmm(const2), get_constant(lpgemm_erf_off, 14));
@@ -591,7 +562,7 @@ kernelOpHandler::POLY_EVAL_HORNER_16_0_AVX512()
 }
 
 void
-kernelOpHandler::ERF_AVX512()
+kernelOpsGeneratorAvx512::ERF_AVX512()
 {
     jit_->mov(regTmp4Half, 0x7FFFFFFF);
     jit_->vpbroadcastd(Zmm(const2), regTmp4Half);
@@ -625,7 +596,7 @@ kernelOpHandler::ERF_AVX512()
 }
 
 void
-kernelOpHandler::GELU_ERF_F32_AVX512_DEF(md_t reg)
+kernelOpsGeneratorAvx512::GELU_ERF_F32_AVX512_DEF(md_t reg)
 {
     jit_->vbroadcastss(Zmm(const1), get_constant(erf_consts_off, 0));
     jit_->vmulps(Zmm(x_erf), Zmm(reg), Zmm(const1));
@@ -642,15 +613,16 @@ kernelOpHandler::GELU_ERF_F32_AVX512_DEF(md_t reg)
 
 template<>
 void
-kernelOpHandler::geluErfZmm<float>()
+kernelOpsGeneratorAvx512::geluErfZmm<float>()
 {
     apply_post_ops_in_high_reg_pressure(
-        num_gelu_regs, std::bind(&kernelOpHandler::GELU_ERF_F32_AVX512_DEF,
-                                 this, std::placeholders::_1));
+        num_gelu_regs,
+        std::bind(&kernelOpsGeneratorAvx512::GELU_ERF_F32_AVX512_DEF, this,
+                  std::placeholders::_1));
 }
 
 jitGeneratorError
-kernelOpHandler::geluErf(kernelOpsMetaData& op)
+kernelOpsGeneratorAvx512::geluErf(kernelOpsMetaData& op)
 {
     if (op.paramStorageDt == DataType::f32) {
         geluErfZmm<float>();
@@ -662,7 +634,7 @@ kernelOpHandler::geluErf(kernelOpsMetaData& op)
 
 template<>
 void
-kernelOpHandler::clipZmm<float>()
+kernelOpsGeneratorAvx512::clipZmm<float>()
 {
     // add code to query clip min and max arg type and then load and
     // convert them to float and then broadcast them to a ZMM
@@ -687,7 +659,7 @@ kernelOpHandler::clipZmm<float>()
 }
 
 jitGeneratorError
-kernelOpHandler::clip(kernelOpsMetaData& op)
+kernelOpsGeneratorAvx512::clip(kernelOpsMetaData& op)
 {
     if (op.paramStorageDt == DataType::f32) {
         clipZmm<float>();
@@ -699,7 +671,7 @@ kernelOpHandler::clip(kernelOpsMetaData& op)
 
 template<>
 void
-kernelOpHandler::ScaleFactorScalarZmm<float>()
+kernelOpsGeneratorAvx512::ScaleFactorScalarZmm<float>()
 {
     md_t sf_reg = scratchBcstRegIdx;
     // add code to move scalefactor pointer to regTmp1
@@ -711,7 +683,7 @@ kernelOpHandler::ScaleFactorScalarZmm<float>()
 
 template<>
 void
-kernelOpHandler::ScaleFactorRowMajorZmm<float>()
+kernelOpsGeneratorAvx512::ScaleFactorRowMajorZmm<float>()
 {
     // Since we are keeping enough registers to load NR elements of B,
     // we can safely assume that we will have enough registers to load
@@ -746,7 +718,7 @@ kernelOpHandler::ScaleFactorRowMajorZmm<float>()
 
 template<>
 void
-kernelOpHandler::ScaleFactorColMajorZmm<float>()
+kernelOpsGeneratorAvx512::ScaleFactorColMajorZmm<float>()
 {
     // since we are keeping atleast one register for broadcasting A,
     // it is safe to broadcast and apply one at a time.
@@ -768,7 +740,7 @@ kernelOpHandler::ScaleFactorColMajorZmm<float>()
 
 template<>
 void
-kernelOpHandler::ZeroPointScalarZmm<float>()
+kernelOpsGeneratorAvx512::ZeroPointScalarZmm<float>()
 {
     md_t zp_reg = scratchBcstRegIdx;
     jit_->vbroadcastss(Zmm(zp_reg), jit_->ptr[regTmp1]);
@@ -779,7 +751,7 @@ kernelOpHandler::ZeroPointScalarZmm<float>()
 
 template<>
 void
-kernelOpHandler::ZeroPointRowMajorZmm<float>()
+kernelOpsGeneratorAvx512::ZeroPointRowMajorZmm<float>()
 {
     jit_->mov(regTmp2, jit_->ptr[regkernelOpsAttr
                                  + offsetof(lpgemm_post_op_attr, post_op_c_j)]);
@@ -811,7 +783,7 @@ kernelOpHandler::ZeroPointRowMajorZmm<float>()
 
 template<>
 void
-kernelOpHandler::ZeroPointColMajorZmm<float>()
+kernelOpsGeneratorAvx512::ZeroPointColMajorZmm<float>()
 {
     jit_->mov(regTmp2, jit_->ptr[regkernelOpsAttr
                                  + offsetof(lpgemm_post_op_attr, post_op_c_i)]);
@@ -830,7 +802,7 @@ kernelOpHandler::ZeroPointColMajorZmm<float>()
 }
 
 jitGeneratorError
-kernelOpHandler::downscaleZmm(kernelOpsMetaData& op)
+kernelOpsGeneratorAvx512::downscale(kernelOpsMetaData& op)
 {
     if (op.scaleFactorDt == DataType::f32) {
         jit_->mov(regTmp1, jit_->ptr[regkernelOpsList
@@ -865,8 +837,8 @@ kernelOpHandler::downscaleZmm(kernelOpsMetaData& op)
 
 template<>
 void
-kernelOpHandler::matOpScaleFactorZmm<float>(matOpType      opType,
-                                            matOpScaleType sclType)
+kernelOpsGeneratorAvx512::matOpScaleFactorZmm<float>(matOpType      opType,
+                                                     matOpScaleType sclType)
 {
     md_t sf_reg = scratchBcstRegIdx;
     if (sclType == matOpScaleType::scalar) {
@@ -961,7 +933,7 @@ kernelOpHandler::matOpScaleFactorZmm<float>(matOpType      opType,
 }
 
 jitGeneratorError
-kernelOpHandler::mataddZmm(kernelOpsMetaData& op)
+kernelOpsGeneratorAvx512::matadd(kernelOpsMetaData& op)
 {
     if (op.scaleFactorDt == DataType::f32) {
         jit_->mov(regTmp1, jit_->ptr[regkernelOpsList
@@ -983,7 +955,7 @@ kernelOpHandler::mataddZmm(kernelOpsMetaData& op)
 }
 
 jitGeneratorError
-kernelOpHandler::matmulZmm(kernelOpsMetaData& op)
+kernelOpsGeneratorAvx512::matmul(kernelOpsMetaData& op)
 {
     if (op.scaleFactorDt == DataType::f32) {
         jit_->mov(regTmp1, jit_->ptr[regkernelOpsList
@@ -1005,7 +977,7 @@ kernelOpHandler::matmulZmm(kernelOpsMetaData& op)
 }
 
 void
-kernelOpHandler::SWISH_F32_AVX512_DEF(md_t reg)
+kernelOpsGeneratorAvx512::SWISH_F32_AVX512_DEF(md_t reg)
 {
     jit_->vpxorq(Zmm(x), Zmm(x), Zmm(x));
     jit_->vfnmadd231ps(Zmm(x), Zmm(reg), Zmm(x_tanh));
@@ -1020,19 +992,20 @@ kernelOpHandler::SWISH_F32_AVX512_DEF(md_t reg)
 
 template<>
 void
-kernelOpHandler::swishZmm<float>()
+kernelOpsGeneratorAvx512::swishZmm<float>()
 {
     jit_->mov(regTmp1,
               jit_->ptr[regkernelOpsList + offsetof(lpgemm_post_op, op_args2)]);
     jit_->vbroadcastss(Zmm(x_tanh), jit_->ptr[regTmp1]);
 
     apply_post_ops_in_high_reg_pressure(
-        num_gelu_regs, std::bind(&kernelOpHandler::SWISH_F32_AVX512_DEF, this,
-                                 std::placeholders::_1));
+        num_gelu_regs,
+        std::bind(&kernelOpsGeneratorAvx512::SWISH_F32_AVX512_DEF, this,
+                  std::placeholders::_1));
 }
 
 jitGeneratorError
-kernelOpHandler::swish(kernelOpsMetaData& op)
+kernelOpsGeneratorAvx512::swish(kernelOpsMetaData& op)
 {
     if (op.paramStorageDt == DataType::f32) {
         swishZmm<float>();
@@ -1043,7 +1016,7 @@ kernelOpHandler::swish(kernelOpsMetaData& op)
 }
 
 void
-kernelOpHandler::TANHF_AVX512_DEF(md_t reg)
+kernelOpsGeneratorAvx512::TANHF_AVX512_DEF(md_t reg)
 {
     jit_->vpxorq(Zmm(x), Zmm(x), Zmm(x));
     jit_->vmovups(Zmm(x_tanh), Zmm(reg));
@@ -1053,15 +1026,15 @@ kernelOpHandler::TANHF_AVX512_DEF(md_t reg)
 
 template<>
 void
-kernelOpHandler::tanhZmm<float>()
+kernelOpsGeneratorAvx512::tanhZmm<float>()
 {
     apply_post_ops_in_high_reg_pressure(
-        num_gelu_regs, std::bind(&kernelOpHandler::TANHF_AVX512_DEF, this,
-                                 std::placeholders::_1));
+        num_gelu_regs, std::bind(&kernelOpsGeneratorAvx512::TANHF_AVX512_DEF,
+                                 this, std::placeholders::_1));
 }
 
 jitGeneratorError
-kernelOpHandler::tanh(kernelOpsMetaData& op)
+kernelOpsGeneratorAvx512::tanh(kernelOpsMetaData& op)
 {
     if (op.paramStorageDt == DataType::f32) {
         tanhZmm<float>();
@@ -1072,7 +1045,7 @@ kernelOpHandler::tanh(kernelOpsMetaData& op)
 }
 
 void
-kernelOpHandler::SIGMOID_AVX512_DEF(md_t reg)
+kernelOpsGeneratorAvx512::SIGMOID_AVX512_DEF(md_t reg)
 {
     jit_->vbroadcastss(Zmm(const1), get_constant(gelu_consts_off, 4));
     jit_->vmulps(Zmm(x), Zmm(const1), Zmm(reg));
@@ -1087,15 +1060,15 @@ kernelOpHandler::SIGMOID_AVX512_DEF(md_t reg)
 
 template<>
 void
-kernelOpHandler::sigmoidZmm<float>()
+kernelOpsGeneratorAvx512::sigmoidZmm<float>()
 {
     apply_post_ops_in_high_reg_pressure(
-        num_gelu_regs, std::bind(&kernelOpHandler::SIGMOID_AVX512_DEF, this,
-                                 std::placeholders::_1));
+        num_gelu_regs, std::bind(&kernelOpsGeneratorAvx512::SIGMOID_AVX512_DEF,
+                                 this, std::placeholders::_1));
 }
 
 jitGeneratorError
-kernelOpHandler::sigmoid(kernelOpsMetaData& op)
+kernelOpsGeneratorAvx512::sigmoid(kernelOpsMetaData& op)
 {
     if (op.paramStorageDt == DataType::f32) {
         sigmoidZmm<float>();
@@ -1105,4 +1078,4 @@ kernelOpHandler::sigmoid(kernelOpsMetaData& op)
     return jitGeneratorError::success;
 }
 
-} // namespace avx512gen::generator
+} // namespace amdzen::avx512gen

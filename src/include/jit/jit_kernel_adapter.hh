@@ -28,6 +28,7 @@
 
 #pragma once
 
+#include "cpu_utils/cpu_features.hh"
 #include "jit_register/jit_register.hh"
 #include "kernels/kernel_base.hh"
 
@@ -65,7 +66,8 @@ class jitKernelAdapter : public kernels::kernelBase
         // a temporary solution to help with simulating a kernelRegister that is
         // under extreme load from too many kernels being registered.
         if ((shouldGenerateKernels) && (mJitGen)) {
-            auto ret = mJitGen->operator()(kI);
+            jitGeneratorContext jC{ kI };
+            auto                ret = mJitGen->operator()(jC);
             if (ret == jitGeneratorError::success) {
                 mIsJitGenerated = true;
             }

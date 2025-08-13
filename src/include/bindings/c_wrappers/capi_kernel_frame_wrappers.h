@@ -29,10 +29,20 @@
 #ifndef CAPI_KERNEL_FRAME_WRAPPERS_H
 #define CAPI_KERNEL_FRAME_WRAPPERS_H
 
+#include <stdint.h>
+
 #include "classic/aocl_gemm_post_ops.h"
 #include "classic/dlp_base_types.h"
 #include "classic/dlp_macros.h"
-#include <stdint.h>
+
+typedef enum
+{
+    UNPACKED  = 0,
+    PACK      = 1,
+    PACK_KC   = 2,
+    PACK_NR   = 3,
+    REORDERED = 4,
+} AOCL_MEMORY_TAG;
 
 // Post-ops codes.
 typedef enum
@@ -85,7 +95,8 @@ typedef struct lpgemm_post_op_attr_t
     int16_t* b_col_sum_vec_s16;
 } lpgemm_post_op_attr;
 
-// Type definitions that can be used by both C and C++ code
+// Type definitions that can be used by both C and C++ code. The enum tokens
+// should follow the exact sequence as in kernelDatatype(kernel_frame_base.h).
 typedef enum
 {
     DLP_KERNEL_INVALID = 0,
@@ -109,10 +120,19 @@ typedef struct
 DLP_BEGIN_EXTERN_C
 
 dlp_kernel_hndl_t
-dlp_init_and_get_kernel_hndl(kernel_datatype_t kDtype,
+dlp_init_and_get_kernel_hndl(kernel_datatype_t k_dtype,
+                             char              storage_format,
+                             AOCL_MEMORY_TAG   mtag_a,
+                             AOCL_MEMORY_TAG   mtag_b,
                              md_t              m,
                              md_t              n,
                              md_t              k,
+                             md_t              rs_a,
+                             md_t              cs_a,
+                             md_t              rs_b,
+                             md_t              cs_b,
+                             md_t              rs_c,
+                             md_t              cs_c,
                              void*             alpha,
                              void*             beta,
                              lpgemm_post_op*   metadata,

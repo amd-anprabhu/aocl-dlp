@@ -46,6 +46,26 @@ enum class jitGeneratorError
     error
 };
 
+struct jitGeneratorContext
+{
+    const kernel_frame::kernelInfo& kI;
+
+    // Can expand to more entities in future, like profiler, compilation
+    // target, etc.
+
+    jitGeneratorContext(const kernel_frame::kernelInfo& kernelInfo)
+        : kI(kernelInfo)
+    {
+    }
+
+    ~jitGeneratorContext() = default;
+
+    jitGeneratorContext(const jitGeneratorContext& other)            = delete;
+    jitGeneratorContext& operator=(const jitGeneratorContext& other) = delete;
+    jitGeneratorContext(jitGeneratorContext&& other)                 = delete;
+    jitGeneratorContext& operator=(jitGeneratorContext&& other)      = delete;
+};
+
 class jitGeneratorBase
 {
   public:
@@ -53,9 +73,8 @@ class jitGeneratorBase
 
     virtual std::vector<cpu_utils::isaFeature>& getIsaFeaturesRequired()    = 0;
     virtual std::vector<kernel_frame::kernelDatatype>& getKernelDatatypes() = 0;
-    virtual jitGeneratorError                          operator()(
-        const kernel_frame::kernelInfo& kI) = 0;
-    virtual std::unique_ptr<jitGeneratorBase> clone()                = 0;
+    virtual jitGeneratorError operator()(const jitGeneratorContext& jI)     = 0;
+    virtual std::unique_ptr<jitGeneratorBase> clone()                       = 0;
 
     // TODO: Remove this once the JIT generator and execution code are
     // separated.

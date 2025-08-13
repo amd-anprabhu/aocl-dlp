@@ -74,15 +74,6 @@ typedef enum
 
 typedef enum
 {
-    UNPACKED  = 0,
-    PACK      = 1,
-    PACK_KC   = 2,
-    PACK_NR   = 3,
-    REORDERED = 4,
-} AOCL_MEMORY_TAG;
-
-typedef enum
-{
     ROW_MAJOR    = 0,
     COLUMN_MAJOR = 1,
 } AOCL_STOR_TAG;

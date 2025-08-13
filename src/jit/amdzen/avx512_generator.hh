@@ -26,83 +26,51 @@
  *
  */
 
-#ifndef AVX512_GENERATOR_HH
-#define AVX512_GENERATOR_HH
-
-#include "jit/jit_generator_base.hh"
-#include "jit/xbyak/xbyak.h"
-#include "jit/xbyak/xbyak_util.h"
-#include "kernel_op_handler.hh"
-#include "kernels/kernel_base.hh"
+#pragma once
 
 #include <cstdint>
 #include <vector>
 
-namespace avx512gen::generator {
+#include "jit/jit_generator_base.hh"
+#include "jit/xbyak/xbyak.h"
+#include "jit_generator_utils.hh"
+#include "kernel_ops_handler.hh"
+#include "kernels/kernel_base.hh"
 
-constexpr uint64_t JIT_KERNEL_SIZE = 8 * 4096;
+namespace amdzen::avx512gen {
 
-typedef void (*jit_kernel)(dlp::kernels::gemmParams*);
+namespace traits {
 
-struct generatorParams
-{
-    int MR; // This MR can be of either main kernel or fringe kernel
-    int NR; // This NR can be of either main kernel or fringe kernel
-    int K_UNROLL;
-    // This will be used to generate NR + " < nElemsPerReg" kernels,
-    // where NR is a multiple of nElemsPerReg including "0".
-    bool useMask;
-    bool mLoop;        // This will be set to true only for the main kernel
-    bool is_beta_zero; // skip beta scaling if beta is 0
-    bool is_alpha_one; // skip alpha scaling if alpha is 1
-    std::vector<kernelOpsMetaData> kernelOps;
+    // Define type traits for each datatype
+    template<dlp::kernel_frame::kernelDatatype KDT>
+    struct kernel_types;
 
-    generatorParams(md_t _MR,
-                    md_t _NR,
-                    int  _K_UNROLL,
-                    bool _useMask,
-                    bool _mLoop,
-                    bool _is_beta_zero = false,
-                    bool _is_alpha_one = false)
-        : MR(_MR)
-        , NR(_NR)
-        , K_UNROLL(_K_UNROLL)
-        , useMask(_useMask)
-        , mLoop(_mLoop)
-        , is_beta_zero(_is_beta_zero)
-        , is_alpha_one(_is_alpha_one)
+    template<>
+    struct kernel_types<dlp::kernel_frame::kernelDatatype::f32f32f32of32>
     {
-    }
+        using aType        = float;
+        using bType        = float;
+        using cType        = float;
+        using accumType    = float;
+        using kernelOpType = float;
+    };
 
-    generatorParams& operator=(const generatorParams& other)
-    {
-        MR           = other.MR;
-        NR           = other.NR;
-        K_UNROLL     = other.K_UNROLL;
-        useMask      = other.useMask;
-        mLoop        = other.mLoop;
-        is_beta_zero = other.is_beta_zero;
-        is_alpha_one = other.is_alpha_one;
-        return *this;
-    }
-
-    generatorParams& operator=(generatorParams&& other)
-    {
-        *this = other;
-        return *this;
-    }
-
-    ~generatorParams() = default;
-};
+} // namespace traits
 
 class jitAVX512 : public Xbyak::CodeGenerator
 {
   public:
     // Constructor that takes buffer and its size for JIT code dumping
     jitAVX512(void* buffer, size_t bufferSize);
+    ~jitAVX512()                      = default;
+    jitAVX512(jitAVX512&)             = delete;
+    jitAVX512& operator=(jitAVX512&)  = delete;
+    jitAVX512(jitAVX512&&)            = delete;
+    jitAVX512& operator=(jitAVX512&&) = delete;
 
+    // Template function that takes the datatype as a template parameter
     template<dlp::kernel_frame::kernelDatatype KDT>
-    dlp::jit::jitGeneratorError generateKernel(generatorParams& params);
+    dlp::jit::jitGeneratorError generateKernel(utils::generatorParams& params);
 
   private:
     // Configuration and state
@@ -136,7 +104,7 @@ class jitAVX512 : public Xbyak::CodeGenerator
     void initializeParameters(bool addIrLoop);
 
     template<typename aType, typename bType, typename cType, typename accumType>
-    dlp::jit::jitGeneratorError generateIrLoop(generatorParams& params);
+    dlp::jit::jitGeneratorError generateIrLoop(utils::generatorParams& params);
 
     // Memory operations
     template<typename bType>
@@ -167,61 +135,4 @@ class jitAVX512 : public Xbyak::CodeGenerator
     dlp::jit::jitGeneratorError cvtAccToFloat();
 };
 
-class jitAVX512FP32 : public dlp::jit::jitGeneratorBase
-{
-
-    std::vector<dlp::kernel_frame::kernelDatatype> mKernelDatatypes;
-    std::vector<dlp::cpu_utils::isaFeature>        mIsaFeaturesRequired;
-
-  public:
-    // jitAVX512 base;
-    int                MR, NR;
-    int                numMRVariants, numNRVariants;
-    int                numKernelVariants;
-    int                K_UNROLL;
-    std::vector<void*> kernelCodeBlocks;
-
-    jitAVX512FP32()
-        : mKernelDatatypes({ dlp::kernel_frame::kernelDatatype::f32f32f32of32 })
-        // TODO: Hardcoded for now, need to make it dynamic
-        , mIsaFeaturesRequired{ dlp::cpu_utils::isaFeature::avx512f,
-                                dlp::cpu_utils::isaFeature::avx512bw,
-                                dlp::cpu_utils::isaFeature::avx512dq,
-                                dlp::cpu_utils::isaFeature::avx512vl }
-    {
-    }
-
-    ~jitAVX512FP32();
-
-    dlp::jit::jitGeneratorError generateAllKernels(
-        const dlp::kernel_frame::kernelInfo& kI);
-
-    dlp::jit::jitGeneratorError operator()(
-        const dlp::kernel_frame::kernelInfo& kI) override
-    {
-        return generateAllKernels(kI);
-    }
-
-    std::vector<dlp::kernel_frame::kernelDatatype>& getKernelDatatypes()
-        override
-    {
-        return mKernelDatatypes;
-    }
-
-    std::vector<dlp::cpu_utils::isaFeature>& getIsaFeaturesRequired() override
-    {
-        return mIsaFeaturesRequired;
-    }
-
-    dlp::kernels::kernelError executeKernel(
-        dlp::kernels::kernelParams* _params);
-
-    std::unique_ptr<jitGeneratorBase> clone() override
-    {
-        return std::make_unique<jitAVX512FP32>();
-    }
-};
-
-} // namespace avx512gen::generator
-
-#endif // X86_JIT_FRAMEWORK_HPP
+} // namespace amdzen::avx512gen

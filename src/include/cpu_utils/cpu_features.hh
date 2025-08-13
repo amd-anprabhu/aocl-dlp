@@ -80,6 +80,8 @@ class cpuFeatures
         return pDetector->hasFeature(feature);
     }
 
+    std::vector<isaFeature> getFeatures() { return pDetector->getFeatures(); }
+
     cpuVendor getCpuVendor() { return pDetector->getCpuVendor(); }
 };
 

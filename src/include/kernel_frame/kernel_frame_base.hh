@@ -29,6 +29,7 @@
 #pragma once
 
 #include <cstdint>
+#include <memory>
 #include <vector>
 
 #include "classic/dlp_base_types.h"
@@ -64,10 +65,14 @@ enum class kernelDatatype : uint8_t
 enum class DataType : uint8_t
 {
     invalid = 0,
+    s4,   // int4_t
+    u4,   // uint4_t
+    f4,   // float4_t
     s8,   // int8_t
     u8,   // uint8_t
     s16,  // int16_t
     u16,  // uint16_t
+    f16,  // float16
     bf16, // bfloat16
     s32,  // int32_t
     u32,  // uint32_t
@@ -75,7 +80,7 @@ enum class DataType : uint8_t
     max_datatypes
 };
 
-enum class kernelOps : uint8_t
+enum class kernelOps : uint16_t
 {
     invalid = 0,
     bias,
@@ -91,6 +96,27 @@ enum class kernelOps : uint8_t
     tanh,
     sigmoid,
     max_kernel_ops
+};
+
+// This enum is only applicable for jit generated kernels and is consumed
+// only by the jit generator. This gives info to the jit generator as to
+// what types of instructions or kernel is to be generated irrespective of
+// the underlying machine ISA.
+enum class kernelInstrPreference : uint8_t
+{
+    none = 0,
+
+    // x86_64 specific hints.
+    avx2_xmm_favour,
+    avx2_ymm_favour,
+    avx512_xmm_favour,
+    avx512_ymm_favour,
+    avx512_zmm_favour,
+
+    // ARM specific hints.
+    // ...
+
+    max_kernel_instr_preferences
 };
 
 // Enum for matrix storage format
@@ -175,7 +201,7 @@ struct kernelOpsMetaData
 
     kernelOpsMetaData& operator=(const kernelOpsMetaData& other)
     {
-        if (this != &other) {
+        if (this != std::addressof(other)) {
             this->type                      = other.type;
             this->scaleFactorDt             = other.scaleFactorDt;
             this->scalarScaleFactorRequired = other.scalarScaleFactorRequired;
@@ -191,7 +217,7 @@ struct kernelOpsMetaData
 
     kernelOpsMetaData& operator=(kernelOpsMetaData&& other)
     {
-        if (this != &other) {
+        if (this != std::addressof(other)) {
             *this = other;
         }
         return *this;
@@ -221,14 +247,18 @@ struct kernelOpsMetaData
 
 struct kernelInfo
 {
-    md_t               mr;
-    md_t               nr;
-    md_t               k_unroll;
-    bool               is_beta_zero;
-    bool               is_alpha_one;
-    kernelOpsMetaData* kOpsArr;
-    std::size_t        kOpsArrSize;
-    bool               anyKOpsOrder;
+    md_t mr;
+    md_t nr;
+    md_t k_unroll;
+    bool is_beta_zero;
+    bool is_alpha_one;
+
+    // Not using std::vector for kOpsArr due to slight overhead compared
+    // to raw pointers.
+    kernelOpsMetaData*    kOpsArr;
+    std::size_t           kOpsArrSize;
+    bool                  anyKOpsOrder;
+    kernelInstrPreference kInstPref;
 
     kernelInfo(md_t                               mr,
                md_t                               nr,
@@ -237,7 +267,8 @@ struct kernelInfo
                bool                               is_alpha_one,
                std::unique_ptr<kernelOpsMetaData> kOpsArr,
                std::size_t                        kOpsArrSize,
-               bool                               anyKOpsOrder)
+               bool                               anyKOpsOrder,
+               kernelInstrPreference              instPref)
         : mr(mr)
         , nr(nr)
         , k_unroll(k_unroll)
@@ -249,6 +280,7 @@ struct kernelInfo
         , kOpsArrSize(((kOpsArr != nullptr) && (kOpsArrSize > 0)) ? kOpsArrSize
                                                                   : 0)
         , anyKOpsOrder(anyKOpsOrder)
+        , kInstPref(instPref)
     {
     }
 
@@ -263,6 +295,7 @@ struct kernelInfo
                           ? other.kOpsArrSize
                           : 0)
         , anyKOpsOrder(other.anyKOpsOrder)
+        , kInstPref(other.kInstPref)
     {
         if ((other.kOpsArr != nullptr) && (other.kOpsArrSize > 0)) {
             this->kOpsArr =
@@ -287,6 +320,7 @@ struct kernelInfo
                           ? other->kOpsArrSize
                           : 0)
         , anyKOpsOrder(other->anyKOpsOrder)
+        , kInstPref(other->kInstPref)
     {
         if ((other->kOpsArr != nullptr) && (other->kOpsArrSize > 0)) {
             other->kOpsArr     = nullptr;
@@ -307,6 +341,7 @@ struct kernelInfo
                           ? other.kOpsArrSize
                           : 0)
         , anyKOpsOrder(other.anyKOpsOrder)
+        , kInstPref(other.kInstPref)
     {
         if ((other.kOpsArr != nullptr) && (other.kOpsArrSize > 0)) {
             other.kOpsArr     = nullptr;
@@ -316,7 +351,7 @@ struct kernelInfo
 
     kernelInfo& operator=(const kernelInfo& other)
     {
-        if (this != &other) {
+        if (this != std::addressof(other)) {
             this->mr           = other.mr;
             this->nr           = other.nr;
             this->k_unroll     = other.k_unroll;
@@ -334,13 +369,14 @@ struct kernelInfo
                 this->kOpsArrSize = other.kOpsArrSize;
             }
             this->anyKOpsOrder = other.anyKOpsOrder;
+            this->kInstPref    = other.kInstPref;
         }
         return *this;
     }
 
     kernelInfo& operator=(kernelInfo&& other)
     {
-        if (this != &other) {
+        if (this != std::addressof(other)) {
             this->mr           = other.mr;
             this->nr           = other.nr;
             this->k_unroll     = other.k_unroll;
@@ -356,6 +392,7 @@ struct kernelInfo
                 other.kOpsArrSize = 0;
             }
             this->anyKOpsOrder = other.anyKOpsOrder;
+            this->kInstPref    = other.kInstPref;
         }
         return *this;
     }
@@ -378,7 +415,8 @@ struct kernelInfo
                 && (this->is_beta_zero == rhs.is_beta_zero)
                 && (this->is_alpha_one == rhs.is_alpha_one)
                 && (this->kOpsArrSize == rhs.kOpsArrSize) && isKOpsArrEqual
-                && (this->anyKOpsOrder == rhs.anyKOpsOrder));
+                && (this->anyKOpsOrder == rhs.anyKOpsOrder)
+                && (this->kInstPref == rhs.kInstPref));
     }
 
     // TODO: Need to implement a subset function for kernelInfo

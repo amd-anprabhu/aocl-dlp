@@ -311,8 +311,9 @@ dlpJitGeneratorRegisterInstance()
  * @param kernelFamily String literal for JIT generator family identifier
  */
 #define DLP_REGISTER_STATIC_GEMM_JIT_GENERATOR(className, kernelFamily)        \
-    static_assert(std::is_default_constructible_v<className>,                  \
-                  "Requires trivially constructible classes for kernels.");    \
+    static_assert(                                                             \
+        std::is_default_constructible_v<className>,                            \
+        "Requires trivially constructible classes for jit generators.");       \
     static_assert(std::is_base_of_v<dlp::jit::jitGeneratorBase, className>,    \
                   "Requires classes derived from jitGeneratorBase.");          \
     static auto className##__FILE__##__LINE =                                  \

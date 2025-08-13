@@ -1,0 +1,258 @@
+/*
+ * Copyright © Advanced Micro Devices, Inc., or its affiliates.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions are met:
+ * 1. Redistributions of source code must retain the above copyright notice,
+ *    this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright notice,
+ *    this list of conditions and the following disclaimer in the documentation
+ *    and/or other materials provided with the distribution.
+ * 3. Neither the name of the copyright holder nor the names of its contributors
+ *    may be used to endorse or promote products derived from this software
+ *    without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+ * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES ( INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+ * POSSIBILITY OF SUCH DAMAGE.
+ *
+ */
+
+#include <cctype>
+
+#include "cpu_utils/cpu_features.hh"
+#include "decision_engine/de_backend.hh"
+#include "kernel_frame/kernel_frame_base.hh"
+#include "utils/ctype_utils.hh"
+
+namespace dlp::de {
+
+gemmF32DEBackend::gemmF32DEBackend()
+    : isZen4(false)
+    , isZen(false)
+{
+    // Determine if machine is zen4 or zen.
+    std::vector<cpu_utils::isaFeature> reqFeaturesZen4{
+        cpu_utils::isaFeature::sse3,       cpu_utils::isaFeature::ssse3,
+        cpu_utils::isaFeature::sse41,      cpu_utils::isaFeature::sse42,
+        cpu_utils::isaFeature::avx,        cpu_utils::isaFeature::fma3,
+        cpu_utils::isaFeature::avx2,       cpu_utils::isaFeature::avx512f,
+        cpu_utils::isaFeature::avx512dq,   cpu_utils::isaFeature::avx512cd,
+        cpu_utils::isaFeature::avx512bw,   cpu_utils::isaFeature::avx512vl,
+        cpu_utils::isaFeature::avx512vnni, cpu_utils::isaFeature::avx512bf16
+    };
+    isZen4 = cpu_utils::cpuFeaturesInstance().hasFeatures(reqFeaturesZen4);
+
+    // isZen is only checked for and set to true if machine is guaranteed
+    // to not be zen4 or zen5.
+    if (!isZen4) {
+        std::vector<cpu_utils::isaFeature> reqFeaturesZen{
+            cpu_utils::isaFeature::avx, cpu_utils::isaFeature::fma3,
+            cpu_utils::isaFeature::avx2
+        };
+        isZen = cpu_utils::cpuFeaturesInstance().hasFeatures(reqFeaturesZen);
+    }
+}
+
+void
+gemmF32DEBackend::setKernelOps(kernel_frame::kernelOpsMetaData* metaData,
+                               lpgemm_post_op*                  post_op,
+                               kernel_frame::kernelDatatype     k_dtype)
+{
+    kernel_frame::kernelOps kOpsType = kernel_frame::kernelOps::invalid;
+    switch (post_op->op_code) {
+        case POST_OPS_BIAS: {
+            metaData->type           = kernel_frame::kernelOps::bias;
+            metaData->paramStorageDt = utils::getStorageDtFromAoclStorageType(
+                static_cast<DLP_TYPE>(post_op->stor_type));
+            char storFormatC =
+                std::tolower(*(static_cast<char*>(post_op->op_args2)));
+            metaData->cMatFormat = (storFormatC == 'c')
+                                       ? kernel_frame::storageFormat::colMajor
+                                       : kernel_frame::storageFormat::rowMajor;
+            break;
+        }
+        case POST_OPS_RELU:
+            metaData->type = kernel_frame::kernelOps::relu;
+            break;
+        case POST_OPS_RELU_SCALE:
+            metaData->type = kernel_frame::kernelOps::reluScale;
+            metaData->paramStorageDt =
+                utils::getStorageDtFromDlpKernelDatatype(k_dtype);
+            break;
+        case POST_OPS_GELU_TANH:
+            metaData->type = kernel_frame::kernelOps::geluTanh;
+            metaData->paramStorageDt =
+                utils::getStorageDtFromDlpKernelDatatype(k_dtype);
+            break;
+        case POST_OPS_GELU_ERF:
+            metaData->type = kernel_frame::kernelOps::geluErf;
+            metaData->paramStorageDt =
+                utils::getStorageDtFromDlpKernelDatatype(k_dtype);
+            break;
+        case POST_OPS_CLIP:
+            metaData->type = kernel_frame::kernelOps::clip;
+            metaData->paramStorageDt =
+                utils::getStorageDtFromDlpKernelDatatype(k_dtype);
+            break;
+        case POST_OPS_SWISH:
+            metaData->type = kernel_frame::kernelOps::swish;
+            metaData->paramStorageDt =
+                utils::getStorageDtFromDlpKernelDatatype(k_dtype);
+            break;
+        case POST_OPS_TANH:
+            metaData->type = kernel_frame::kernelOps::tanh;
+            metaData->paramStorageDt =
+                utils::getStorageDtFromDlpKernelDatatype(k_dtype);
+            break;
+        case POST_OPS_SIGMOID:
+            metaData->type = kernel_frame::kernelOps::sigmoid;
+            metaData->paramStorageDt =
+                utils::getStorageDtFromDlpKernelDatatype(k_dtype);
+            break;
+        case POST_OPS_DOWNSCALE: {
+            metaData->type           = kernel_frame::kernelOps::downscale;
+            metaData->paramStorageDt = utils::getStorageDtFromAoclStorageType(
+                static_cast<DLP_TYPE>(post_op->stor_type));
+            char storFormatC =
+                std::tolower(*(static_cast<char*>(post_op->op_args2)));
+            metaData->cMatFormat    = (storFormatC == 'c')
+                                          ? kernel_frame::storageFormat::colMajor
+                                          : kernel_frame::storageFormat::rowMajor;
+            metaData->scaleFactorDt = utils::getStorageDtFromAoclStorageType(
+                static_cast<DLP_TYPE>(post_op->sf_stor_type));
+            metaData->scalarScaleFactorRequired =
+                (post_op->scale_factor_len == 1) ? true : false;
+            metaData->vectorScaleFactorRequired =
+                (post_op->scale_factor_len > 1) ? true : false;
+            metaData->zeroPointDt = utils::getStorageDtFromAoclStorageType(
+                static_cast<DLP_TYPE>(post_op->zp_stor_type));
+            metaData->scalarZeroPointRequired =
+                (*(static_cast<md_t*>(post_op->op_args3)) == 1) ? true : false;
+            metaData->vectorZeroPointRequired =
+                (*(static_cast<md_t*>(post_op->op_args3)) > 1) ? true : false;
+            break;
+        }
+        case POST_OPS_MATRIX_ADD: {
+            metaData->type           = kernel_frame::kernelOps::matAdd;
+            metaData->paramStorageDt = utils::getStorageDtFromAoclStorageType(
+                static_cast<DLP_TYPE>(post_op->stor_type));
+            char storFormatC =
+                std::tolower(*(static_cast<char*>(post_op->op_args2)));
+            metaData->cMatFormat = (storFormatC == 'c')
+                                       ? kernel_frame::storageFormat::colMajor
+                                       : kernel_frame::storageFormat::rowMajor;
+            metaData->scaleFactorDt =
+                kernel_frame::DataType::f32; // TODO: Always F32 for mat add
+            metaData->scalarScaleFactorRequired =
+                (post_op->scale_factor_len == 1) ? true : false;
+            metaData->vectorScaleFactorRequired =
+                (post_op->scale_factor_len > 1) ? true : false;
+            break;
+        }
+        case POST_OPS_MATRIX_MUL: {
+            metaData->type           = kernel_frame::kernelOps::matMul;
+            metaData->paramStorageDt = utils::getStorageDtFromAoclStorageType(
+                static_cast<DLP_TYPE>(post_op->stor_type));
+            char storFormatC =
+                std::tolower(*(static_cast<char*>(post_op->op_args2)));
+            metaData->cMatFormat = (storFormatC == 'c')
+                                       ? kernel_frame::storageFormat::colMajor
+                                       : kernel_frame::storageFormat::rowMajor;
+            metaData->scaleFactorDt =
+                kernel_frame::DataType::f32; // TODO: Always F32 for mat mul
+            metaData->scalarScaleFactorRequired =
+                (post_op->scale_factor_len == 1) ? true : false;
+            metaData->vectorScaleFactorRequired =
+                (post_op->scale_factor_len > 1) ? true : false;
+            break;
+        }
+        case POST_OPS_DISABLE:
+            metaData->type = kernel_frame::kernelOps::invalid;
+            break;
+        default:
+            metaData->type = kernel_frame::kernelOps::invalid;
+            break;
+    }
+}
+
+std::optional<kernel_frame::kernelInfo>
+gemmF32DEBackend::getKernelInfoForInput(iDEInput* in)
+{
+    auto gemmIn = static_cast<gemmDEInput*>(in);
+    if (gemmIn == nullptr) {
+        return std::nullopt;
+    }
+
+    md_t mr           = gemmIn->mr_hint;
+    md_t nr           = gemmIn->nr_hint;
+    md_t k_unroll     = 1;
+    bool anyKOpsOrder = false;
+
+    // TODO: Only supports non GEMV kernels for now.
+    if ((gemmIn->m == 1) || (gemmIn->n == 1)) {
+        return std::nullopt;
+    }
+
+    kernel_frame::kernelInstrPreference kInstPref =
+        kernel_frame::kernelInstrPreference::none;
+    if (isZen4) {
+        kInstPref = kernel_frame::kernelInstrPreference::avx512_zmm_favour;
+    } else if (isZen) {
+        kInstPref = kernel_frame::kernelInstrPreference::avx2_ymm_favour;
+    }
+
+    if (gemmIn->metadata == nullptr) {
+        kernel_frame::kernelInfo kI{ mr,      nr, k_unroll,     false,    false,
+                                     nullptr, 0,  anyKOpsOrder, kInstPref };
+        return std::make_optional(kI);
+    } else {
+        // Iterate over the post_ops list to get the number of post-ops.
+        md_t            numPostOps    = 0;
+        lpgemm_post_op* temp_post_ops = gemmIn->metadata;
+        while ((temp_post_ops != NULL)
+               && (temp_post_ops->op_code != POST_OPS_DISABLE)) {
+            temp_post_ops = temp_post_ops->next;
+            numPostOps++;
+        }
+
+        if (numPostOps == 0) {
+            kernel_frame::kernelInfo kI{ mr,    nr,           k_unroll,
+                                         false, false,        nullptr,
+                                         0,     anyKOpsOrder, kInstPref };
+            return std::make_optional(kI);
+        } else {
+            kernel_frame::kernelInfo kI{ mr,    nr,           k_unroll,
+                                         false, false,        nullptr,
+                                         0,     anyKOpsOrder, kInstPref };
+            kI.kOpsArrSize = numPostOps;
+            kI.kOpsArr =
+                kernel_frame::kernelInfo::allocateKernelOpsArray(numPostOps);
+
+            md_t ii       = 0;
+            temp_post_ops = gemmIn->metadata;
+            while ((temp_post_ops != NULL)
+                   && (temp_post_ops->op_code != POST_OPS_DISABLE)) {
+                setKernelOps(std::addressof(kI.kOpsArr[ii]), temp_post_ops,
+                             gemmIn->k_dtype);
+                temp_post_ops = temp_post_ops->next;
+                ii++;
+            }
+
+            return std::make_optional(kI);
+        }
+        return std::nullopt;
+    }
+
+    return std::nullopt;
+}
+
+} // namespace dlp::de

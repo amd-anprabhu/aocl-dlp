@@ -30,281 +30,31 @@
 #include <optional>
 
 #include "bindings/c_wrappers/capi_kernel_frame_wrappers.h"
+#include "decision_engine/decision_engine.hh"
 #include "jit/jit_kernel_adapter.hh"
 #include "jit_register/jit_register.hh"
 #include "kernel_register/kernel_register.hh"
+#include "utils/ctype_utils.hh"
 
 using namespace dlp::kernel_frame;
 using namespace dlp::jit;
 using namespace dlp::kernels;
-
-inline kernelDatatype
-getKernelDatatype(kernel_datatype_t kDtype)
-{
-    if ((kDtype < DLP_KERNEL_U8S8S32OS32)
-        || (kDtype >= DLP_KERNEL_DATATYPE_MAX)) {
-        return kernelDatatype::invalid;
-    }
-    return static_cast<kernelDatatype>(kDtype);
-}
-
-DataType
-getStorageDtFromAoclKernelDatatype(kernel_datatype_t kDtype)
-{
-    DataType retType = DataType::invalid;
-
-    switch (kDtype) {
-        case DLP_KERNEL_U8S8S32OS32:
-            retType = DataType::s32;
-            break;
-        case DLP_KERNEL_U8S8S32OS8:
-            retType = DataType::s32;
-            break;
-        case DLP_KERNEL_BF16BF16F32OBF16:
-            retType = DataType::f32;
-            break;
-        case DLP_KERNEL_BF16BF16F32OF32:
-            retType = DataType::f32;
-            break;
-        case DLP_KERNEL_F32F32F32OF32:
-            retType = DataType::f32;
-            break;
-        default:
-            retType = DataType::invalid;
-            break;
-    }
-
-    return retType;
-}
-
-DataType
-getStorageDtFromAoclStorageType(DLP_TYPE st)
-{
-    DataType dt = DataType::invalid;
-    switch (st) {
-        case DLP_S8:
-            dt = DataType::s8;
-            break;
-        case DLP_U8:
-            dt = DataType::u8;
-            break;
-        case DLP_S16:
-            dt = DataType::s16;
-            break;
-        case DLP_U16:
-            dt = DataType::u16;
-            break;
-        case DLP_BF16:
-            dt = DataType::bf16;
-            break;
-        case DLP_S32:
-            dt = DataType::s32;
-            break;
-        case DLP_U32:
-            dt = DataType::u32;
-            break;
-        case DLP_F32:
-            dt = DataType::f32;
-            break;
-        default:
-            dt = DataType::invalid;
-            break;
-    }
-
-    return dt;
-}
-
-static inline void
-setKernelOps(kernelOpsMetaData* metaData,
-             lpgemm_post_op*    post_op,
-             kernel_datatype_t  k_dtype)
-{
-    kernelOps kOpsType = kernelOps::invalid;
-    switch (post_op->op_code) {
-        case POST_OPS_BIAS: {
-            metaData->type           = kernelOps::bias;
-            metaData->paramStorageDt = getStorageDtFromAoclStorageType(
-                static_cast<DLP_TYPE>(post_op->stor_type));
-            char storFormatC =
-                std::tolower(*(static_cast<char*>(post_op->op_args2)));
-            metaData->cMatFormat = (storFormatC == 'c')
-                                       ? storageFormat::colMajor
-                                       : storageFormat::rowMajor;
-            break;
-        }
-        case POST_OPS_RELU:
-            metaData->type = kernelOps::relu;
-            break;
-        case POST_OPS_RELU_SCALE:
-            metaData->type = kernelOps::reluScale;
-            metaData->paramStorageDt =
-                getStorageDtFromAoclKernelDatatype(k_dtype);
-            break;
-        case POST_OPS_GELU_TANH:
-            metaData->type = kernelOps::geluTanh;
-            metaData->paramStorageDt =
-                getStorageDtFromAoclKernelDatatype(k_dtype);
-            break;
-        case POST_OPS_GELU_ERF:
-            metaData->type = kernelOps::geluErf;
-            metaData->paramStorageDt =
-                getStorageDtFromAoclKernelDatatype(k_dtype);
-            break;
-        case POST_OPS_CLIP:
-            metaData->type = kernelOps::clip;
-            metaData->paramStorageDt =
-                getStorageDtFromAoclKernelDatatype(k_dtype);
-            break;
-        case POST_OPS_SWISH:
-            metaData->type = kernelOps::swish;
-            metaData->paramStorageDt =
-                getStorageDtFromAoclKernelDatatype(k_dtype);
-            break;
-        case POST_OPS_TANH:
-            metaData->type = kernelOps::tanh;
-            metaData->paramStorageDt =
-                getStorageDtFromAoclKernelDatatype(k_dtype);
-            break;
-        case POST_OPS_SIGMOID:
-            metaData->type = kernelOps::sigmoid;
-            metaData->paramStorageDt =
-                getStorageDtFromAoclKernelDatatype(k_dtype);
-            break;
-        case POST_OPS_DOWNSCALE: {
-            metaData->type           = kernelOps::downscale;
-            metaData->paramStorageDt = getStorageDtFromAoclStorageType(
-                static_cast<DLP_TYPE>(post_op->stor_type));
-            char storFormatC =
-                std::tolower(*(static_cast<char*>(post_op->op_args2)));
-            metaData->cMatFormat    = (storFormatC == 'c')
-                                          ? storageFormat::colMajor
-                                          : storageFormat::rowMajor;
-            metaData->scaleFactorDt = getStorageDtFromAoclStorageType(
-                static_cast<DLP_TYPE>(post_op->sf_stor_type));
-            metaData->scalarScaleFactorRequired =
-                (post_op->scale_factor_len == 1) ? true : false;
-            metaData->vectorScaleFactorRequired =
-                (post_op->scale_factor_len > 1) ? true : false;
-            metaData->zeroPointDt = getStorageDtFromAoclStorageType(
-                static_cast<DLP_TYPE>(post_op->zp_stor_type));
-            metaData->scalarZeroPointRequired =
-                (*(static_cast<md_t*>(post_op->op_args3)) == 1) ? true : false;
-            metaData->vectorZeroPointRequired =
-                (*(static_cast<md_t*>(post_op->op_args3)) > 1) ? true : false;
-            break;
-        }
-        case POST_OPS_MATRIX_ADD: {
-            metaData->type           = kernelOps::matAdd;
-            metaData->paramStorageDt = getStorageDtFromAoclStorageType(
-                static_cast<DLP_TYPE>(post_op->stor_type));
-            char storFormatC =
-                std::tolower(*(static_cast<char*>(post_op->op_args2)));
-            metaData->cMatFormat = (storFormatC == 'c')
-                                       ? storageFormat::colMajor
-                                       : storageFormat::rowMajor;
-            metaData->scaleFactorDt =
-                DataType::f32; // TODO: Always DLP_F32 for mat add
-            metaData->scalarScaleFactorRequired =
-                (post_op->scale_factor_len == 1) ? true : false;
-            metaData->vectorScaleFactorRequired =
-                (post_op->scale_factor_len > 1) ? true : false;
-            break;
-        }
-        case POST_OPS_MATRIX_MUL: {
-            metaData->type           = kernelOps::matMul;
-            metaData->paramStorageDt = getStorageDtFromAoclStorageType(
-                static_cast<DLP_TYPE>(post_op->stor_type));
-            char storFormatC =
-                std::tolower(*(static_cast<char*>(post_op->op_args2)));
-            metaData->cMatFormat = (storFormatC == 'c')
-                                       ? storageFormat::colMajor
-                                       : storageFormat::rowMajor;
-            metaData->scaleFactorDt =
-                DataType::f32; // TODO: Always DLP_F32 for mat mul
-            metaData->scalarScaleFactorRequired =
-                (post_op->scale_factor_len == 1) ? true : false;
-            metaData->vectorScaleFactorRequired =
-                (post_op->scale_factor_len > 1) ? true : false;
-            break;
-        }
-        case POST_OPS_DISABLE:
-            metaData->type = kernelOps::invalid;
-            break;
-        default:
-            metaData->type = kernelOps::invalid;
-            break;
-    }
-}
-
-// TODO: This is a pseudo decision engine. Need to replace it with a real one.
-// Post-ops are not supported in this pseudo decision engine.
-static std::optional<kernelInfo>
-getKernelInfoForJitIntelligence(kernel_datatype_t k_dtype,
-                                md_t              m,
-                                md_t              n,
-                                md_t              k,
-                                void*             alpha,
-                                void*             beta,
-                                lpgemm_post_op*   metadata,
-                                md_t              mr_hint,
-                                md_t              nr_hint)
-{
-    md_t mr           = mr_hint;
-    md_t nr           = nr_hint;
-    md_t k_unroll     = 1;
-    bool anyKOpsOrder = false;
-
-    // TODO: Only supports non GEMV kernels for now.
-    if ((m == 1) || (n == 1)) {
-        return std::nullopt;
-    }
-
-    if (metadata == nullptr) {
-        kernelInfo kI{
-            mr, nr, k_unroll, false, false, nullptr, 0, anyKOpsOrder
-        };
-        return std::make_optional(kI);
-    } else {
-        // Iterate over the metadata list to get the number of post-ops.
-        md_t            numPostOps    = 0;
-        lpgemm_post_op* temp_post_ops = metadata;
-        while ((temp_post_ops != NULL)
-               && (temp_post_ops->op_code != POST_OPS_DISABLE)) {
-            temp_post_ops = temp_post_ops->next;
-            numPostOps++;
-        }
-
-        if (numPostOps == 0) {
-            kernelInfo kI{ mr,    nr,      k_unroll, false,
-                           false, nullptr, 0,        anyKOpsOrder };
-            return std::make_optional(kI);
-        } else {
-            kernelInfo kI{ mr,    nr,      k_unroll, false,
-                           false, nullptr, 0,        anyKOpsOrder };
-            kI.kOpsArrSize = numPostOps;
-            kI.kOpsArr     = kernelInfo::allocateKernelOpsArray(numPostOps);
-
-            md_t ii       = 0;
-            temp_post_ops = metadata;
-            while ((temp_post_ops != NULL)
-                   && (temp_post_ops->op_code != POST_OPS_DISABLE)) {
-                setKernelOps(std::addressof(kI.kOpsArr[ii]), temp_post_ops,
-                             k_dtype);
-                temp_post_ops = temp_post_ops->next;
-                ii++;
-            }
-
-            return std::make_optional(kI);
-        }
-        return std::nullopt;
-    }
-}
+using namespace dlp::utils;
 
 dlp_kernel_hndl_t
 dlp_init_and_get_kernel_hndl(kernel_datatype_t k_dtype,
+                             char              storage_format,
+                             AOCL_MEMORY_TAG   mtag_a,
+                             AOCL_MEMORY_TAG   mtag_b,
                              md_t              m,
                              md_t              n,
                              md_t              k,
+                             md_t              rs_a,
+                             md_t              cs_a,
+                             md_t              rs_b,
+                             md_t              cs_b,
+                             md_t              rs_c,
+                             md_t              cs_c,
                              void*             alpha,
                              void*             beta,
                              lpgemm_post_op*   metadata,
@@ -313,24 +63,25 @@ dlp_init_and_get_kernel_hndl(kernel_datatype_t k_dtype,
 {
     dlp_kernel_hndl_t kernel_hndl{ DLP_KERNEL_INVALID, 0, 0, nullptr };
 
-    // TODO: Generate the jitIntelligence via pseudo DecisionEngine.
-    auto optKI = getKernelInfoForJitIntelligence(k_dtype, m, n, k, alpha, beta,
-                                                 metadata, mr_hint, nr_hint);
+    kernelDatatype kDType = getKernelDatatype(k_dtype);
+    if (kDType == kernelDatatype::invalid) {
+        return kernel_hndl;
+    }
+    dlp::de::gemmDEInput gDEIn{ kDType, m,    n,        k,       rs_a,
+                                cs_a,   rs_b, cs_b,     rs_c,    cs_c,
+                                alpha,  beta, metadata, mr_hint, nr_hint };
+    auto optKI = dlp::de::decisionEngineInstance().getKernelInfoForInput(
+        std::addressof(gDEIn), kernelRoutineType::gemm, kDType);
     if (!optKI.has_value()) {
         return kernel_hndl;
     }
 
-    kernelDatatype kDtype = getKernelDatatype(k_dtype);
-    if (kDtype == kernelDatatype::invalid) {
-        return kernel_hndl;
-    }
-
     auto kernPtr =
-        dlpKernelRegisterInstance().getGemmKernel(&optKI.value(), kDtype);
+        dlpKernelRegisterInstance().getGemmKernel(&optKI.value(), kDType);
 
     if (!kernPtr) {
         auto jitGen =
-            dlpJitGeneratorRegisterInstance().getGemmJitGenerator(kDtype);
+            dlpJitGeneratorRegisterInstance().getGemmJitGenerator(kDType);
         auto kB = std::make_unique<jitKernelAdapter>(optKI.value(),
                                                      std::move(jitGen), true);
 
@@ -346,7 +97,7 @@ dlp_init_and_get_kernel_hndl(kernel_datatype_t k_dtype,
                 std::abort();
             }
             kernPtr = dlpKernelRegisterInstance().getGemmKernel(&optKI.value(),
-                                                                kDtype);
+                                                                kDType);
         }
     }
 

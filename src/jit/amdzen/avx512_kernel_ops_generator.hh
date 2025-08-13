@@ -26,71 +26,58 @@
  *
  */
 
-#ifndef KERNEL_OP_HANDLER_HPP
-#define KERNEL_OP_HANDLER_HPP
+#pragma once
 
-#include <functional>
-#include <memory>
+#include "kernel_ops_generator_base.hh"
 
-#include "jit/jit_generator_base.hh"
-#include "jit/xbyak/xbyak.h"
-#include "jit/xbyak/xbyak_util.h"
-#include "kernel_frame/kernel_frame_base.hh"
-#include "kernels/kernel_base.hh"
+namespace amdzen::avx512gen {
 
-namespace avx512gen::generator {
-
-using namespace Xbyak;
-using namespace dlp::kernel_frame;
-using namespace dlp::jit;
-
-// Error handling macro to reduce repetitive code
-#define RETURN_IF_ERROR(expr)                                                  \
-    do {                                                                       \
-        auto err = (expr);                                                     \
-        if (err != jitGeneratorError::success) {                               \
-            return err;                                                        \
-        }                                                                      \
-    } while (0)
-
-// kernelOpHandler class that implements
-class kernelOpHandler
+class kernelOpsGeneratorAvx512 : public gen::kernelOpsGeneratorInterface
 {
   public:
-    kernelOpHandler(Xbyak::CodeGenerator* jit,
-                    int                   MR,
-                    int                   NR,
-                    bool                  useMask,
-                    int                   cRegStartIdx,
-                    int                   cRegCount);
+    kernelOpsGeneratorAvx512(Xbyak::CodeGenerator* jit,
+                             int                   MR,
+                             int                   NR,
+                             bool                  useMask,
+                             int                   cRegStartIdx,
+                             int                   cRegCount);
+    ~kernelOpsGeneratorAvx512()                               = default;
+    kernelOpsGeneratorAvx512(const kernelOpsGeneratorAvx512&) = delete;
+    kernelOpsGeneratorAvx512& operator=(const kernelOpsGeneratorAvx512&) =
+        delete;
+    kernelOpsGeneratorAvx512(kernelOpsGeneratorAvx512&&)            = delete;
+    kernelOpsGeneratorAvx512& operator=(kernelOpsGeneratorAvx512&&) = delete;
 
-    ~kernelOpHandler()                                 = default;
-    kernelOpHandler(const kernelOpHandler&)            = delete;
-    kernelOpHandler& operator=(const kernelOpHandler&) = delete;
-    kernelOpHandler(kernelOpHandler&&)                 = delete;
-    kernelOpHandler& operator=(kernelOpHandler&&)      = delete;
+    dlp::jit::jitGeneratorError generateKernelOps(
+        std::vector<dlp::kernel_frame::kernelOpsMetaData>& kernelOps,
+        const Xbyak::Reg64& postOpsArgWrapperPtrReg) override;
+    dlp::jit::jitGeneratorError bias(
+        dlp::kernel_frame::kernelOpsMetaData& op) override;
+    dlp::jit::jitGeneratorError relu(
+        [[maybe_unused]] dlp::kernel_frame::kernelOpsMetaData& op) override;
+    dlp::jit::jitGeneratorError reluScale(
+        dlp::kernel_frame::kernelOpsMetaData& op) override;
+    dlp::jit::jitGeneratorError geluTanh(
+        dlp::kernel_frame::kernelOpsMetaData& op) override;
+    dlp::jit::jitGeneratorError geluErf(
+        dlp::kernel_frame::kernelOpsMetaData& op) override;
+    dlp::jit::jitGeneratorError clip(
+        dlp::kernel_frame::kernelOpsMetaData& op) override;
+    dlp::jit::jitGeneratorError downscale(
+        dlp::kernel_frame::kernelOpsMetaData& op) override;
+    dlp::jit::jitGeneratorError matadd(
+        dlp::kernel_frame::kernelOpsMetaData& op) override;
+    dlp::jit::jitGeneratorError matmul(
+        dlp::kernel_frame::kernelOpsMetaData& op) override;
+    dlp::jit::jitGeneratorError swish(
+        dlp::kernel_frame::kernelOpsMetaData& op) override;
+    dlp::jit::jitGeneratorError tanh(
+        dlp::kernel_frame::kernelOpsMetaData& op) override;
+    dlp::jit::jitGeneratorError sigmoid(
+        dlp::kernel_frame::kernelOpsMetaData& op) override;
+    dlp::jit::jitGeneratorError embedKernelOpsAttributes() override;
 
-    // Main post-op interface
-    jitGeneratorError generatekernelOps(
-        std::vector<kernelOpsMetaData>& kernelOps,
-        const Xbyak::Reg64&             stackPtr);
-
-    // Function to generate the gelu const embeddings within the kernel.
-    jitGeneratorError generateTableStores();
-
-    // Individual post-op methods
-    jitGeneratorError biasZmm(kernelOpsMetaData& op);
-    jitGeneratorError reluZmm();
-    jitGeneratorError reluScale(kernelOpsMetaData& op);
-    jitGeneratorError geluTanh(kernelOpsMetaData& op);
-    jitGeneratorError geluErf(kernelOpsMetaData& op);
-    jitGeneratorError clip(kernelOpsMetaData& op);
-    jitGeneratorError downscaleZmm(kernelOpsMetaData& op);
-    jitGeneratorError mataddZmm(kernelOpsMetaData& op);
-    jitGeneratorError matmulZmm(kernelOpsMetaData& op);
-    jitGeneratorError swish(kernelOpsMetaData& op);
-    jitGeneratorError tanh(kernelOpsMetaData& op);
-    jitGeneratorError sigmoid(kernelOpsMetaData& op);
+    void advancePostOpsPtr() override;
 
   private:
     int numRegs  = 32;
@@ -131,7 +118,7 @@ class kernelOpHandler
 
     Xbyak::CodeGenerator* jit_; // Back reference to access registers and state
 
-    jitGeneratorError allocateRegs();
+    dlp::jit::jitGeneratorError setPostOpsContext();
 
     // Helper implementations for different storage formats
     template<typename T>
@@ -246,6 +233,4 @@ class kernelOpHandler
     Xbyak::Label tables;
 };
 
-} // namespace avx512gen::generator
-
-#endif // KERNEL_OP_HANDLER_HPP
+} // namespace amdzen::avx512gen

@@ -28,43 +28,40 @@
 
 #pragma once
 
-#include <stack>
+#include <optional>
 
-#include "jit/xbyak/xbyak.h"
+#include "de_input.hh"
+#include "kernel_frame/kernel_frame_base.hh"
 
-namespace avx512gen::utils {
+namespace dlp::de {
 
-template<typename REG_TYPE>
-class registerGuard
+class iDEBackend
 {
-    Xbyak::CodeGenerator* jit;
-    std::stack<REG_TYPE>  regStack;
-
   public:
-    registerGuard(Xbyak::CodeGenerator* _jit)
-        : jit{ _jit }
-    {
-    }
-
-    void saveRegister(REG_TYPE reg)
-    {
-        regStack.push(reg);
-        jit->push(reg);
-    }
-
-    ~registerGuard()
-    {
-        while (!regStack.empty()) {
-            auto tReg = regStack.top();
-            jit->pop(tReg);
-            regStack.pop();
-        }
-    }
-
-    registerGuard(registerGuard&)             = delete;
-    registerGuard(registerGuard&&)            = delete;
-    registerGuard& operator=(registerGuard&)  = delete;
-    registerGuard& operator=(registerGuard&&) = delete;
+    virtual ~iDEBackend() = default;
+    virtual std::optional<dlp::kernel_frame::kernelInfo> getKernelInfoForInput(
+        iDEInput* in) = 0;
 };
 
-} // namespace avx512gen::utils
+class gemmF32DEBackend : public iDEBackend
+{
+    static inline void setKernelOps(
+        dlp::kernel_frame::kernelOpsMetaData* metaData,
+        lpgemm_post_op*                       post_op,
+        kernel_frame::kernelDatatype          k_dtype);
+    bool isZen4;
+    bool isZen;
+
+  public:
+    gemmF32DEBackend();
+    ~gemmF32DEBackend()                                  = default;
+    gemmF32DEBackend(const gemmF32DEBackend&)            = delete;
+    gemmF32DEBackend(gemmF32DEBackend&&)                 = delete;
+    gemmF32DEBackend& operator=(const gemmF32DEBackend&) = delete;
+    gemmF32DEBackend& operator=(gemmF32DEBackend&&)      = delete;
+
+    std::optional<dlp::kernel_frame::kernelInfo> getKernelInfoForInput(
+        iDEInput* in) override;
+};
+
+} // namespace dlp::de

@@ -31,38 +31,12 @@
 
 #include "aocl_dlp_config.h"
 
-#if DLP_OS_WINDOWS
-#include <windows.h>
-#else
-#include <sys/mman.h>
-#endif
-
 #include "avx512_generator.hh"
 #include "jit_register/jit_register.hh"
 
-namespace avx512gen::generator {
+namespace amdzen::avx512gen {
 
-void
-dump_jit_code(
-    const void* code, int code_size, const char* code_name, int m, int n)
-{
-    if (code) {
-        static int counter = 0;
-#define MAX_FNAME_LEN 256
-        char fname[MAX_FNAME_LEN + 1];
-        // TODO (Roma): support prefix for code / linux perf dumps
-        snprintf(fname, MAX_FNAME_LEN, "%s_%dx%d.bin", code_name, m, n);
-        counter++;
-        FILE* fp = fopen(fname, "wb+");
-        // Failure to dump code is not fatal
-        if (fp) {
-            int unused = fwrite(code, code_size, 1, fp);
-            // UNUSED(unused);
-            fclose(fp);
-        }
-    }
-#undef MAX_FNAME_LEN
-}
+using namespace Xbyak;
 
 jitAVX512::jitAVX512(void* buffer, size_t bufferSize)
     : Xbyak::CodeGenerator(bufferSize,
@@ -242,7 +216,7 @@ jitAVX512::scaleBeta()
 
 template<typename aType, typename bType, typename cType, typename accumType>
 dlp::jit::jitGeneratorError
-jitAVX512::generateIrLoop(generatorParams& params)
+jitAVX512::generateIrLoop(utils::generatorParams& params)
 {
     inLocalLabel();
     // calculate and load pointers
@@ -306,14 +280,16 @@ jitAVX512::generateIrLoop(generatorParams& params)
 
     // Create and set up kernelOphandler if there are post-ops
     if (!params.kernelOps.empty()) {
-        kernelOpHandler kernelOpHandler(this, MR, NR, useMask, cRegIdx, cReg);
+        gen::kernelOpsHandler kernelOpsHandler(this, params.MR, params.NR,
+                                               params.useMask, cRegIdx, cReg,
+                                               params.kType);
 
-        kernelOpHandler.generatekernelOps(params.kernelOps, stackPtr);
+        kernelOpsHandler.generateKernelOps(params.kernelOps, stackPtr);
 
         // The gelu constants are embedded within the generated JIT kernel.
         // Otherwise a bug was observed whereby the address of gelu constants
         // inside the class turned out to be beyond what JIT can access.
-        kernelOpHandler.generateTableStores();
+        kernelOpsHandler.generateKernelOpsAttributes();
     }
 
     L(label_store_result);
@@ -350,30 +326,16 @@ jitAVX512::generateIrLoop(generatorParams& params)
     return dlp::jit::jitGeneratorError::success;
 }
 
-// Define type traits for each datatype
-template<dlp::kernel_frame::kernelDatatype KDT>
-struct kernel_types;
-
-template<>
-struct kernel_types<dlp::kernel_frame::kernelDatatype::f32f32f32of32>
-{
-    using aType        = float;
-    using bType        = float;
-    using cType        = float;
-    using accumType    = float;
-    using kernelOpType = float;
-};
-
 // Template function that takes the datatype as a template parameter
 template<dlp::kernel_frame::kernelDatatype KDT>
 dlp::jit::jitGeneratorError
-jitAVX512::generateKernel(generatorParams& params)
+jitAVX512::generateKernel(utils::generatorParams& params)
 {
     MR      = params.MR;
     NR      = params.NR;
     useMask = params.useMask;
 
-    using types     = kernel_types<KDT>;
+    using types     = traits::kernel_types<KDT>;
     using aType     = typename types::aType;
     using bType     = typename types::bType;
     using cType     = typename types::cType;
@@ -400,6 +362,12 @@ jitAVX512::generateKernel(generatorParams& params)
 
     return dlp::jit::jitGeneratorError::success;
 }
+
+// Instantiating for a concrete type, to enable header and .cc file
+// separation of templated function.
+template dlp::jit::jitGeneratorError
+jitAVX512::generateKernel<dlp::kernel_frame::kernelDatatype::f32f32f32of32>(
+    utils::generatorParams& params);
 
 template<>
 dlp::jit::jitGeneratorError
@@ -496,207 +464,4 @@ jitAVX512::scaleBeta<float, float>()
     return dlp::jit::jitGeneratorError::success;
 }
 
-dlp::jit::jitGeneratorError
-jitAVX512FP32::generateAllKernels(const dlp::kernel_frame::kernelInfo& ji)
-{
-
-    dlp::jit::jitGeneratorError err = dlp::jit::jitGeneratorError::error;
-
-    MR                 = ji.mr;
-    NR                 = ji.nr;
-    K_UNROLL           = ji.k_unroll;
-    int numElemsPerReg = 16; // RegBytes / this->sizeofType<accumType>();
-#if 0
-    // The idea is to generate all kernels with multiple of nElemsPerReg
-    // and then use the mask to handle in-between cases.
-
-    // This approach is more efficient for the cases where n < NR cases
-    //  where you can operate the entire "<NR" region in one go.
-
-    // These kernels can be used currently for the cases where reordering is not done.
-
-    // To-Do: Design pack kernels to support this approach.
-    numNRVariants      = (NR / numElemsPerReg) * 2;
-#else
-    // Here, we only generate kernels with multiples of numElemsPerReg
-    // and then one kernel to handle "< numElemsPerReg" cases.
-    // Here, the problem will be divided first by NR and the fringe will be
-    // divided further into two regions. One for "multiples of numElemsPerReg"
-    // and the other for "< numElemsPerReg" cases.
-
-    // This approach works well with the current reordering strategy but is
-    // inefficient for the cases where n < NR cases especially with "lt16"
-    // fringe being taken.
-    numNRVariants = (NR / numElemsPerReg) + 1;
-#endif
-    numMRVariants     = MR;
-    numKernelVariants = numMRVariants * numNRVariants;
-
-    // Hardcoding the FP32 kernel datatype for now
-    const dlp::kernel_frame::kernelDatatype kdt =
-        dlp::kernel_frame::kernelDatatype::f32f32f32of32;
-
-    kernelCodeBlocks.resize(numKernelVariants);
-
-    // Initializing with default values.
-    generatorParams params(0, 0, ji.k_unroll, false, false, ji.is_beta_zero,
-                           ji.is_alpha_one);
-
-    for (std::size_t ii = 0; ii < ji.kOpsArrSize; ++ii) {
-        // Copy the kernelOps from the kernelInfo to params
-        params.kernelOps.push_back(ji.kOpsArr[ii]);
-    }
-
-    // Generate all kernels for the given MR and NR
-    for (int mr = 0; mr < numMRVariants; mr++) {
-        for (int nr = 0; nr < numNRVariants; nr++) {
-            params.MR    = mr == 0 ? MR : mr;
-            params.mLoop = mr == 0;
-#if 0 // case where fringe is handled all at once
-            params.NR        = (nr/2) * numElemsPerReg;
-            params.useMask   = (nr % 2) == 0;
-#else // current approach where fringe is handled in two parts
-            params.NR      = nr * numElemsPerReg;
-            params.useMask = (nr == 0);
-#endif
-            void* codeBuffer = kernelCodeBlocks[mr * numNRVariants + nr];
-            // Allocate executable memory
-#if DLP_OS_WINDOWS
-            codeBuffer =
-                VirtualAlloc(nullptr, JIT_KERNEL_SIZE, MEM_COMMIT | MEM_RESERVE,
-                             PAGE_EXECUTE_READWRITE);
-            if (codeBuffer == nullptr) {
-#else
-            codeBuffer = mmap(nullptr, JIT_KERNEL_SIZE,
-                              PROT_READ | PROT_WRITE | PROT_EXEC,
-                              MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-            if (codeBuffer == MAP_FAILED) {
-#endif
-                err = dlp::jit::jitGeneratorError::errorAllocatingMemory;
-                goto cleanup;
-            }
-            kernelCodeBlocks[mr * numNRVariants + nr] = codeBuffer;
-
-            // Create a new instance of jitAVX512 with the code buffer and size
-            jitAVX512 base(codeBuffer, JIT_KERNEL_SIZE);
-
-            err = base.generateKernel<kdt>(params);
-            if (err != dlp::jit::jitGeneratorError::success) {
-                goto cleanup;
-            }
-#ifdef DLP_DUMP_JIT_CODE
-            dump_jit_code(kernelCodeBlocks[mr * numNRVariants + nr],
-                          JIT_KERNEL_SIZE, "jit_kernel", params.MR, params.NR);
-#endif
-        }
-    }
-
-    return dlp::jit::jitGeneratorError::success;
-
-cleanup:
-    // Free the memory allocated for the kernel code blocks if
-    // allocation fails or if the kernel generation fails
-    for (auto& codeBlock : kernelCodeBlocks) {
-        if (codeBlock != nullptr) {
-#if DLP_OS_WINDOWS
-            VirtualFree(codeBlock, 0, MEM_RELEASE);
-#else
-            munmap(codeBlock, JIT_KERNEL_SIZE);
-#endif
-        }
-    }
-    return err;
-}
-
-dlp::kernels::kernelError
-jitAVX512FP32::executeKernel(dlp::kernels::kernelParams* _params)
-{
-    auto params = static_cast<dlp::kernels::gemmParams*>(_params);
-    // Since JR loop is in framework, the 'n' dimension passed to this function
-    // is always <= NR.
-    int mFullPieces    = params->m / MR;
-    int mPartialPieces = params->m % MR;
-
-    params->kIter = params->k / K_UNROLL;
-    params->kLeft = params->k % K_UNROLL;
-
-    int numElemsPerReg = 16; // RegBytes / this->sizeofType<accumType>();
-
-    float* aPtr = static_cast<float*>(params->a);
-    float* bPtr = static_cast<float*>(params->b);
-    float* cPtr = static_cast<float*>(params->c);
-    // Initialize pointers to A and B
-    float* c_jr = cPtr;
-    float* c_ir = cPtr;
-
-    md_t n = params->n;
-    md_t m = params->m;
-    md_t k = params->k;
-
-    md_t og_post_op_c_i = (params->kernelOpsAttr).post_op_c_i;
-    while (n) {
-        int n_idx = n / numElemsPerReg;
-        int nElemsProcessing =
-            dlp_max(n_idx * numElemsPerReg, n % numElemsPerReg);
-        params->a       = aPtr;
-        params->c       = c_jr;
-        params->maskF32 = 0xFFFF >> (numElemsPerReg - nElemsProcessing);
-
-        if (params->m >= MR) {
-            params->mIter = mFullPieces;
-            int m_idx     = 0;
-            params->n     = nElemsProcessing;
-
-            jit_kernel kernel = reinterpret_cast<jit_kernel>(
-                kernelCodeBlocks[m_idx * numNRVariants + n_idx]);
-            kernel(params);
-        }
-        if (mPartialPieces) {
-            (params->a) = (float*)(params->a) + mFullPieces * params->psA;
-            (params->c) = (float*)(params->c) + mFullPieces * MR * params->rsC;
-            int m_idx   = mPartialPieces;
-            {
-                jit_kernel kernel = reinterpret_cast<jit_kernel>(
-                    kernelCodeBlocks[m_idx * numNRVariants + n_idx]);
-                kernel(params);
-            }
-        }
-        // move b and c pointers
-        params->b = (float*)(params->b) + n_idx * numElemsPerReg;
-        c_jr      = (float*)(c_jr) + n_idx * numElemsPerReg;
-        n -= nElemsProcessing;
-
-        // This is the case where a fringe is encountered, with the fringe
-        // itself composed of a part which is a multiple of numElemsPerReg
-        // and a part which is < numElemsPerReg.
-        (params->kernelOpsAttr).post_op_c_j += nElemsProcessing;
-
-        // The following line is necessary to ensure a subtle bug does not
-        // occur. Unlike the classic kernels where the kernelOpsAttr is passed
-        // by value to the fringe kernels, here it is kind of passed by
-        // reference, since the params ptr is the only kernel argument (inside
-        // which is the kernelOpsAttr). Since the while(n) loop can execute
-        // multiple times, any state variable, like post_op_c_i, if modified
-        // inside kernel, it needs to be reverted.
-        (params->kernelOpsAttr).post_op_c_i = og_post_op_c_i;
-    }
-
-    return dlp::kernels::kernelError::success;
-}
-
-jitAVX512FP32::~jitAVX512FP32()
-{
-    for (auto& codeBlock : kernelCodeBlocks) {
-        if (codeBlock != nullptr) {
-#if DLP_OS_WINDOWS
-            VirtualFree(codeBlock, 0, MEM_RELEASE);
-#else
-            munmap(codeBlock, JIT_KERNEL_SIZE);
-#endif
-        }
-    }
-}
-
-DLP_REGISTER_STATIC_GEMM_JIT_GENERATOR(jitAVX512FP32, "dlp_zen_jit");
-
-} // namespace avx512gen::generator
+} // namespace amdzen::avx512gen
