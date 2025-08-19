@@ -36,26 +36,9 @@
 #include "jit_generator_utils.hh"
 #include "kernel_ops_handler.hh"
 #include "kernels/kernel_base.hh"
+#include "traits.hh"
 
 namespace amdzen::avx512gen {
-
-namespace traits {
-
-    // Define type traits for each datatype
-    template<dlp::kernel_frame::kernelDatatype KDT>
-    struct kernel_types;
-
-    template<>
-    struct kernel_types<dlp::kernel_frame::kernelDatatype::f32f32f32of32>
-    {
-        using aType        = float;
-        using bType        = float;
-        using cType        = float;
-        using accumType    = float;
-        using kernelOpType = float;
-    };
-
-} // namespace traits
 
 class jitAVX512 : public Xbyak::CodeGenerator
 {

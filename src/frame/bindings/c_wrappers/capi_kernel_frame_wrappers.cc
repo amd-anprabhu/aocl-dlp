@@ -128,11 +128,21 @@ dlp_execute_kernel(dlp_kernel_hndl_t   kernel_hndl,
                    lpgemm_post_op*     post_ops_list,
                    lpgemm_post_op_attr post_ops_attr)
 {
-    gemmParams kP{
-        A,    B,    C,    m,    n,     k,    rs_a,          cs_a,         ps_a,
-        rs_b, cs_b, rs_c, cs_c, alpha, beta, post_ops_list, post_ops_attr
-    };
+    // This function is currently used only for FP32 GEMM and GEMV(with n==1)
+    // kernels.
+    std::unique_ptr<kernelParams> uPtr;
+    if (n == 1) {
+        uPtr.reset(new gemvParams{ A, B, C, m, k, rs_a, cs_a, rs_b, cs_b, rs_c,
+                                   cs_c, alpha, beta, post_ops_list,
+                                   post_ops_attr });
+    } else {
+        uPtr.reset(new gemmParams{ A, B, C, m, n, k, rs_a, cs_a, ps_a, rs_b,
+                                   cs_b, rs_c, cs_c, alpha, beta, post_ops_list,
+                                   post_ops_attr });
+    }
+
     kernelBase* kB = static_cast<kernelBase*>(kernel_hndl.kernel_base);
-    kB->operator()(std::addressof(kP));
+    kB->operator()(uPtr.get());
+
     return;
 }

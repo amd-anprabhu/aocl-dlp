@@ -253,7 +253,7 @@ jitAVX512::generateIrLoop(utils::generatorParams& params)
 
     L(".BPOSTACCUM");
 
-    if (params.is_alpha_one) {
+    if (params.alphaScalingType == dlp::kernel_frame::scalingType::one) {
         // skip alpha scaling if alpha is 1
     } else {
         // alpha scaling
@@ -261,7 +261,7 @@ jitAVX512::generateIrLoop(utils::generatorParams& params)
     }
 
     // To-Do: add support for beta scaling if beta is 1 using vaddps
-    if (params.is_beta_zero) {
+    if (params.betaScalingType == dlp::kernel_frame::scalingType::zero) {
         // skip beta scaling if beta is 0
     } else {
         // beta scaling
@@ -335,7 +335,7 @@ jitAVX512::generateKernel(utils::generatorParams& params)
     NR      = params.NR;
     useMask = params.useMask;
 
-    using types     = traits::kernel_types<KDT>;
+    using types     = amdzen::traits::kernel_types<KDT>;
     using aType     = typename types::aType;
     using bType     = typename types::bType;
     using cType     = typename types::cType;

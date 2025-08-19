@@ -107,6 +107,7 @@ class jitHelperUtils
 };
 
 typedef void (*jit_kernel)(dlp::kernels::gemmParams*);
+using jit_gemv_kernel = void (*)(dlp::kernels::gemvParams*);
 
 constexpr uint64_t JIT_KERNEL_SIZE = 8 * 4096;
 
@@ -127,28 +128,30 @@ struct generatorParams
     int K_UNROLL;
     // This will be used to generate NR + " < nElemsPerReg" kernels,
     // where NR is a multiple of nElemsPerReg including "0".
-    bool            useMask;
-    bool            mLoop; // This will be set to true only for the main kernel
-    bool            is_beta_zero; // skip beta scaling if beta is 0
-    bool            is_alpha_one; // skip alpha scaling if alpha is 1
-    kernelInstrType kType;
+    bool useMask;
+    bool mLoop; // This will be set to true only for the main kernel
+    dlp::kernel_frame::scalingType                    alphaScalingType;
+    dlp::kernel_frame::scalingType                    betaScalingType;
+    kernelInstrType                                   kType;
     std::vector<dlp::kernel_frame::kernelOpsMetaData> kernelOps;
 
-    generatorParams(md_t            _MR,
-                    md_t            _NR,
-                    int             _K_UNROLL,
-                    bool            _useMask,
-                    bool            _mLoop,
-                    bool            _is_beta_zero = false,
-                    bool            _is_alpha_one = false,
-                    kernelInstrType _kType        = kernelInstrType::none)
+    generatorParams(md_t                           _MR,
+                    md_t                           _NR,
+                    int                            _K_UNROLL,
+                    bool                           _useMask,
+                    bool                           _mLoop,
+                    dlp::kernel_frame::scalingType _alphaScalingType =
+                        dlp::kernel_frame::scalingType::generic,
+                    dlp::kernel_frame::scalingType _betaScalingType =
+                        dlp::kernel_frame::scalingType::generic,
+                    kernelInstrType _kType = kernelInstrType::none)
         : MR(_MR)
         , NR(_NR)
         , K_UNROLL(_K_UNROLL)
         , useMask(_useMask)
         , mLoop(_mLoop)
-        , is_beta_zero(_is_beta_zero)
-        , is_alpha_one(_is_alpha_one)
+        , alphaScalingType(_alphaScalingType)
+        , betaScalingType(_betaScalingType)
         , kType(_kType)
     {
     }
@@ -159,8 +162,8 @@ struct generatorParams
         , K_UNROLL(other.K_UNROLL)
         , useMask(other.useMask)
         , mLoop(other.mLoop)
-        , is_beta_zero(other.is_beta_zero)
-        , is_alpha_one(other.is_alpha_one)
+        , alphaScalingType(other.alphaScalingType)
+        , betaScalingType(other.betaScalingType)
         , kType(other.kType)
         , kernelOps(other.kernelOps)
     {
@@ -169,15 +172,15 @@ struct generatorParams
     generatorParams& operator=(const generatorParams& other)
     {
         if (this != std::addressof(other)) {
-            MR           = other.MR;
-            NR           = other.NR;
-            K_UNROLL     = other.K_UNROLL;
-            useMask      = other.useMask;
-            mLoop        = other.mLoop;
-            is_beta_zero = other.is_beta_zero;
-            is_alpha_one = other.is_alpha_one;
-            kType        = other.kType;
-            kernelOps    = other.kernelOps;
+            MR               = other.MR;
+            NR               = other.NR;
+            K_UNROLL         = other.K_UNROLL;
+            useMask          = other.useMask;
+            mLoop            = other.mLoop;
+            alphaScalingType = other.alphaScalingType;
+            betaScalingType  = other.betaScalingType;
+            kType            = other.kType;
+            kernelOps        = other.kernelOps;
         }
         return *this;
     }
@@ -188,8 +191,8 @@ struct generatorParams
         , K_UNROLL(other.K_UNROLL)
         , useMask(other.useMask)
         , mLoop(other.mLoop)
-        , is_beta_zero(other.is_beta_zero)
-        , is_alpha_one(other.is_alpha_one)
+        , alphaScalingType(other.alphaScalingType)
+        , betaScalingType(other.betaScalingType)
         , kType(other.kType)
         , kernelOps(std::move(other.kernelOps))
     {
@@ -198,20 +201,143 @@ struct generatorParams
     generatorParams& operator=(generatorParams&& other)
     {
         if (this != std::addressof(other)) {
-            MR           = other.MR;
-            NR           = other.NR;
-            K_UNROLL     = other.K_UNROLL;
-            useMask      = other.useMask;
-            mLoop        = other.mLoop;
-            is_beta_zero = other.is_beta_zero;
-            is_alpha_one = other.is_alpha_one;
-            kType        = other.kType;
-            kernelOps    = std::move(other.kernelOps);
+            MR               = other.MR;
+            NR               = other.NR;
+            K_UNROLL         = other.K_UNROLL;
+            useMask          = other.useMask;
+            mLoop            = other.mLoop;
+            alphaScalingType = other.alphaScalingType;
+            betaScalingType  = other.betaScalingType;
+            kType            = other.kType;
+            kernelOps        = std::move(other.kernelOps);
         }
         return *this;
     }
 
     ~generatorParams() = default;
+};
+
+// GEMV specific generator parameters
+// This is used by the JIT generator to generate the GEMV kernel
+struct gemvGeneratorParams
+{
+    // Dimensions and loop control
+    int MR;      // Vector length (number of rows to process at once)
+    int M_LEFT;  // M-dimension left over elements
+    int MR_LEFT; // MR-dimension left over elements(used when loading/storing
+                 // from C)
+
+    bool mloop;   // Whether to loop in m direction in steps of MR
+    bool kloop;   // Whether to loop in k direction in steps of numElemsPerReg
+    bool mfringe; // Whether to generate code for m-dimension fringe
+    bool kfringe; // Whether to generate code for k-dimension fringe
+
+    dlp::kernel_frame::storageFormat cMatFormat; // Storage format of the C
+                                                 // matrix (row-major or
+                                                 // column-major)
+
+    dlp::kernel_frame::scalingType alphaScalingType; // Scaling type for alpha
+    dlp::kernel_frame::scalingType betaScalingType;  // Scaling type for beta
+
+    kernelInstrType kType; // Instruction type for the kernel
+
+    // Constructor
+    gemvGeneratorParams(int                              _MR,
+                        int                              _M_LEFT,
+                        int                              _MR_LEFT,
+                        bool                             _mloop,
+                        bool                             _kloop,
+                        bool                             _mfringe,
+                        bool                             _kfringe,
+                        dlp::kernel_frame::storageFormat _cMatFormat,
+                        dlp::kernel_frame::scalingType   _alphaScalingType,
+                        dlp::kernel_frame::scalingType   _betaScalingType,
+                        kernelInstrType                  _kType)
+        : MR(_MR)
+        , M_LEFT(_M_LEFT)
+        , MR_LEFT(_MR_LEFT)
+        , mloop(_mloop)
+        , kloop(_kloop)
+        , mfringe(_mfringe)
+        , kfringe(_kfringe)
+        , cMatFormat(_cMatFormat)
+        , alphaScalingType(_alphaScalingType)
+        , betaScalingType(_betaScalingType)
+        , kType(_kType)
+    {
+    }
+
+    // Copy constructor
+    gemvGeneratorParams(const gemvGeneratorParams& other)
+        : MR(other.MR)
+        , M_LEFT(other.M_LEFT)
+        , MR_LEFT(other.MR_LEFT)
+        , mloop(other.mloop)
+        , kloop(other.kloop)
+        , mfringe(other.mfringe)
+        , kfringe(other.kfringe)
+        , cMatFormat(other.cMatFormat)
+        , alphaScalingType(other.alphaScalingType)
+        , betaScalingType(other.betaScalingType)
+        , kType(other.kType)
+    {
+    }
+    // Copy assignment operator
+    gemvGeneratorParams& operator=(const gemvGeneratorParams& other)
+    {
+        if (this != std::addressof(other)) {
+            MR               = other.MR;
+            M_LEFT           = other.M_LEFT;
+            MR_LEFT          = other.MR_LEFT;
+            mloop            = other.mloop;
+            kloop            = other.kloop;
+            mfringe          = other.mfringe;
+            kfringe          = other.kfringe;
+            cMatFormat       = other.cMatFormat;
+            alphaScalingType = other.alphaScalingType;
+            betaScalingType  = other.betaScalingType;
+            kType            = other.kType;
+        }
+        return *this;
+    }
+
+    // Move constructor
+    gemvGeneratorParams(gemvGeneratorParams&& other)
+        : MR(other.MR)
+        , M_LEFT(other.M_LEFT)
+        , MR_LEFT(other.MR_LEFT)
+        , mloop(other.mloop)
+        , kloop(other.kloop)
+        , mfringe(other.mfringe)
+        , kfringe(other.kfringe)
+        , cMatFormat(other.cMatFormat)
+        , alphaScalingType(other.alphaScalingType)
+        , betaScalingType(other.betaScalingType)
+        , kType(other.kType)
+    {
+    }
+
+    // Move assignment operator
+    gemvGeneratorParams& operator=(gemvGeneratorParams&& other) noexcept
+    {
+        if (this != std::addressof(other)) {
+            MR               = other.MR;
+            M_LEFT           = other.M_LEFT;
+            MR_LEFT          = other.MR_LEFT;
+            mloop            = other.mloop;
+            kloop            = other.kloop;
+            mfringe          = other.mfringe;
+            kfringe          = other.kfringe;
+            cMatFormat       = other.cMatFormat;
+            alphaScalingType = other.alphaScalingType;
+            betaScalingType  = other.betaScalingType;
+            kType            = other.kType;
+        }
+        return *this;
+    }
+
+    // Destructor
+    ~gemvGeneratorParams() = default;
 };
 
 template<typename REG_TYPE>

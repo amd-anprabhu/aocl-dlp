@@ -126,6 +126,14 @@ enum class storageFormat : uint8_t
     colMajor = 1  // Column-major layout (Fortran style)
 };
 
+// Enum for alpha/beta scaling type
+enum class scalingType : uint8_t
+{
+    zero    = 0,
+    one     = 1,
+    generic = 2 // Generic scaling (not zero or one)
+};
+
 struct kernelOpsMetaData
 {
     kernelOps     type;
@@ -247,11 +255,11 @@ struct kernelOpsMetaData
 
 struct kernelInfo
 {
-    md_t mr;
-    md_t nr;
-    md_t k_unroll;
-    bool is_beta_zero;
-    bool is_alpha_one;
+    md_t        mr;
+    md_t        nr;
+    md_t        k_unroll;
+    scalingType alphaScalingType;
+    scalingType betaScalingType;
 
     // Not using std::vector for kOpsArr due to slight overhead compared
     // to raw pointers.
@@ -263,8 +271,8 @@ struct kernelInfo
     kernelInfo(md_t                               mr,
                md_t                               nr,
                md_t                               k_unroll,
-               bool                               is_beta_zero,
-               bool                               is_alpha_one,
+               scalingType                        _alphaScalingType,
+               scalingType                        _betaScalingType,
                std::unique_ptr<kernelOpsMetaData> kOpsArr,
                std::size_t                        kOpsArrSize,
                bool                               anyKOpsOrder,
@@ -272,8 +280,8 @@ struct kernelInfo
         : mr(mr)
         , nr(nr)
         , k_unroll(k_unroll)
-        , is_beta_zero(is_beta_zero)
-        , is_alpha_one(is_alpha_one)
+        , alphaScalingType(_alphaScalingType)
+        , betaScalingType(_betaScalingType)
         , kOpsArr(((kOpsArr != nullptr) && (kOpsArrSize > 0))
                       ? kOpsArr.release()
                       : nullptr)
@@ -288,8 +296,8 @@ struct kernelInfo
         : mr(other.mr)
         , nr(other.nr)
         , k_unroll(other.k_unroll)
-        , is_beta_zero(other.is_beta_zero)
-        , is_alpha_one(other.is_alpha_one)
+        , alphaScalingType(other.alphaScalingType)
+        , betaScalingType(other.betaScalingType)
         , kOpsArr(nullptr)
         , kOpsArrSize(((other.kOpsArr != nullptr) && (other.kOpsArrSize > 0))
                           ? other.kOpsArrSize
@@ -311,8 +319,8 @@ struct kernelInfo
         : mr(other->mr)
         , nr(other->nr)
         , k_unroll(other->k_unroll)
-        , is_beta_zero(other->is_beta_zero)
-        , is_alpha_one(other->is_alpha_one)
+        , alphaScalingType(other->alphaScalingType)
+        , betaScalingType(other->betaScalingType)
         , kOpsArr(((other->kOpsArr != nullptr) && (other->kOpsArrSize > 0))
                       ? other->kOpsArr
                       : nullptr)
@@ -332,8 +340,8 @@ struct kernelInfo
         : mr(other.mr)
         , nr(other.nr)
         , k_unroll(other.k_unroll)
-        , is_beta_zero(other.is_beta_zero)
-        , is_alpha_one(other.is_alpha_one)
+        , alphaScalingType(other.alphaScalingType)
+        , betaScalingType(other.betaScalingType)
         , kOpsArr(((other.kOpsArr != nullptr) && (other.kOpsArrSize > 0))
                       ? other.kOpsArr
                       : nullptr)
@@ -352,11 +360,11 @@ struct kernelInfo
     kernelInfo& operator=(const kernelInfo& other)
     {
         if (this != std::addressof(other)) {
-            this->mr           = other.mr;
-            this->nr           = other.nr;
-            this->k_unroll     = other.k_unroll;
-            this->is_beta_zero = other.is_beta_zero;
-            this->is_alpha_one = other.is_alpha_one;
+            this->mr               = other.mr;
+            this->nr               = other.nr;
+            this->k_unroll         = other.k_unroll;
+            this->alphaScalingType = other.alphaScalingType;
+            this->betaScalingType  = other.betaScalingType;
             if (this->kOpsArr != nullptr) {
                 delete[] this->kOpsArr;
             }
@@ -377,11 +385,11 @@ struct kernelInfo
     kernelInfo& operator=(kernelInfo&& other)
     {
         if (this != std::addressof(other)) {
-            this->mr           = other.mr;
-            this->nr           = other.nr;
-            this->k_unroll     = other.k_unroll;
-            this->is_beta_zero = other.is_beta_zero;
-            this->is_alpha_one = other.is_alpha_one;
+            this->mr               = other.mr;
+            this->nr               = other.nr;
+            this->k_unroll         = other.k_unroll;
+            this->alphaScalingType = other.alphaScalingType;
+            this->betaScalingType  = other.betaScalingType;
             if (this->kOpsArr != nullptr) {
                 delete[] this->kOpsArr;
             }
@@ -412,8 +420,8 @@ struct kernelInfo
         }
         return ((this->mr == rhs.mr) && (this->nr == rhs.nr)
                 && (this->k_unroll == rhs.k_unroll)
-                && (this->is_beta_zero == rhs.is_beta_zero)
-                && (this->is_alpha_one == rhs.is_alpha_one)
+                && (this->alphaScalingType == rhs.alphaScalingType)
+                && (this->betaScalingType == rhs.betaScalingType)
                 && (this->kOpsArrSize == rhs.kOpsArrSize) && isKOpsArrEqual
                 && (this->anyKOpsOrder == rhs.anyKOpsOrder)
                 && (this->kInstPref == rhs.kInstPref));

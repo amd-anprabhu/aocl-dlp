@@ -217,6 +217,181 @@ struct gemmParams : public kernelParams
     }
 };
 
+// Runtime parameters for GEMV N1 kernel
+struct gemvParams : public kernelParams
+{
+    void*               a;             // Input matrix A
+    void*               x;             // Input vector x
+    void*               y;             // Output vector y
+    md_t                m;             // Number of rows in A
+    md_t                k;             // Number of columns in A
+    md_t                rsA;           // Row stride for A
+    md_t                csA;           // Column stride for A
+    md_t                rsB;           // Row stride for B
+    md_t                csB;           // Column stride for B
+    md_t                rsC;           // Row stride for C
+    md_t                csC;           // Column stride for C
+    md_t                k_iter;        // Number of full k iterations
+    md_t                k_left;        // Remaining k elements
+    md_t                m_iter;        // Number of full m iterations (m/MR)
+    md_t                m_left;        // Remaining m elements
+    void*               alpha;         // Scaling factor for A*x
+    void*               beta;          // Scaling factor for y
+    uint16_t            k_mask;        // Mask for k-dimension fringe
+    uint16_t            m_mask;        // Mask for m-dimension fringe
+    uint16_t            mr_mask;       // Mask for MR-dimension fringe
+    lpgemm_post_op*     kernelOpsList; // List of post-ops
+    lpgemm_post_op_attr kernelOpsAttr; // Attributes for post-ops
+
+    // Constructor
+    gemvParams(void*               A,
+               void*               X,
+               void*               Y,
+               md_t                M,
+               md_t                K,
+               md_t                rs_a,
+               md_t                cs_a,
+               md_t                rs_b,
+               md_t                cs_b,
+               md_t                rs_c,
+               md_t                cs_c,
+               void*               alpha_acc,
+               void*               beta_acc,
+               lpgemm_post_op*     kernelOps     = nullptr,
+               lpgemm_post_op_attr kernelOpsAttr = {})
+        : a(A)
+        , x(X)
+        , y(Y)
+        , m(M)
+        , k(K)
+        , rsA(rs_a)
+        , csA(cs_a)
+        , rsB(rs_b)
+        , csB(cs_b)
+        , rsC(rs_c)
+        , csC(cs_c)
+        , k_iter(0)
+        , k_left(0)
+        , m_iter(0)
+        , m_left(0)
+        , alpha(alpha_acc)
+        , beta(beta_acc)
+        , k_mask(0)
+        , m_mask(0)
+        , mr_mask(0)
+        , kernelOpsList(kernelOps)
+        , kernelOpsAttr(kernelOpsAttr)
+    {
+    }
+
+    // Copy constructor
+    gemvParams(const gemvParams& other)
+        : a(other.a)
+        , x(other.x)
+        , y(other.y)
+        , m(other.m)
+        , k(other.k)
+        , rsA(other.rsA)
+        , csA(other.csA)
+        , rsB(other.rsB)
+        , csB(other.csB)
+        , rsC(other.rsC)
+        , csC(other.csC)
+        , k_iter(other.k_iter)
+        , k_left(other.k_left)
+        , m_iter(other.m_iter)
+        , m_left(other.m_left)
+        , alpha(other.alpha)
+        , beta(other.beta)
+        , k_mask(other.k_mask)
+        , m_mask(other.m_mask)
+        , mr_mask(other.mr_mask)
+        , kernelOpsList(other.kernelOpsList)
+        , kernelOpsAttr(other.kernelOpsAttr)
+    {
+    }
+
+    // Move constructor
+    gemvParams(gemvParams&& other)
+        : a(other.a)
+        , x(other.x)
+        , y(other.y)
+        , m(other.m)
+        , k(other.k)
+        , rsA(other.rsA)
+        , csA(other.csA)
+        , rsB(other.rsB)
+        , csB(other.csB)
+        , rsC(other.rsC)
+        , csC(other.csC)
+        , k_iter(other.k_iter)
+        , k_left(other.k_left)
+        , m_iter(other.m_iter)
+        , m_left(other.m_left)
+        , alpha(other.alpha)
+        , beta(other.beta)
+        , k_mask(other.k_mask)
+        , m_mask(other.m_mask)
+        , mr_mask(other.mr_mask)
+        , kernelOpsList(other.kernelOpsList)
+        , kernelOpsAttr(other.kernelOpsAttr)
+    {
+    }
+
+    // Copy assignment operator
+    gemvParams& operator=(const gemvParams& other)
+    {
+        a             = other.a;
+        x             = other.x;
+        y             = other.y;
+        m             = other.m;
+        k             = other.k;
+        rsA           = other.rsA;
+        csA           = other.csA;
+        rsB           = other.rsB;
+        csB           = other.csB;
+        rsC           = other.rsC;
+        csC           = other.csC;
+        k_iter        = other.k_iter;
+        k_left        = other.k_left;
+        m_iter        = other.m_iter;
+        m_left        = other.m_left;
+        alpha         = other.alpha;
+        beta          = other.beta;
+        k_mask        = other.k_mask;
+        m_mask        = other.m_mask;
+        mr_mask       = other.mr_mask;
+        kernelOpsList = other.kernelOpsList;
+        kernelOpsAttr = other.kernelOpsAttr;
+        return *this;
+    }
+
+    // Move assignment operator
+    gemvParams& operator=(gemvParams&& other)
+    {
+        *this = other;
+        return *this;
+    }
+
+    // Destructor
+    ~gemvParams()
+    {
+        a             = nullptr;
+        x             = nullptr;
+        y             = nullptr;
+        alpha         = nullptr;
+        beta          = nullptr;
+        k_iter        = 0;
+        k_left        = 0;
+        m_iter        = 0;
+        m_left        = 0;
+        k_mask        = 0;
+        m_mask        = 0;
+        mr_mask       = 0;
+        kernelOpsList = nullptr;
+    }
+};
+
 class kernelBase
 {
   public:

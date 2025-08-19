@@ -136,12 +136,16 @@ LPGEMV_TINY(float, float, float, f32f32f32of32)
 #ifdef DLP_KERNELS_ZEN4
         if (dlp_cpuid_is_avx512_supported() == TRUE) {
             if (lpgemm_get_enabled_arch() == DLP_ARCH_ZEN3) {
-                MR       = 16;
+                // Disable JIT generated AVX512 kernels for ZEN4
+                // Since we should explicitly run AVX2 kernels optimized
+                // for ZEN4(which are not supported by JIT for now).
+                lcntx->dlp_kernel_hndl.kernel_base = NULL;
+                MR                                 = 16;
                 ker_fp   = lpgemv_n_one_f32f32f32of32_avx512_256;
                 packa_fp = packa_mr8_f32f32f32of32_col_major;
             } else {
                 MR       = 16;
-                ker_fp   = lpgemv_n_one_f32f32f32of32;
+                ker_fp   = lpgemv_n_one_f32f32f32of32; // This can be commented
                 packa_fp = packa_mr16_f32f32f32of32_col_major;
             }
         } else {
@@ -153,9 +157,13 @@ LPGEMV_TINY(float, float, float, f32f32f32of32)
 #ifdef DLP_KERNELS_ZEN4
         }
 #endif
-
+        // The vector is already contiguous if reordered.
+        if (mtag_b == REORDERED) {
+            rs_b_use = 1;
+            cs_b_use = 1;
+        }
         // Pack B matrix if rs_b > 1
-        if (rs_b != 1) {
+        else if (rs_b != 1) {
             msz_t mem_b_size_req = sizeof(float) * k;
             pack_b_buffer_f32f32f32of32 =
                 (float*)dlp_malloc_page_aligned(mem_b_size_req, &err);
@@ -181,9 +189,17 @@ LPGEMV_TINY(float, float, float, f32f32f32of32)
 
         post_ops_attr.post_op_c_i = 0;
         post_ops_attr.post_op_c_j = 0;
-        ker_fp(m, k, a_use, rs_a_use, cs_a_use, mtag_a, b_use, rs_b_use,
-               cs_b_use, mtag_b, c, rs_c, cs_c, alpha, beta, MR, k,
-               post_op_list, &post_ops_attr);
+
+        if (lcntx->dlp_kernel_hndl.kernel_base != NULL) {
+            dlp_execute_kernel(lcntx->dlp_kernel_hndl, m, 1, k, (float*)a_use,
+                               rs_a_use, cs_a_use, 1, (float*)b_use, rs_b_use,
+                               cs_b_use, c, rs_c, cs_c, (void*)&alpha,
+                               (void*)&beta, post_op_list, post_ops_attr);
+        } else {
+            ker_fp(m, k, a_use, rs_a_use, cs_a_use, mtag_a, b_use, rs_b_use,
+                   cs_b_use, mtag_b, c, rs_c, cs_c, alpha, beta, MR, k,
+                   post_op_list, &post_ops_attr);
+        }
 
         if (pack_a_buffer_f32f32f32of32 != NULL) {
             dlp_free_page_aligned(pack_a_buffer_f32f32f32of32);
