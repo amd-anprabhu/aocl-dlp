@@ -27,6 +27,7 @@
  */
 
 #include "amdzen_generator.hh"
+#include "avx2_generator.hh"
 #include "avx512_gemv.hh"
 #include "avx512_generator.hh"
 #include "cpu_utils/cpu_features.hh"
@@ -320,6 +321,14 @@ jitAmdZenFP32::generateAllKernels(const dlp::jit::jitGeneratorContext& jI)
                         goto cleanup;
                     }
                 } else if (isZen) {
+                    // Create a new instance of jitAVX2 with the code buffer and
+                    // size
+                    avx2gen::jitAVX2 base(codeBuffer, utils::JIT_KERNEL_SIZE);
+
+                    err = base.generateKernel<kdt>(params);
+                    if (err != dlp::jit::jitGeneratorError::success) {
+                        goto cleanup;
+                    }
                 } else {
                     return dlp::jit::jitGeneratorError::error;
                 }
@@ -414,10 +423,19 @@ jitAmdZenFP32::executeKernel(dlp::kernels::kernelParams* _params)
             int n_idx = n / numElemsPerReg;
             int nElemsProcessing =
                 dlp_max(n_idx * numElemsPerReg, n % numElemsPerReg);
-            params->a       = aPtr;
-            params->c       = c_jr;
-            params->maskF32 = 0xFFFF >> (numElemsPerReg - nElemsProcessing);
 
+            params->a = aPtr;
+            params->c = c_jr;
+            if (isZen4) {
+                // maskF32 would be used for AVX512 fringe handling
+                params->maskF32 = 0xFFFF >> (numElemsPerReg - nElemsProcessing);
+            } else if (isZen) {
+                // Array would be used for AVX2 fringe handling
+                for (int i = 0; i < 8; i++) {
+                    params->maskArray[i] = (i < nElemsProcessing) ? 0xFFFFFFFF
+                                                                  : 0;
+                }
+            }
             if (params->m >= MR) {
                 params->mIter = mFullPieces;
                 int m_idx     = 0;

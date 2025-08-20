@@ -55,6 +55,9 @@ project(${PROJECT_NAME} VERSION ${PROJECT_VERSION} LANGUAGES C CXX)
 
 include(cmake/dlp_platform.cmake)
 
+# Find pthread library for bench/example compilation in Milan machines
+find_package(Threads REQUIRED)
+
 # Define file extensions
 dlp_define_extensions()
 # Define Project Options
@@ -88,6 +91,7 @@ target_link_libraries(${PROJECT_NAME}
         ${DLP_PLUS_TARGETS}
     PUBLIC
         dlp::openmp
+        Threads::Threads
 )
 
 # Link with the classic object static library and dependencies

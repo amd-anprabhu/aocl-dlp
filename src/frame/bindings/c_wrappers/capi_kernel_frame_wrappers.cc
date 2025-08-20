@@ -131,7 +131,7 @@ dlp_execute_kernel(dlp_kernel_hndl_t   kernel_hndl,
     // This function is currently used only for FP32 GEMM and GEMV(with n==1)
     // kernels.
     std::unique_ptr<kernelParams> uPtr;
-    if (n == 1) {
+    if (kernel_hndl.nr == 1) {
         uPtr.reset(new gemvParams{ A, B, C, m, k, rs_a, cs_a, rs_b, cs_b, rs_c,
                                    cs_c, alpha, beta, post_ops_list,
                                    post_ops_attr });

@@ -75,6 +75,7 @@ struct gemmParams : public kernelParams
     md_t     kIter;
     md_t     kLeft;
     uint16_t maskF32;
+    alignas(64) std::array<int32_t, 8> maskArray;
 
     lpgemm_post_op*     kernelOpsList;
     lpgemm_post_op_attr kernelOpsAttr;
@@ -115,6 +116,7 @@ struct gemmParams : public kernelParams
         , kIter(0)
         , kLeft(0)
         , maskF32(0)
+        , maskArray{ 0, 0, 0, 0, 0, 0, 0, 0 }
         , kernelOpsList(kernelOpsList)
         , kernelOpsAttr(kernelOpsAttr)
     {
@@ -143,6 +145,8 @@ struct gemmParams : public kernelParams
         , kernelOpsList(other.kernelOpsList)
         , kernelOpsAttr(other.kernelOpsAttr)
     {
+        std::copy(std::begin(other.maskArray), std::end(other.maskArray),
+                  std::begin(maskArray));
     }
 
     gemmParams(gemmParams&& other)
@@ -168,29 +172,32 @@ struct gemmParams : public kernelParams
         , kernelOpsList(other.kernelOpsList)
         , kernelOpsAttr(other.kernelOpsAttr)
     {
+        maskArray.swap(other.maskArray);
     }
 
     gemmParams& operator=(const gemmParams& other)
     {
-        a             = other.a;
-        b             = other.b;
-        c             = other.c;
-        m             = other.m;
-        n             = other.n;
-        k             = other.k;
-        rsA           = other.rsA;
-        csA           = other.csA;
-        psA           = other.psA;
-        rsB           = other.rsB;
-        csB           = other.csB;
-        rsC           = other.rsC;
-        csC           = other.csC;
-        alpha         = other.alpha;
-        beta          = other.beta;
-        mIter         = other.mIter;
-        kIter         = other.kIter;
-        kLeft         = other.kLeft;
-        maskF32       = other.maskF32;
+        a       = other.a;
+        b       = other.b;
+        c       = other.c;
+        m       = other.m;
+        n       = other.n;
+        k       = other.k;
+        rsA     = other.rsA;
+        csA     = other.csA;
+        psA     = other.psA;
+        rsB     = other.rsB;
+        csB     = other.csB;
+        rsC     = other.rsC;
+        csC     = other.csC;
+        alpha   = other.alpha;
+        beta    = other.beta;
+        mIter   = other.mIter;
+        kIter   = other.kIter;
+        kLeft   = other.kLeft;
+        maskF32 = other.maskF32;
+        std::copy(std::begin(other.maskArray), std::end(other.maskArray),
+                  std::begin(maskArray));
         kernelOpsList = other.kernelOpsList;
         kernelOpsAttr = other.kernelOpsAttr;
         return *this;

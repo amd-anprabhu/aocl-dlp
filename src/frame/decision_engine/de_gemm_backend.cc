@@ -214,7 +214,7 @@ gemmF32DEBackend::getKernelInfoForInput(iDEInput* in)
         kInstPref = kernel_frame::kernelInstrPreference::avx2_ymm_favour;
     }
 
-    // TODO: Only supports non GEMV kernels for now.
+    // TODO: Only supports GEMV kernels n = 1 for now.
     if (gemmIn->m == 1) {
         return std::nullopt;
     } else if (gemmIn->n == 1) {
@@ -274,23 +274,38 @@ gemmF32DEBackend::getKernelInfoForInput(iDEInput* in)
         }
 
     } else {
-        if (gemmIn->metadata == nullptr) {
-            kernel_frame::kernelInfo kI{
-                mr,      nr, k_unroll,     alphaScalingType, betaScalingType,
-                nullptr, 0,  anyKOpsOrder, kInstPref
-            };
-            return std::make_optional(kI);
-        } else {
-            // Iterate over the post_ops list to get the number of post-ops.
-            md_t            numPostOps    = 0;
-            lpgemm_post_op* temp_post_ops = gemmIn->metadata;
-            while ((temp_post_ops != NULL)
-                   && (temp_post_ops->op_code != POST_OPS_DISABLE)) {
-                temp_post_ops = temp_post_ops->next;
-                numPostOps++;
+        // Currently JIT kernels has been enabled in Zen machines to
+        // work only for GEMM kernels without post-ops support.
+        // TODO : The Zen-check will be removed when post-ops are
+        // added to the JIT Kernel. This check is currently added
+        // to avoid executing JIT kernels with postops for AVX2.
+        if (isZen) {
+            if (gemmIn->metadata == nullptr) {
+                kernel_frame::kernelInfo kI{ mr,
+                                             nr,
+                                             k_unroll,
+                                             alphaScalingType,
+                                             betaScalingType,
+                                             nullptr,
+                                             0,
+                                             anyKOpsOrder,
+                                             kInstPref };
+                return std::make_optional(kI);
+            } else if (gemmIn->metadata[0].op_code == POST_OPS_DISABLE) {
+                kernel_frame::kernelInfo kI{ mr,
+                                             nr,
+                                             k_unroll,
+                                             alphaScalingType,
+                                             betaScalingType,
+                                             nullptr,
+                                             0,
+                                             anyKOpsOrder,
+                                             kInstPref };
+                return std::make_optional(kI);
             }
-
-            if (numPostOps == 0) {
+            return std::nullopt;
+        } else if (isZen4) {
+            if (gemmIn->metadata == nullptr) {
                 kernel_frame::kernelInfo kI{ mr,
                                              nr,
                                              k_unroll,
@@ -302,36 +317,59 @@ gemmF32DEBackend::getKernelInfoForInput(iDEInput* in)
                                              kInstPref };
                 return std::make_optional(kI);
             } else {
-                kernel_frame::kernelInfo kI{ mr,
-                                             nr,
-                                             k_unroll,
-                                             alphaScalingType,
-                                             betaScalingType,
-                                             nullptr,
-                                             0,
-                                             anyKOpsOrder,
-                                             kInstPref };
-                kI.kOpsArrSize = numPostOps;
-                kI.kOpsArr = kernel_frame::kernelInfo::allocateKernelOpsArray(
-                    numPostOps);
-
-                md_t ii       = 0;
-                temp_post_ops = gemmIn->metadata;
+                // Iterate over the post_ops list to get the number of post-ops.
+                md_t            numPostOps    = 0;
+                lpgemm_post_op* temp_post_ops = gemmIn->metadata;
                 while ((temp_post_ops != NULL)
                        && (temp_post_ops->op_code != POST_OPS_DISABLE)) {
-                    setKernelOps(std::addressof(kI.kOpsArr[ii]), temp_post_ops,
-                                 gemmIn->k_dtype);
                     temp_post_ops = temp_post_ops->next;
-                    ii++;
+                    numPostOps++;
                 }
 
-                return std::make_optional(kI);
-            }
-            return std::nullopt;
-        }
+                if (numPostOps == 0) {
+                    kernel_frame::kernelInfo kI{ mr,
+                                                 nr,
+                                                 k_unroll,
+                                                 alphaScalingType,
+                                                 betaScalingType,
+                                                 nullptr,
+                                                 0,
+                                                 anyKOpsOrder,
+                                                 kInstPref };
+                    return std::make_optional(kI);
+                } else {
+                    kernel_frame::kernelInfo kI{ mr,
+                                                 nr,
+                                                 k_unroll,
+                                                 alphaScalingType,
+                                                 betaScalingType,
+                                                 nullptr,
+                                                 0,
+                                                 anyKOpsOrder,
+                                                 kInstPref };
+                    kI.kOpsArrSize = numPostOps;
+                    kI.kOpsArr =
+                        kernel_frame::kernelInfo::allocateKernelOpsArray(
+                            numPostOps);
 
+                    md_t ii       = 0;
+                    temp_post_ops = gemmIn->metadata;
+                    while ((temp_post_ops != NULL)
+                           && (temp_post_ops->op_code != POST_OPS_DISABLE)) {
+                        setKernelOps(std::addressof(kI.kOpsArr[ii]),
+                                     temp_post_ops, gemmIn->k_dtype);
+                        temp_post_ops = temp_post_ops->next;
+                        ii++;
+                    }
+
+                    return std::make_optional(kI);
+                }
+                return std::nullopt;
+            }
+        }
         return std::nullopt;
     }
+    return std::nullopt;
 }
 
 } // namespace dlp::de
