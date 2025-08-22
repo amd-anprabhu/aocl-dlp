@@ -129,20 +129,36 @@ dlp_execute_kernel(dlp_kernel_hndl_t   kernel_hndl,
                    lpgemm_post_op_attr post_ops_attr)
 {
     // This function is currently used only for FP32 GEMM and GEMV(with n==1)
-    // kernels.
-    std::unique_ptr<kernelParams> uPtr;
+    // kernels. Also dont use new/delete and malloc/free calls here, since
+    // they are lock based and will result in performance degradation.
     if (kernel_hndl.nr == 1) {
-        uPtr.reset(new gemvParams{ A, B, C, m, k, rs_a, cs_a, rs_b, cs_b, rs_c,
-                                   cs_c, alpha, beta, post_ops_list,
-                                   post_ops_attr });
+        gemvParams gemvParamsIn{
+            A,    B,    C,    m,     k,    rs_a,          cs_a,         rs_b,
+            cs_b, rs_c, cs_c, alpha, beta, post_ops_list, post_ops_attr
+        };
+        kernelBase* kB = static_cast<kernelBase*>(kernel_hndl.kernel_base);
+        kB->operator()(std::addressof(gemvParamsIn));
     } else {
-        uPtr.reset(new gemmParams{ A, B, C, m, n, k, rs_a, cs_a, ps_a, rs_b,
-                                   cs_b, rs_c, cs_c, alpha, beta, post_ops_list,
-                                   post_ops_attr });
+        gemmParams  gemmParamsIn{ A,
+                                 B,
+                                 C,
+                                 m,
+                                 n,
+                                 k,
+                                 rs_a,
+                                 cs_a,
+                                 ps_a,
+                                 rs_b,
+                                 cs_b,
+                                 rs_c,
+                                 cs_c,
+                                 alpha,
+                                 beta,
+                                 post_ops_list,
+                                 post_ops_attr };
+        kernelBase* kB = static_cast<kernelBase*>(kernel_hndl.kernel_base);
+        kB->operator()(std::addressof(gemmParamsIn));
     }
-
-    kernelBase* kB = static_cast<kernelBase*>(kernel_hndl.kernel_base);
-    kB->operator()(uPtr.get());
 
     return;
 }

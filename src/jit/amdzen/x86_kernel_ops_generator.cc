@@ -579,21 +579,21 @@ kernelOpsGeneratorX86<KType>::downscale(kernelOpsMetaData& op)
         jit_->ptr[regkernelOpsList + offsetof(lpgemm_post_op, scale_factor)]);
 
     if (op.scalarScaleFactorRequired) {
-        DISPATCH_BY_DATATYPE(op.paramStorageDt, scaleFactorScalarImpl);
+        DISPATCH_BY_DATATYPE(op.scaleFactorDt, scaleFactorScalarImpl);
     } else if (op.cMatFormat == storageFormat::rowMajor) {
-        DISPATCH_BY_DATATYPE(op.paramStorageDt, scaleFactorRowMajorImpl);
+        DISPATCH_BY_DATATYPE(op.scaleFactorDt, scaleFactorRowMajorImpl);
     } else {
-        DISPATCH_BY_DATATYPE(op.paramStorageDt, scaleFactorColMajorImpl);
+        DISPATCH_BY_DATATYPE(op.scaleFactorDt, scaleFactorColMajorImpl);
     }
 
     jit_->mov(regTmp1,
               jit_->ptr[regkernelOpsList + offsetof(lpgemm_post_op, op_args1)]);
     if (op.scalarZeroPointRequired) {
-        DISPATCH_BY_DATATYPE(op.paramStorageDt, zeroPointScalarImpl);
+        DISPATCH_BY_DATATYPE(op.zeroPointDt, zeroPointScalarImpl);
     } else if (op.cMatFormat == storageFormat::rowMajor) {
-        DISPATCH_BY_DATATYPE(op.paramStorageDt, zeroPointRowMajorImpl);
+        DISPATCH_BY_DATATYPE(op.zeroPointDt, zeroPointRowMajorImpl);
     } else {
-        DISPATCH_BY_DATATYPE(op.paramStorageDt, zeroPointColMajorImpl);
+        DISPATCH_BY_DATATYPE(op.zeroPointDt, zeroPointColMajorImpl);
     }
 
     return jitGeneratorError::success;
@@ -712,13 +712,13 @@ kernelOpsGeneratorX86<KType>::matadd(kernelOpsMetaData& op)
         jit_->ptr[regkernelOpsList + offsetof(lpgemm_post_op, scale_factor)]);
 
     if (op.scalarScaleFactorRequired) {
-        DISPATCH_BY_DATATYPE(op.paramStorageDt, matOpScaleFactorImpl,
+        DISPATCH_BY_DATATYPE(op.scaleFactorDt, matOpScaleFactorImpl,
                              matOpType::matOpAdd, matOpScaleType::scalar);
     } else if (op.cMatFormat == storageFormat::rowMajor) {
-        DISPATCH_BY_DATATYPE(op.paramStorageDt, matOpScaleFactorImpl,
+        DISPATCH_BY_DATATYPE(op.scaleFactorDt, matOpScaleFactorImpl,
                              matOpType::matOpAdd, matOpScaleType::rowVector);
     } else {
-        DISPATCH_BY_DATATYPE(op.paramStorageDt, matOpScaleFactorImpl,
+        DISPATCH_BY_DATATYPE(op.scaleFactorDt, matOpScaleFactorImpl,
                              matOpType::matOpAdd, matOpScaleType::columnVector);
     }
 
@@ -734,13 +734,13 @@ kernelOpsGeneratorX86<KType>::matmul(kernelOpsMetaData& op)
         jit_->ptr[regkernelOpsList + offsetof(lpgemm_post_op, scale_factor)]);
 
     if (op.scalarScaleFactorRequired) {
-        DISPATCH_BY_DATATYPE(op.paramStorageDt, matOpScaleFactorImpl,
+        DISPATCH_BY_DATATYPE(op.scaleFactorDt, matOpScaleFactorImpl,
                              matOpType::matOpMul, matOpScaleType::scalar);
     } else if (op.cMatFormat == storageFormat::rowMajor) {
-        DISPATCH_BY_DATATYPE(op.paramStorageDt, matOpScaleFactorImpl,
+        DISPATCH_BY_DATATYPE(op.scaleFactorDt, matOpScaleFactorImpl,
                              matOpType::matOpMul, matOpScaleType::rowVector);
     } else {
-        DISPATCH_BY_DATATYPE(op.paramStorageDt, matOpScaleFactorImpl,
+        DISPATCH_BY_DATATYPE(op.scaleFactorDt, matOpScaleFactorImpl,
                              matOpType::matOpMul, matOpScaleType::columnVector);
     }
 

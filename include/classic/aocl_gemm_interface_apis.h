@@ -42,50 +42,57 @@
  * matrix B).
  * @param[in] k Number of rows in the matrix.
  * @param[in] n Number of columns in the matrix.
+ * @param[in] metadata Metadata for the post-operations.
  * @return Size of the buffer in bytes.
  */
 DLP_CLASSIC_EXPORT msz_t
 /// @ref aocl_get_reorder_buf_size_f32f32f32of32
-aocl_get_reorder_buf_size_f32f32f32of32(const char order,
-                                        const char trans,
-                                        const char mat_type,
-                                        const md_t k,
-                                        const md_t n);
+aocl_get_reorder_buf_size_f32f32f32of32(const char      order,
+                                        const char      trans,
+                                        const char      mat_type,
+                                        const md_t      k,
+                                        const md_t      n,
+                                        dlp_metadata_t* metadata);
 DLP_CLASSIC_EXPORT msz_t
 /// @ref aocl_get_reorder_buf_size_u8s8s32os32
-aocl_get_reorder_buf_size_u8s8s32os32(const char order,
-                                      const char trans,
-                                      const char mat_type,
-                                      const md_t k,
-                                      const md_t n);
+aocl_get_reorder_buf_size_u8s8s32os32(const char      order,
+                                      const char      trans,
+                                      const char      mat_type,
+                                      const md_t      k,
+                                      const md_t      n,
+                                      dlp_metadata_t* metadata);
 DLP_CLASSIC_EXPORT msz_t
 /// @ref aocl_get_reorder_buf_size_bf16bf16f32of32
-aocl_get_reorder_buf_size_bf16bf16f32of32(const char order,
-                                          const char trans,
-                                          const char mat_type,
-                                          const md_t k,
-                                          const md_t n);
+aocl_get_reorder_buf_size_bf16bf16f32of32(const char      order,
+                                          const char      trans,
+                                          const char      mat_type,
+                                          const md_t      k,
+                                          const md_t      n,
+                                          dlp_metadata_t* metadata);
 DLP_CLASSIC_EXPORT msz_t
 /// @ref aocl_get_reorder_buf_size_s8s8s32os32
-aocl_get_reorder_buf_size_s8s8s32os32(const char order,
-                                      const char trans,
-                                      const char mat_type,
-                                      const md_t k,
-                                      const md_t n);
+aocl_get_reorder_buf_size_s8s8s32os32(const char      order,
+                                      const char      trans,
+                                      const char      mat_type,
+                                      const md_t      k,
+                                      const md_t      n,
+                                      dlp_metadata_t* metadata);
 DLP_CLASSIC_EXPORT msz_t
 /// @ref aocl_get_reorder_buf_size_u8s4s32os32
-aocl_get_reorder_buf_size_u8s4s32os32(const char order,
-                                      const char trans,
-                                      const char mat_type,
-                                      const md_t k,
-                                      const md_t n);
+aocl_get_reorder_buf_size_u8s4s32os32(const char      order,
+                                      const char      trans,
+                                      const char      mat_type,
+                                      const md_t      k,
+                                      const md_t      n,
+                                      dlp_metadata_t* metadata);
 DLP_CLASSIC_EXPORT msz_t
 /// @ref aocl_get_reorder_buf_size_bf16s4f32of32
-aocl_get_reorder_buf_size_bf16s4f32of32(const char order,
-                                        const char trans,
-                                        const char mat_type,
-                                        const md_t k,
-                                        const md_t n);
+aocl_get_reorder_buf_size_bf16s4f32of32(const char      order,
+                                        const char      trans,
+                                        const char      mat_type,
+                                        const md_t      k,
+                                        const md_t      n,
+                                        dlp_metadata_t* metadata);
 
 /**
  * @brief Returns the size of the buffer (in bytes) required for the reordered
@@ -96,17 +103,20 @@ aocl_get_reorder_buf_size_bf16s4f32of32(const char order,
  * matrix B).
  * @param[in] k Number of rows in the matrix.
  * @param[in] n Number of columns in the matrix.
- * @param[in] meta_data Metadata for symmetric quantization.
+ * @param[in] symq_meta_data Metadata for symmetric quantization.
+ * @param[in] metadata Metadata for the post-operations.
  * @return Size of the buffer in bytes.
  */
 DLP_CLASSIC_EXPORT msz_t
 /// @ref aocl_get_reorder_buf_size_s8s8s32os32_sym_quant
-aocl_get_reorder_buf_size_s8s8s32os32_sym_quant(const char           order,
-                                                const char           trans,
-                                                const char           mat_type,
-                                                const md_t           k,
-                                                const md_t           n,
-                                                DLP_SYMM_STAT_QUANT* meta_data);
+aocl_get_reorder_buf_size_s8s8s32os32_sym_quant(
+    const char           order,
+    const char           trans,
+    const char           mat_type,
+    const md_t           k,
+    const md_t           n,
+    DLP_SYMM_STAT_QUANT* symq_meta_data,
+    dlp_metadata_t*      metadata);
 
 /**
  * @brief Performs reordering of the input matrix. Expanded from
@@ -120,34 +130,38 @@ aocl_get_reorder_buf_size_s8s8s32os32_sym_quant(const char           order,
  * @param[in] k Number of rows in the matrix.
  * @param[in] n Number of columns in the matrix.
  * @param[in] ldb Leading dimension of the matrix.
+ * @param[in] metadata Metadata for the post-operations.
  */
 DLP_CLASSIC_EXPORT void
-aocl_reorder_f32f32f32of32(const char   order,
-                           const char   trans,
-                           const char   mat_type,
-                           const float* input_buf_addr,
-                           float*       reorder_buf_addr,
-                           const md_t   k,
-                           const md_t   n,
-                           const md_t   ldb);
+aocl_reorder_f32f32f32of32(const char      order,
+                           const char      trans,
+                           const char      mat_type,
+                           const float*    input_buf_addr,
+                           float*          reorder_buf_addr,
+                           const md_t      k,
+                           const md_t      n,
+                           const md_t      ldb,
+                           dlp_metadata_t* metadata);
 DLP_CLASSIC_EXPORT void
-aocl_reorder_f32f32f32of32_reference(const char   order,
-                                     const char   trans,
-                                     const char   mat_type,
-                                     const float* input_buf_addr,
-                                     float*       reorder_buf_addr,
-                                     const md_t   k,
-                                     const md_t   n,
-                                     const md_t   ldb);
+aocl_reorder_f32f32f32of32_reference(const char      order,
+                                     const char      trans,
+                                     const char      mat_type,
+                                     const float*    input_buf_addr,
+                                     float*          reorder_buf_addr,
+                                     const md_t      k,
+                                     const md_t      n,
+                                     const md_t      ldb,
+                                     dlp_metadata_t* metadata);
 DLP_CLASSIC_EXPORT void
-aocl_reorder_u8s8s32os32(const char    order,
-                         const char    trans,
-                         const char    mat_type,
-                         const int8_t* input_buf_addr,
-                         int8_t*       reorder_buf_addr,
-                         const md_t    k,
-                         const md_t    n,
-                         const md_t    ldb);
+aocl_reorder_u8s8s32os32(const char      order,
+                         const char      trans,
+                         const char      mat_type,
+                         const int8_t*   input_buf_addr,
+                         int8_t*         reorder_buf_addr,
+                         const md_t      k,
+                         const md_t      n,
+                         const md_t      ldb,
+                         dlp_metadata_t* metadata);
 DLP_CLASSIC_EXPORT void
 aocl_reorder_bf16bf16f32of32(const char      order,
                              const char      trans,
@@ -156,7 +170,8 @@ aocl_reorder_bf16bf16f32of32(const char      order,
                              bfloat16*       reorder_buf_addr,
                              const md_t      k,
                              const md_t      n,
-                             const md_t      ldb);
+                             const md_t      ldb,
+                             dlp_metadata_t* metadata);
 DLP_CLASSIC_EXPORT void
 aocl_reorder_bf16bf16f32of32_reference(const char      order,
                                        const char      trans,
@@ -165,34 +180,38 @@ aocl_reorder_bf16bf16f32of32_reference(const char      order,
                                        bfloat16*       reorder_buf_addr,
                                        const md_t      k,
                                        const md_t      n,
-                                       const md_t      ldb);
+                                       const md_t      ldb,
+                                       dlp_metadata_t* metadata);
 DLP_CLASSIC_EXPORT void
-aocl_reorder_s8s8s32os32(const char    order,
-                         const char    trans,
-                         const char    mat_type,
-                         const int8_t* input_buf_addr,
-                         int8_t*       reorder_buf_addr,
-                         const md_t    k,
-                         const md_t    n,
-                         const md_t    ldb);
+aocl_reorder_s8s8s32os32(const char      order,
+                         const char      trans,
+                         const char      mat_type,
+                         const int8_t*   input_buf_addr,
+                         int8_t*         reorder_buf_addr,
+                         const md_t      k,
+                         const md_t      n,
+                         const md_t      ldb,
+                         dlp_metadata_t* metadata);
 DLP_CLASSIC_EXPORT void
-aocl_reorder_u8s4s32os32(const char    order,
-                         const char    trans,
-                         const char    mat_type,
-                         const int8_t* input_buf_addr,
-                         int8_t*       reorder_buf_addr,
-                         const md_t    k,
-                         const md_t    n,
-                         const md_t    ldb);
+aocl_reorder_u8s4s32os32(const char      order,
+                         const char      trans,
+                         const char      mat_type,
+                         const int8_t*   input_buf_addr,
+                         int8_t*         reorder_buf_addr,
+                         const md_t      k,
+                         const md_t      n,
+                         const md_t      ldb,
+                         dlp_metadata_t* metadata);
 DLP_CLASSIC_EXPORT void
-aocl_reorder_bf16s4f32of32(const char    order,
-                           const char    trans,
-                           const char    mat_type,
-                           const int8_t* input_buf_addr,
-                           int8_t*       reorder_buf_addr,
-                           const md_t    k,
-                           const md_t    n,
-                           const md_t    ldb);
+aocl_reorder_bf16s4f32of32(const char      order,
+                           const char      trans,
+                           const char      mat_type,
+                           const int8_t*   input_buf_addr,
+                           int8_t*         reorder_buf_addr,
+                           const md_t      k,
+                           const md_t      n,
+                           const md_t      ldb,
+                           dlp_metadata_t* metadata);
 
 /**
  * @brief Performs reordering of the input matrix for symmetric quantization.
@@ -206,7 +225,8 @@ aocl_reorder_bf16s4f32of32(const char    order,
  * @param[in] k Number of rows in the matrix.
  * @param[in] n Number of columns in the matrix.
  * @param[in] ldb Leading dimension of the matrix.
- * @param[in] meta_data Metadata for symmetric quantization.
+ * @param[in] symq_meta_data Metadata for symmetric quantization.
+ * @param[in] metadata Metadata for the post-operations.
  */
 DLP_CLASSIC_EXPORT void
 aocl_reorder_s8s8s32os32_sym_quant(const char           order,
@@ -217,7 +237,8 @@ aocl_reorder_s8s8s32os32_sym_quant(const char           order,
                                    const md_t           k,
                                    const md_t           n,
                                    const md_t           ldb,
-                                   DLP_SYMM_STAT_QUANT* meta_data);
+                                   DLP_SYMM_STAT_QUANT* symq_meta_data,
+                                   dlp_metadata_t*      metadata);
 
 /**
  * @brief Performs reordering of the input matrix for mixed precision LPGEMM.
@@ -231,16 +252,18 @@ aocl_reorder_s8s8s32os32_sym_quant(const char           order,
  * @param[in] k Number of rows in the matrix.
  * @param[in] n Number of columns in the matrix.
  * @param[in] ldb Leading dimension of the matrix.
+ * @param[in] metadata Metadata for the post-operations.
  */
 DLP_CLASSIC_EXPORT void
-aocl_reorder_f32obf16(const char   order,
-                      const char   trans,
-                      const char   mat_type,
-                      const float* input_buf_addr,
-                      bfloat16*    reorder_buf_addr,
-                      const md_t   k,
-                      const md_t   n,
-                      const md_t   ldb);
+aocl_reorder_f32obf16(const char      order,
+                      const char      trans,
+                      const char      mat_type,
+                      const float*    input_buf_addr,
+                      bfloat16*       reorder_buf_addr,
+                      const md_t      k,
+                      const md_t      n,
+                      const md_t      ldb,
+                      dlp_metadata_t* metadata);
 
 /**
  * @brief Converts a reordered matrix back to its original format.
@@ -253,6 +276,7 @@ aocl_reorder_f32obf16(const char   order,
  * @param[in] k Number of rows in the matrix.
  * @param[in] n Number of columns in the matrix.
  * @param[in] ldb Leading dimension of the matrix.
+ * @param[in] metadata Metadata for the post-operations.
  */
 DLP_CLASSIC_EXPORT void
 aocl_unreorder_bf16bf16f32of32(const char      order,
@@ -261,7 +285,8 @@ aocl_unreorder_bf16bf16f32of32(const char      order,
                                bfloat16*       output_buf_addr,
                                const md_t      k,
                                const md_t      n,
-                               const md_t      ldb);
+                               const md_t      ldb,
+                               dlp_metadata_t* metadata);
 DLP_CLASSIC_EXPORT void
 aocl_unreorder_bf16bf16f32of32_reference(const char      order,
                                          const char      mat_type,
@@ -269,23 +294,26 @@ aocl_unreorder_bf16bf16f32of32_reference(const char      order,
                                          bfloat16*       output_buf_addr,
                                          const md_t      k,
                                          const md_t      n,
-                                         const md_t      ldb);
+                                         const md_t      ldb,
+                                         dlp_metadata_t* metadata);
 DLP_CLASSIC_EXPORT void
-aocl_unreorder_f32f32f32of32_reference(const char   order,
-                                       const char   mat_type,
-                                       const float* reorder_buf_addr,
-                                       float*       output_buf_addr,
-                                       const md_t   k,
-                                       const md_t   n,
-                                       const md_t   ldb);
+aocl_unreorder_f32f32f32of32_reference(const char      order,
+                                       const char      mat_type,
+                                       const float*    reorder_buf_addr,
+                                       float*          output_buf_addr,
+                                       const md_t      k,
+                                       const md_t      n,
+                                       const md_t      ldb,
+                                       dlp_metadata_t* metadata);
 DLP_CLASSIC_EXPORT void
-aocl_unreorder_s8s8s32os32_reference(const char    order,
-                                     const char    mat_type,
-                                     const int8_t* reorder_buf_addr,
-                                     int8_t*       output_buf_addr,
-                                     const md_t    k,
-                                     const md_t    n,
-                                     const md_t    ldb);
+aocl_unreorder_s8s8s32os32_reference(const char      order,
+                                     const char      mat_type,
+                                     const int8_t*   reorder_buf_addr,
+                                     int8_t*         output_buf_addr,
+                                     const md_t      k,
+                                     const md_t      n,
+                                     const md_t      ldb,
+                                     dlp_metadata_t* metadata);
 
 /**
  * @brief GEMM (General Matrix Multiplication) with support for fused

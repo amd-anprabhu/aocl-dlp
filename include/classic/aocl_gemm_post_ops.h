@@ -377,6 +377,13 @@ typedef struct
                                          different quantization groups */
     md_t num_eltwise; /**< Number of element-wise operations to track */
 
+    dlp_error_hndl_t error_hndl; /**< Error handle for the routine, currently
+                                      wrapped as part of the metadata. */
 } dlp_metadata_t;
+
+#define DLP_METADATA_SET_ERROR(metadata, err_no)                               \
+    if ((metadata) != NULL) {                                                  \
+        ((metadata)->error_hndl).error_code = err_no;                          \
+    }
 
 #endif // DLP_GEMM_POST_OPS_H

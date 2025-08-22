@@ -390,8 +390,8 @@ GEN_MAT_MUL_GET_OUTPUT_TYPE_VALUE(uint8_t, float)
                                                          &temp_accum);         \
                                                                                \
                 float comp_float, ref_float;                                   \
-                GEN_FUNC_NAME(C_type, _to_float)(                              \
-                    *(c + (rs_c * i) + (cs_c * j)), &comp_float);              \
+                GEN_FUNC_NAME(C_type, _to_float)                               \
+                (*(c + (rs_c * i) + (cs_c * j)), &comp_float);                 \
                 GEN_FUNC_NAME(C_type, _to_float)(out_temp_accum, &ref_float);  \
                                                                                \
                 if (((comp_float - ref_float) > 1.0E-5)                        \
@@ -511,19 +511,19 @@ GEN_MAT_MUL_POST_OPS_CREATOR(
              alpha, a, stride_a, b, stride_b, beta, c, stride_c, post_op,      \
              post_ops_str_copy);                                               \
         } else if ((op_b == 'r') || (op_b == 'R')) {                           \
-            DLP_SYMM_STAT_QUANT meta_data;                                     \
-            meta_data.group_size = post_op->post_op_grp->group_size;           \
-            B_type* b_reorder    = NULL;                                       \
+            DLP_SYMM_STAT_QUANT symq_meta_data;                                \
+            symq_meta_data.group_size = post_op->post_op_grp->group_size;      \
+            B_type* b_reorder         = NULL;                                  \
             /* Reorder B.*/                                                    \
             msz_t b_reorder_buf_siz_req =                                      \
                 GEN_FUNC_NAME(aocl_get_reorder_buf_size_, REORDER_SFX)(        \
-                    stor_order, transb, 'B', k, n, &meta_data);                \
+                    stor_order, transb, 'B', k, n, &symq_meta_data, NULL);     \
                                                                                \
             b_reorder = (B_type*)lpgemm_malloc(b_reorder_buf_siz_req);         \
-            GEN_FUNC_NAME(aocl_reorder_, REORDER_SFX)(                         \
-                stor_order, transb, 'B', (GET_B_TYPE_##REORDER_SFX*)b,         \
-                (GET_B_TYPE_##REORDER_SFX*)b_reorder, k, n, stride_b,          \
-                &meta_data);                                                   \
+            GEN_FUNC_NAME(aocl_reorder_, REORDER_SFX)                          \
+            (stor_order, transb, 'B', (GET_B_TYPE_##REORDER_SFX*)b,            \
+             (GET_B_TYPE_##REORDER_SFX*)b_reorder, k, n, stride_b,             \
+             &symq_meta_data, NULL);                                           \
             GEN_FUNC_NAME(mat_mul_bench_driver_, BLAS_SFX)                     \
             (stor_order, transa, transb, op_a, op_b, n_repeats, m, n, k,       \
              alpha, a, stride_a, b_reorder, stride_b, beta, c, stride_c,       \

@@ -28,6 +28,8 @@
 
 #include "aocl_gemm_check.h"
 #include "classic/aocl_gemm_interface_apis.h"
+#include "classic/aocl_lib_interface_apis.h"
+#include "classic/dlp_errors.h"
 #include "config/lpgemm_config.h"
 #include "gemm_utils/lpgemm_utils.h"
 #include "logging/lpgemm_logger.h"
@@ -89,14 +91,15 @@ aocl_gemm_f32f32f32of32(const char      order,
                         ((float)alpha), lda, mem_format_a, ldb, mem_format_b,
                         ((float)beta), ldc, metadata);
 
-    dlp_trans_t dlp_transa;
-    dlp_trans_t dlp_transb;
+    DLP_METADATA_SET_ERROR(metadata,
+                           DLP_CLSC_SUCCESS); // Set default error to success.
 
     // Check if AVX2 ISA is supported, lpgemm fp32 matmul only works with it.
     if (dlp_cpuid_is_avx2fma3_supported() == FALSE) {
         dlp_print_msg(" AVX2 ISA not supported by processor, "
                       "cannot perform f32f32f32 gemm.",
                       __FILE__, __LINE__);
+        DLP_METADATA_SET_ERROR(metadata, DLP_CLSC_NOT_SUPPORTED);
         goto err_hndl;
     }
 
@@ -104,13 +107,16 @@ aocl_gemm_f32f32f32of32(const char      order,
     aocl_lpgemm_init_global_cntx();
 
     // check for validity of params.
-    int err_no = 0;
+    dlp_clsc_err_t err_no = DLP_CLSC_SUCCESS;
     AOCL_GEMM_CHECK("f32f32f32of32", order, transa, transb, m, n, k, a, lda,
                     mem_format_a, b, ldb, mem_format_b, c, ldc, err_no);
-    if (err_no != 0) {
+    if (err_no != DLP_CLSC_SUCCESS) {
+        DLP_METADATA_SET_ERROR(metadata, err_no);
         goto err_hndl;
     }
 
+    dlp_trans_t dlp_transa;
+    dlp_trans_t dlp_transb;
     /* Map BLAS chars to their corresponding DLP enumerated type value. */
     dlp_param_map_netlib_to_dlp_trans(transa, &dlp_transa);
     dlp_param_map_netlib_to_dlp_trans(transb, &dlp_transb);
@@ -118,7 +124,9 @@ aocl_gemm_f32f32f32of32(const char      order,
     bool is_row_major    = ((order == 'r') || (order == 'R'));
     bool is_column_major = ((order == 'c') || (order == 'C'));
 
-    // The strides are set assuming a row major kernel.
+    // In case the inputs are column major, the matrices are swapped (A -> B',
+    // B -> A'), and C' is computed instead of C. The strides are set so that
+    // in the end post the swap, the strides correspond to a row major kernel.
     md_t rs_a = lda;
     md_t cs_a = 1;
 
@@ -148,6 +156,7 @@ aocl_gemm_f32f32f32of32(const char      order,
     if ((is_row_major == TRUE) && (mtag_a == REORDERED)) {
         dlp_print_msg(" Reordering of A matrix is not supported.", __FILE__,
                       __LINE__);
+        DLP_METADATA_SET_ERROR(metadata, DLP_CLSC_NOT_SUPPORTED);
         goto err_hndl;
     }
 
@@ -156,6 +165,7 @@ aocl_gemm_f32f32f32of32(const char      order,
              && ((mtag_b == REORDERED) || (mtag_a == REORDERED))) {
         dlp_print_msg(" Reordering of column major matrices is not supported.",
                       __FILE__, __LINE__);
+        DLP_METADATA_SET_ERROR(metadata, DLP_CLSC_NOT_SUPPORTED);
         goto err_hndl;
     }
 
@@ -189,6 +199,7 @@ aocl_gemm_f32f32f32of32(const char      order,
         metadata, post_op_list, (void*)c, (void*)(&order), m, n);
 
     if (err != DLP_CLSC_SUCCESS) {
+        DLP_METADATA_SET_ERROR(metadata, err);
         goto err_hndl;
     }
 
@@ -199,10 +210,14 @@ aocl_gemm_f32f32f32of32(const char      order,
 
     lpgemm_cntx_t* lcntx_g = lpgemm_get_global_cntx_obj(F32F32F32OF32);
     lcntx_g->dlp_kernel_hndl.kernel_base = NULL;
-    lcntx_g->dlp_kernel_hndl             = dlp_init_and_get_kernel_hndl(
-        DLP_KERNEL_F32F32F32OF32, order, mtag_a, mtag_b, m, n, k, rs_a, cs_a,
-        rs_b, cs_b, rs_c, cs_c, (void*)&alpha, (void*)&beta, post_op_list,
-        lcntx_g->blksz.MR, lcntx_g->blksz.NR);
+
+    // Only enable JIT kernels if AOCL_ENABLE_INSTRUCTIONS is not set.
+    if (dlp_aocl_enable_instruction_query() == FALSE) {
+        lcntx_g->dlp_kernel_hndl = dlp_init_and_get_kernel_hndl(
+            DLP_KERNEL_F32F32F32OF32, order, mtag_a, mtag_b, m, n, k, rs_a,
+            cs_a, rs_b, cs_b, rs_c, cs_c, (void*)&alpha, (void*)&beta,
+            post_op_list, lcntx_g->blksz.MR, lcntx_g->blksz.NR);
+    }
 
     if (is_single_thread(&rntm_g) == TRUE) {
         if ((is_row_major == TRUE)

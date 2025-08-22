@@ -26,78 +26,39 @@
  *
  */
 
-#ifndef DLP_BASE_TYPES_H
-#define DLP_BASE_TYPES_H
+#ifndef DLP_ERRORS_H
+#define DLP_ERRORS_H
 
-#include <stdbool.h>
-#include <stdint.h>
-
-#include "classic/dlp_defines.h"
-#include "classic/dlp_errors.h"
-
-#ifndef TRUE
-#define TRUE true
-#endif
-
-#ifndef FALSE
-#define FALSE false
-#endif
-
-#if defined(_WIN32) || defined(__CYGWIN__)
-#ifdef DLP_IS_BUILDING_LIBRARY
-#define DLP_CLASSIC_EXPORT __declspec(dllexport)
-#else
-#define DLP_CLASSIC_EXPORT
-#endif
-#elif defined(__GNUC__) && __GNUC__ >= 4
-#define DLP_CLASSIC_EXPORT __attribute__((visibility("default")))
-#else
-#define DLP_CLASSIC_EXPORT
-#endif
-
-// Determine if we are on a 64-bit or 32-bit architecture.
-#if defined(_M_X64) || defined(__x86_64) || defined(__aarch64__)               \
-    || defined(_ARCH_PPC64) || defined(__s390x__) || defined(_LP64)
-#define DLP_CLASSIC_ARCH_64
-#else
-#define DLP_CLASSIC_ARCH_32
-#endif
-
-#if defined(__GNUC__) || defined(__clang__) || defined(__ICC)                  \
-    || defined(__IBMC__)
-#define DLP_CLASSIC_THREAD_LOCAL __thread
-#else
-#define DLP_CLASSIC_THREAD_LOCAL
-#endif
-
-#ifdef DLP_CLASSIC_ARCH_64
-typedef uint64_t msz_t;
-#else
-typedef uint32_t msz_t;
-#endif
-
-#ifdef __cplusplus
-#define DLP_INLINE inline
-#else
-#define DLP_INLINE static
-#endif
-
-typedef int64_t md_t;
-
-typedef void* opaq_fp_t;
-
+/**
+ * @brief Error codes for DLP classic library operations
+ *
+ * This enumeration defines the various error conditions that can occur
+ * during DLP classic library function calls. Each error code provides
+ * specific information about the type of failure encountered.
+ */
 typedef enum
 {
-    DLP_NO_TRANSPOSE = 0,
-    DLP_TRANSPOSE,
-    DLP_CONJ_NO_TRANSPOSE,
-    DLP_CONJ_TRANSPOSE,
-    DLP_PACKED,
-} dlp_trans_t;
+    DLP_CLSC_SUCCESS = 0,           /**< Operation completed successfully */
+    DLP_CLSC_FAILURE,               /**< General failure occurred */
+    DLP_CLSC_NULL_POINTER,          /**< Null pointer passed as argument */
+    DLP_CLSC_UNEXPECTED_VECTOR_DIM, /**< Vector dimension is unexpected or
+                                        invalid */
+    DLP_CLSC_NOT_SUPPORTED,         /**< Operation or feature not supported */
+    DLP_CLSC_INVALID_ORDER,      /**< Invalid memory layout order specified */
+    DLP_CLSC_INVALID_TRANSPOSE,  /**< Invalid transpose operation specified */
+    DLP_CLSC_INVALID_MEMORY_TAG, /**< Invalid memory tag or format specified */
+    DLP_CLSC_INVALID_MATRIX_DIMENSION, /**< Invalid matrix dimension provided */
+    DLP_CLSC_INVALID_LEADING_DIMENSION, /**< Invalid leading dimension specified
+                                         */
+    DLP_CLSC_INVALID_MATRIX_TYPE,       /**< Invalid matrix type specified */
+    DLP_CLSC_INVALID_GROUP_DIMENSION, /**< Invalid group dimension specified */
+    DLP_CLSC_ERROR_MAX /**< Maximum error code value (for bounds checking) */
+} dlp_clsc_err_t;
 
-#define dlp_min(a, b)  ((a) < (b) ? (a) : (b))
-#define dlp_max(a, b)  ((a) > (b) ? (a) : (b))
-#define dlp_abs(a)     ((a) <= 0 ? -(a) : (a))
-#define dlp_fmin(a, b) dlp_min(a, b)
+typedef struct
+{
+    dlp_clsc_err_t error_code;
+    // More error information can be added here.
+} dlp_error_hndl_t;
 
-#endif // DLP_BASE_TYPES_H
+#endif // DLP_ERRORS_H

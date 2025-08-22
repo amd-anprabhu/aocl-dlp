@@ -84,9 +84,11 @@ aocl_batch_gemm_bf16s4f32of32(const char*      order,
     md_t mat_idx = 0;
 
     // check for validity of params.
-    int err_no = 0;
+    dlp_clsc_err_t err_no = DLP_CLSC_SUCCESS;
 
     for (md_t gc_i = 0; gc_i < group_count; gc_i++) {
+
+        DLP_METADATA_SET_ERROR(metadata[gc_i], DLP_CLSC_SUCCESS);
 
         md_t g_sz = group_size[gc_i];
         // check for validity of params.
@@ -96,7 +98,8 @@ aocl_batch_gemm_bf16s4f32of32(const char*      order,
                               b[gc_i], ldb[gc_i], mem_format_b[gc_i], c[gc_i],
                               ldc[gc_i], err_no);
 
-        if (err_no != 0) {
+        if (err_no != DLP_CLSC_SUCCESS) {
+            DLP_METADATA_SET_ERROR(metadata[gc_i], err_no);
             goto err_hndl;
         }
 
@@ -118,16 +121,20 @@ aocl_batch_gemm_bf16s4f32of32(const char*      order,
         // Convert pre op struct to pre op linked list format.
         dlp_clsc_err_t err = lpgemm_translate_to_pre_ops_list(
             metadata[gc_i]->pre_ops, pre_op_list, m[gc_i], n[gc_i], k[gc_i]);
-        if (err != DLP_CLSC_SUCCESS)
+        if (err != DLP_CLSC_SUCCESS) {
+            DLP_METADATA_SET_ERROR(metadata[gc_i], err);
             goto err_hndl;
+        }
 
         // Convert post op struct to post op linked list format.
         err = lpgemm_translate_to_post_ops_list(
             metadata[gc_i], post_op_list, (void*)c[gc_i],
             (void*)((order + gc_i)), m[gc_i], n[gc_i]);
 
-        if (err != DLP_CLSC_SUCCESS)
+        if (err != DLP_CLSC_SUCCESS) {
+            DLP_METADATA_SET_ERROR(metadata[gc_i], err);
             goto err_hndl;
+        }
 
         bfloat16* a_local[g_sz];
         int8_t*   b_local[g_sz];
@@ -146,6 +153,7 @@ aocl_batch_gemm_bf16s4f32of32(const char*      order,
             if (is_column_major == TRUE) {
                 dlp_print_msg("Column major inputs not supported.", __FILE__,
                               __LINE__);
+                DLP_METADATA_SET_ERROR(metadata[gc_i], DLP_CLSC_NOT_SUPPORTED);
                 goto err_hndl;
             } else // row-major
             {
@@ -176,6 +184,8 @@ aocl_batch_gemm_bf16s4f32of32(const char*      order,
                         " Reordering of A matrix is not supported in row "
                         "major case.",
                         __FILE__, __LINE__);
+                    DLP_METADATA_SET_ERROR(metadata[gc_i],
+                                           DLP_CLSC_NOT_SUPPORTED);
                     goto err_hndl;
                 }
                 // From 5-loop function point of view,
@@ -283,9 +293,11 @@ aocl_batch_gemm_bf16s4f32obf16(const char*      order,
     md_t mat_idx = 0;
 
     // check for validity of params.
-    int err_no = 0;
+    dlp_clsc_err_t err_no = DLP_CLSC_SUCCESS;
 
     for (md_t gc_i = 0; gc_i < group_count; gc_i++) {
+
+        DLP_METADATA_SET_ERROR(metadata[gc_i], DLP_CLSC_SUCCESS);
 
         md_t g_sz = group_size[gc_i];
         // check for validity of params.
@@ -295,7 +307,8 @@ aocl_batch_gemm_bf16s4f32obf16(const char*      order,
                               mem_format_a[gc_i], b[gc_i], ldb[gc_i],
                               mem_format_b[gc_i], c[gc_i], ldc[gc_i], err_no);
 
-        if (err_no != 0) {
+        if (err_no != DLP_CLSC_SUCCESS) {
+            DLP_METADATA_SET_ERROR(metadata[gc_i], err_no);
             goto err_hndl;
         }
 
@@ -321,16 +334,20 @@ aocl_batch_gemm_bf16s4f32obf16(const char*      order,
         // Convert pre op struct to pre op linked list format.
         dlp_clsc_err_t err = lpgemm_translate_to_pre_ops_list(
             metadata[gc_i]->pre_ops, pre_op_list, m[gc_i], n[gc_i], k[gc_i]);
-        if (err != DLP_CLSC_SUCCESS)
+        if (err != DLP_CLSC_SUCCESS) {
+            DLP_METADATA_SET_ERROR(metadata[gc_i], err);
             goto err_hndl;
+        }
 
         // Convert post op struct to post op linked list format.
         err = lpgemm_translate_to_post_ops_list(
             metadata[gc_i], post_op_list, (void*)c[gc_i],
             (void*)((order + gc_i)), m[gc_i], n[gc_i]);
 
-        if (err != DLP_CLSC_SUCCESS)
+        if (err != DLP_CLSC_SUCCESS) {
+            DLP_METADATA_SET_ERROR(metadata[gc_i], err);
             goto err_hndl;
+        }
 
         dlp_trans_t dlp_transa;
         dlp_trans_t dlp_transb;
@@ -345,6 +362,7 @@ aocl_batch_gemm_bf16s4f32obf16(const char*      order,
             if (is_column_major == TRUE) {
                 dlp_print_msg("Column major inputs not supported.", __FILE__,
                               __LINE__);
+                DLP_METADATA_SET_ERROR(metadata[gc_i], DLP_CLSC_NOT_SUPPORTED);
                 goto err_hndl;
             } else // row-major
             {
@@ -375,6 +393,8 @@ aocl_batch_gemm_bf16s4f32obf16(const char*      order,
                         " Reordering of A matrix is not supported in row "
                         "major case.",
                         __FILE__, __LINE__);
+                    DLP_METADATA_SET_ERROR(metadata[gc_i],
+                                           DLP_CLSC_NOT_SUPPORTED);
                     goto err_hndl;
                 }
                 // From 5-loop function point of view,

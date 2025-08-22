@@ -421,8 +421,8 @@ GEN_GET_BIAS_POST_OP_VAL_f32(bf16bf16f32obf16) GEN_GET_BIAS_POST_OP_VAL_f32(
                                                                                \
                 POST_ACCUM_type post_temp_accum = 0;                           \
                 if (is_integerAPI_avx512(#BLAS_SFX)) {                         \
-                    CVT_FUNC_NAME(ACCUM_type, POST_ACCUM_type)(                \
-                        temp_accum, &post_temp_accum);                         \
+                    CVT_FUNC_NAME(ACCUM_type, POST_ACCUM_type)                 \
+                    (temp_accum, &post_temp_accum);                            \
                 } else {                                                       \
                     post_temp_accum = temp_accum;                              \
                 }                                                              \
@@ -568,8 +568,8 @@ GEN_GET_BIAS_POST_OP_VAL_f32(bf16bf16f32obf16) GEN_GET_BIAS_POST_OP_VAL_f32(
                     &out_temp_accum, &post_temp_accum);                        \
                                                                                \
                 float comp_float, ref_float;                                   \
-                GEN_FUNC_NAME(C_type, _to_float)(                              \
-                    *(c + (rs_c * i) + (cs_c * j)), &comp_float);              \
+                GEN_FUNC_NAME(C_type, _to_float)                               \
+                (*(c + (rs_c * i) + (cs_c * j)), &comp_float);                 \
                 GEN_FUNC_NAME(C_type, _to_float)(out_temp_accum, &ref_float);  \
                                                                                \
                 if (((comp_float - ref_float) > 1.0E-5)                        \
@@ -854,24 +854,24 @@ GEN_GET_BIAS_POST_OP_VAL_f32(bf16bf16f32obf16) GEN_GET_BIAS_POST_OP_VAL_f32(
             /* Reorder B.*/                                                    \
             if (int4_testing == FALSE) {                                       \
                 msz_t b_reorder_buf_siz_req =                                  \
-                    GEN_FUNC_NAME(aocl_get_reorder_buf_size_,                  \
-                                  REORDER_SFX)(stor_order, transb, 'B', k, n); \
+                    GEN_FUNC_NAME(aocl_get_reorder_buf_size_, REORDER_SFX)(    \
+                        stor_order, transb, 'B', k, n, NULL);                  \
                                                                                \
                 b_reorder = (B_type*)lpgemm_malloc(b_reorder_buf_siz_req);     \
-                GEN_FUNC_NAME(aocl_reorder_, REORDER_SFX)(                     \
-                    stor_order, transb, 'B', (GET_B_TYPE_##REORDER_SFX*)b,     \
-                    (GET_B_TYPE_##REORDER_SFX*)b_reorder, k, n, stride_b);     \
+                GEN_FUNC_NAME(aocl_reorder_, REORDER_SFX)                      \
+                (stor_order, transb, 'B', (GET_B_TYPE_##REORDER_SFX*)b,        \
+                 (GET_B_TYPE_##REORDER_SFX*)b_reorder, k, n, stride_b, NULL);  \
             } /* It has to be ensured, for now, only int4 testing takes else   \
                  path. */                                                      \
             else {                                                             \
                 msz_t b_reorder_buf_siz_req = GEN_FUNC_NAME(                   \
                     aocl_get_reorder_buf_size_,                                \
-                    INT4_REORDER_SFX)(stor_order, transb, 'B', k, n);          \
+                    INT4_REORDER_SFX)(stor_order, transb, 'B', k, n, NULL);    \
                                                                                \
                 b_reorder = (B_type*)lpgemm_malloc(b_reorder_buf_siz_req);     \
-                GEN_FUNC_NAME(aocl_reorder_, INT4_REORDER_SFX)(                \
-                    stor_order, transb, 'B', (int8_t*)b, (int8_t*)b_reorder,   \
-                    k, n, stride_b);                                           \
+                GEN_FUNC_NAME(aocl_reorder_, INT4_REORDER_SFX)                 \
+                (stor_order, transb, 'B', (int8_t*)b, (int8_t*)b_reorder, k,   \
+                 n, stride_b, NULL);                                           \
             }                                                                  \
                                                                                \
             GEN_FUNC_NAME(mat_mul_bench_driver_, BLAS_SFX)                     \

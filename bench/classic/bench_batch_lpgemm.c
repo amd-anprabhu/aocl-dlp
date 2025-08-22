@@ -469,8 +469,8 @@ GEN_GET_BIAS_POST_OP_VAL_f32(bf16bf16f32obf16) GEN_GET_BIAS_POST_OP_VAL_f32(
                             cs_c_ref, i, j, k[gc_i], n[gc_i], a_pre_op);       \
                         POST_ACCUM_type post_temp_accum = 0;                   \
                         if (is_integerAPI_avx512(#BLAS_SFX)) {                 \
-                            CVT_FUNC_NAME(ACCUM_type, POST_ACCUM_type)(        \
-                                temp_accum, &post_temp_accum);                 \
+                            CVT_FUNC_NAME(ACCUM_type, POST_ACCUM_type)         \
+                            (temp_accum, &post_temp_accum);                    \
                         } else {                                               \
                             post_temp_accum = temp_accum;                      \
                         }                                                      \
@@ -650,11 +650,11 @@ GEN_GET_BIAS_POST_OP_VAL_f32(bf16bf16f32obf16) GEN_GET_BIAS_POST_OP_VAL_f32(
                             &out_temp_accum, &post_temp_accum);                \
                                                                                \
                         float comp_float, ref_float;                           \
-                        GEN_FUNC_NAME(C_type, _to_float)(                      \
-                            *(c[mat_idx + gs_i] + (rs_c * i) + (cs_c * j)),    \
-                            &comp_float);                                      \
-                        GEN_FUNC_NAME(C_type, _to_float)(out_temp_accum,       \
-                                                         &ref_float);          \
+                        GEN_FUNC_NAME(C_type, _to_float)                       \
+                        (*(c[mat_idx + gs_i] + (rs_c * i) + (cs_c * j)),       \
+                         &comp_float);                                         \
+                        GEN_FUNC_NAME(C_type, _to_float)                       \
+                        (out_temp_accum, &ref_float);                          \
                                                                                \
                         if (((comp_float - ref_float) > 1.0E-5)                \
                             || ((ref_float - comp_float) > 1.0E-5)) {          \
@@ -973,26 +973,26 @@ GEN_GET_BIAS_POST_OP_VAL_f32(bf16bf16f32obf16) GEN_GET_BIAS_POST_OP_VAL_f32(
                     if (int4_testing == FALSE) {                               \
                         msz_t b_reorder_buf_siz_req = GEN_FUNC_NAME(           \
                             aocl_get_reorder_buf_size_, REORDER_SFX)(          \
-                            stor_order[i], transb[i], 'B', k[i], n[i]);        \
+                            stor_order[i], transb[i], 'B', k[i], n[i], NULL);  \
                         b_gemm[idx] =                                          \
                             (B_type*)lpgemm_malloc(b_reorder_buf_siz_req);     \
-                        GEN_FUNC_NAME(aocl_reorder_, REORDER_SFX)(             \
-                            stor_order[i], transb[i], 'B',                     \
-                            (GET_B_TYPE_##REORDER_SFX*)b[idx],                 \
-                            (GET_B_TYPE_##REORDER_SFX*)b_gemm[idx], k[i],      \
-                            n[i], stride_b[i]);                                \
+                        GEN_FUNC_NAME(aocl_reorder_, REORDER_SFX)              \
+                        (stor_order[i], transb[i], 'B',                        \
+                         (GET_B_TYPE_##REORDER_SFX*)b[idx],                    \
+                         (GET_B_TYPE_##REORDER_SFX*)b_gemm[idx], k[i], n[i],   \
+                         stride_b[i], NULL);                                   \
                     } /* It has to be ensured, for now, only int4 testing      \
                          takes else path. */                                   \
                     else {                                                     \
                         msz_t b_reorder_buf_siz_req = GEN_FUNC_NAME(           \
                             aocl_get_reorder_buf_size_, INT4_REORDER_SFX)(     \
-                            stor_order[i], transb[i], 'B', k[i], n[i]);        \
+                            stor_order[i], transb[i], 'B', k[i], n[i], NULL);  \
                                                                                \
                         b_gemm[idx] =                                          \
                             (B_type*)lpgemm_malloc(b_reorder_buf_siz_req);     \
-                        GEN_FUNC_NAME(aocl_reorder_, INT4_REORDER_SFX)(        \
-                            stor_order[i], transb[i], 'B', (int8_t*)b[idx],    \
-                            (int8_t*)b_gemm[idx], k[i], n[i], stride_b[i]);    \
+                        GEN_FUNC_NAME(aocl_reorder_, INT4_REORDER_SFX)         \
+                        (stor_order[i], transb[i], 'B', (int8_t*)b[idx],       \
+                         (int8_t*)b_gemm[idx], k[i], n[i], stride_b[i], NULL); \
                     }                                                          \
                 }                                                              \
             }                                                                  \

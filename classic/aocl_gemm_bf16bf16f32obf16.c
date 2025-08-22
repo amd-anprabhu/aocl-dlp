@@ -87,14 +87,15 @@ aocl_gemm_bf16bf16f32obf16(const char      order,
                         ((float)alpha), lda, mem_format_a, ldb, mem_format_b,
                         ((float)beta), ldc, metadata);
 
-    dlp_trans_t dlp_transa;
-    dlp_trans_t dlp_transb;
+    DLP_METADATA_SET_ERROR(metadata,
+                           DLP_CLSC_SUCCESS); // Set default error to success.
 
     // Check if avx512_vnni ISA is supported, lpgemm matmul only works with it.
     if (dlp_cpuid_is_avx2fma3_supported() == FALSE) {
         dlp_print_msg(" AVX2 ISA not supported by processor, "
                       "cannot perform bf16bf16f32 gemm.",
                       __FILE__, __LINE__);
+        DLP_METADATA_SET_ERROR(metadata, DLP_CLSC_NOT_SUPPORTED);
         goto err_hndl;
     }
 
@@ -102,10 +103,11 @@ aocl_gemm_bf16bf16f32obf16(const char      order,
     aocl_lpgemm_init_global_cntx();
 
     // check for validity of params.
-    int err_no = 0;
+    dlp_clsc_err_t err_no = DLP_CLSC_SUCCESS;
     AOCL_GEMM_CHECK("bf16bf16f32obf16", order, transa, transb, m, n, k, a, lda,
                     mem_format_a, b, ldb, mem_format_b, c, ldc, err_no);
-    if (err_no != 0) {
+    if (err_no != DLP_CLSC_SUCCESS) {
+        DLP_METADATA_SET_ERROR(metadata, err_no);
         goto err_hndl;
     }
 
@@ -114,10 +116,13 @@ aocl_gemm_bf16bf16f32obf16(const char      order,
         dlp_print_msg(" Could not generate bf16bf16f32obf16 "
                       " kernels using JIT.",
                       __FILE__, __LINE__);
+        DLP_METADATA_SET_ERROR(metadata, DLP_CLSC_NOT_SUPPORTED);
         return;
     }
 #endif
 
+    dlp_trans_t dlp_transa;
+    dlp_trans_t dlp_transb;
     /* Map BLAS chars to their corresponding DLP enumerated type value. */
     dlp_param_map_netlib_to_dlp_trans(transa, &dlp_transa);
     dlp_param_map_netlib_to_dlp_trans(transb, &dlp_transb);
@@ -155,6 +160,7 @@ aocl_gemm_bf16bf16f32obf16(const char      order,
         dlp_print_msg(
             " Reordering of A matrix is not supported in row major case.",
             __FILE__, __LINE__);
+        DLP_METADATA_SET_ERROR(metadata, DLP_CLSC_NOT_SUPPORTED);
         goto err_hndl;
     }
     // Inputs swapped in column major, A becomes B from kernel point of view.
@@ -163,6 +169,7 @@ aocl_gemm_bf16bf16f32obf16(const char      order,
              && ((mtag_b == REORDERED) || (mtag_a == REORDERED))) {
         dlp_print_msg(" Reordering of column major matrices is not supported.",
                       __FILE__, __LINE__);
+        DLP_METADATA_SET_ERROR(metadata, DLP_CLSC_NOT_SUPPORTED);
         goto err_hndl;
     }
 
@@ -196,6 +203,7 @@ aocl_gemm_bf16bf16f32obf16(const char      order,
         metadata, post_op_list, (void*)c, (void*)(&order), m, n);
 
     if (err != DLP_CLSC_SUCCESS) {
+        DLP_METADATA_SET_ERROR(metadata, err);
         goto err_hndl;
     }
 

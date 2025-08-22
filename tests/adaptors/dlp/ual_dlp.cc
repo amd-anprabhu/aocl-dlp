@@ -109,11 +109,13 @@ UalDlp::reorder(const Matrix& in, Matrix& out, MatrixType accType)
     if (in.getMatrixType() == MatrixType::f32) {
         alloc_bytes = aocl_get_reorder_buf_size_f32f32f32of32(
             in.getLayout() == MatrixLayout::ROW_MAJOR ? 'r' : 'c',
-            in.isTransposed() ? 't' : 'n', 'B', effective_rows, effective_cols);
+            in.isTransposed() ? 't' : 'n', 'B', effective_rows, effective_cols,
+            NULL);
     } else if (in.getMatrixType() == MatrixType::bf16) {
         alloc_bytes = aocl_get_reorder_buf_size_bf16bf16f32of32(
             in.getLayout() == MatrixLayout::ROW_MAJOR ? 'r' : 'c',
-            in.isTransposed() ? 't' : 'n', 'B', effective_rows, effective_cols);
+            in.isTransposed() ? 't' : 'n', 'B', effective_rows, effective_cols,
+            NULL);
     } else {
         return false;
     }
@@ -142,7 +144,7 @@ UalDlp::reorder(const Matrix& in, Matrix& out, MatrixType accType)
                 reinterpret_cast<const float*>(
                     in.getMatrixData().getMatrixPtr()),
                 reinterpret_cast<float*>(out.getMatrixData().getMatrixPtr()),
-                effective_rows, effective_cols, in.getLeadingDimension());
+                effective_rows, effective_cols, in.getLeadingDimension(), NULL);
             break;
         case MatrixType::bf16:
             aocl_reorder_bf16bf16f32of32(
@@ -150,7 +152,7 @@ UalDlp::reorder(const Matrix& in, Matrix& out, MatrixType accType)
                 reinterpret_cast<const bfloat16*>(
                     in.getMatrixData().getMatrixPtr()),
                 reinterpret_cast<bfloat16*>(out.getMatrixData().getMatrixPtr()),
-                effective_rows, effective_cols, in.getLeadingDimension());
+                effective_rows, effective_cols, in.getLeadingDimension(), NULL);
             break;
         default:
             return false;

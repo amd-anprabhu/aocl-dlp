@@ -93,17 +93,17 @@ GEN_UNPACK_ACC_CHK_DRV_FUNC(bfloat16, bf16bf16f32of32)
         B_type* b_reorder = NULL;                                              \
                                                                                \
         msz_t b_reorder_buf_siz_req =                                          \
-            GEN_FUNC_NAME(aocl_get_reorder_buf_size_, LP_SFX)(stor_order, 'n', \
-                                                              mat_type, m, n); \
+            GEN_FUNC_NAME(aocl_get_reorder_buf_size_,                          \
+                          LP_SFX)(stor_order, 'n', mat_type, m, n, NULL);      \
                                                                                \
         b_reorder = (B_type*)lpgemm_malloc(b_reorder_buf_siz_req);             \
         /* reorder B. */                                                       \
-        GEN_FUNC_NAME(aocl_reorder_, LP_SFX)(stor_order, 'n', mat_type, b,     \
-                                             b_reorder, m, n, stride);         \
+        GEN_FUNC_NAME(aocl_reorder_, LP_SFX)                                   \
+        (stor_order, 'n', mat_type, b, b_reorder, m, n, stride, NULL);         \
                                                                                \
         /* Unpack B. */                                                        \
-        GEN_FUNC_NAME(aocl_unreorder_, LP_SFX)(                                \
-            stor_order, mat_type, b_reorder, b_unpacked, m, n, stride);        \
+        GEN_FUNC_NAME(aocl_unreorder_, LP_SFX)                                 \
+        (stor_order, mat_type, b_reorder, b_unpacked, m, n, stride, NULL);     \
                                                                                \
         /* Accuracy check */                                                   \
         printf("Running accuracy check\n");                                    \
