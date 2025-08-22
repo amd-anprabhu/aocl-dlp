@@ -55,9 +55,12 @@ class gemmDEInput : public iDEInput
     md_t                         cs_c;
     void*                        alpha;
     void*                        beta;
+    AOCL_MEMORY_TAG              mtag_a;
+    AOCL_MEMORY_TAG              mtag_b;
     lpgemm_post_op*              metadata;
     md_t                         mr_hint;
     md_t                         nr_hint;
+    md_t                         kc_hint;
 
     gemmDEInput(kernel_frame::kernelDatatype k_dtype,
                 md_t                         m,
@@ -71,9 +74,12 @@ class gemmDEInput : public iDEInput
                 md_t                         cs_c,
                 void*                        alpha,
                 void*                        beta,
+                AOCL_MEMORY_TAG              mtag_a,
+                AOCL_MEMORY_TAG              mtag_b,
                 lpgemm_post_op*              metadata,
                 md_t                         mr_hint,
-                md_t                         nr_hint)
+                md_t                         nr_hint,
+                md_t                         kc_hint)
         : k_dtype(k_dtype)
         , m(m)
         , n(n)
@@ -86,9 +92,12 @@ class gemmDEInput : public iDEInput
         , cs_c(cs_c)
         , alpha(alpha)
         , beta(beta)
+        , mtag_a(mtag_a)
+        , mtag_b(mtag_b)
         , metadata(metadata)
         , mr_hint(mr_hint)
         , nr_hint(nr_hint)
+        , kc_hint(kc_hint)
     {
     }
 
@@ -105,9 +114,12 @@ class gemmDEInput : public iDEInput
         , cs_c(other.cs_c)
         , alpha(other.alpha)
         , beta(other.beta)
+        , mtag_a(other.mtag_a)
+        , mtag_b(other.mtag_b)
         , metadata(other.metadata)
         , mr_hint(other.mr_hint)
         , nr_hint(other.nr_hint)
+        , kc_hint(other.kc_hint)
     {
     }
 
@@ -124,9 +136,12 @@ class gemmDEInput : public iDEInput
         , cs_c(other.cs_c)
         , alpha(other.alpha)
         , beta(other.beta)
+        , mtag_a(other.mtag_a)
+        , mtag_b(other.mtag_b)
         , metadata(other.metadata)
         , mr_hint(other.mr_hint)
         , nr_hint(other.nr_hint)
+        , kc_hint(other.kc_hint)
     {
     }
 
@@ -144,9 +159,12 @@ class gemmDEInput : public iDEInput
         cs_c     = other.cs_c;
         alpha    = other.alpha;
         beta     = other.beta;
+        mtag_a   = other.mtag_a;
+        mtag_b   = other.mtag_b;
         metadata = other.metadata;
         mr_hint  = other.mr_hint;
         nr_hint  = other.nr_hint;
+        kc_hint  = other.kc_hint;
         return *this;
     }
 

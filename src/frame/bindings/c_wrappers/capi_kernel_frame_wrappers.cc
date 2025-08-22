@@ -59,7 +59,8 @@ dlp_init_and_get_kernel_hndl(kernel_datatype_t k_dtype,
                              void*             beta,
                              lpgemm_post_op*   metadata,
                              md_t              mr_hint,
-                             md_t              nr_hint)
+                             md_t              nr_hint,
+                             md_t              kc_hint)
 {
     dlp_kernel_hndl_t kernel_hndl{ DLP_KERNEL_INVALID, 0, 0, nullptr };
 
@@ -67,9 +68,10 @@ dlp_init_and_get_kernel_hndl(kernel_datatype_t k_dtype,
     if (kDType == kernelDatatype::invalid) {
         return kernel_hndl;
     }
-    dlp::de::gemmDEInput gDEIn{ kDType, m,    n,        k,       rs_a,
-                                cs_a,   rs_b, cs_b,     rs_c,    cs_c,
-                                alpha,  beta, metadata, mr_hint, nr_hint };
+    dlp::de::gemmDEInput gDEIn{ kDType,  m,       n,      k,      rs_a,
+                                cs_a,    rs_b,    cs_b,   rs_c,   cs_c,
+                                alpha,   beta,    mtag_a, mtag_b, metadata,
+                                mr_hint, nr_hint, kc_hint };
     auto optKI = dlp::de::decisionEngineInstance().getKernelInfoForInput(
         std::addressof(gDEIn), kernelRoutineType::gemm, kDType);
     if (!optKI.has_value()) {
@@ -120,6 +122,8 @@ dlp_execute_kernel(dlp_kernel_hndl_t   kernel_hndl,
                    void*               B,
                    md_t                rs_b,
                    md_t                cs_b,
+                   md_t                n_sub_updated,
+                   md_t                jc_cur_loop_rem,
                    void*               C,
                    md_t                rs_c,
                    md_t                cs_c,
@@ -128,11 +132,31 @@ dlp_execute_kernel(dlp_kernel_hndl_t   kernel_hndl,
                    lpgemm_post_op*     post_ops_list,
                    lpgemm_post_op_attr post_ops_attr)
 {
-    // This function is currently used only for FP32 GEMM and GEMV(with n==1)
+    // This function is currently used only for FP32 GEMM and GEMV
     // kernels. Also dont use new/delete and malloc/free calls here, since
     // they are lock based and will result in performance degradation.
-    if (kernel_hndl.nr == 1) {
-        gemvParams gemvParamsIn{
+    if (kernel_hndl.mr == 1) {
+        gemvM1Params obj{ A,
+                          B,
+                          C,
+                          n,
+                          k,
+                          rs_a,
+                          cs_a,
+                          rs_b,
+                          cs_b,
+                          rs_c,
+                          cs_c,
+                          n_sub_updated,
+                          jc_cur_loop_rem,
+                          alpha,
+                          beta,
+                          post_ops_list,
+                          post_ops_attr };
+        kernelBase*  kB = static_cast<kernelBase*>(kernel_hndl.kernel_base);
+        kB->operator()(std::addressof(obj));
+    } else if (kernel_hndl.nr == 1) {
+        gemvN1Params gemvParamsIn{
             A,    B,    C,    m,     k,    rs_a,          cs_a,         rs_b,
             cs_b, rs_c, cs_c, alpha, beta, post_ops_list, post_ops_attr
         };

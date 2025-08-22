@@ -255,11 +255,14 @@ struct kernelOpsMetaData
 
 struct kernelInfo
 {
-    md_t        mr;
-    md_t        nr;
-    md_t        k_unroll;
-    scalingType alphaScalingType;
-    scalingType betaScalingType;
+    md_t            mr;
+    md_t            nr;
+    md_t            k_unroll;
+    md_t            kc;
+    scalingType     alphaScalingType;
+    scalingType     betaScalingType;
+    AOCL_MEMORY_TAG mtag_a;
+    AOCL_MEMORY_TAG mtag_b;
 
     // Not using std::vector for kOpsArr due to slight overhead compared
     // to raw pointers.
@@ -271,8 +274,11 @@ struct kernelInfo
     kernelInfo(md_t                               mr,
                md_t                               nr,
                md_t                               k_unroll,
+               md_t                               kc,
                scalingType                        _alphaScalingType,
                scalingType                        _betaScalingType,
+               AOCL_MEMORY_TAG                    mtag_a,
+               AOCL_MEMORY_TAG                    mtag_b,
                std::unique_ptr<kernelOpsMetaData> kOpsArr,
                std::size_t                        kOpsArrSize,
                bool                               anyKOpsOrder,
@@ -280,8 +286,11 @@ struct kernelInfo
         : mr(mr)
         , nr(nr)
         , k_unroll(k_unroll)
+        , kc(kc)
         , alphaScalingType(_alphaScalingType)
         , betaScalingType(_betaScalingType)
+        , mtag_a(mtag_a)
+        , mtag_b(mtag_b)
         , kOpsArr(((kOpsArr != nullptr) && (kOpsArrSize > 0))
                       ? kOpsArr.release()
                       : nullptr)
@@ -296,8 +305,11 @@ struct kernelInfo
         : mr(other.mr)
         , nr(other.nr)
         , k_unroll(other.k_unroll)
+        , kc(other.kc)
         , alphaScalingType(other.alphaScalingType)
         , betaScalingType(other.betaScalingType)
+        , mtag_a(other.mtag_a)
+        , mtag_b(other.mtag_b)
         , kOpsArr(nullptr)
         , kOpsArrSize(((other.kOpsArr != nullptr) && (other.kOpsArrSize > 0))
                           ? other.kOpsArrSize
@@ -319,8 +331,11 @@ struct kernelInfo
         : mr(other->mr)
         , nr(other->nr)
         , k_unroll(other->k_unroll)
+        , kc(other->kc)
         , alphaScalingType(other->alphaScalingType)
         , betaScalingType(other->betaScalingType)
+        , mtag_a(other->mtag_a)
+        , mtag_b(other->mtag_b)
         , kOpsArr(((other->kOpsArr != nullptr) && (other->kOpsArrSize > 0))
                       ? other->kOpsArr
                       : nullptr)
@@ -340,8 +355,11 @@ struct kernelInfo
         : mr(other.mr)
         , nr(other.nr)
         , k_unroll(other.k_unroll)
+        , kc(other.kc)
         , alphaScalingType(other.alphaScalingType)
         , betaScalingType(other.betaScalingType)
+        , mtag_a(other.mtag_a)
+        , mtag_b(other.mtag_b)
         , kOpsArr(((other.kOpsArr != nullptr) && (other.kOpsArrSize > 0))
                       ? other.kOpsArr
                       : nullptr)
@@ -363,8 +381,11 @@ struct kernelInfo
             this->mr               = other.mr;
             this->nr               = other.nr;
             this->k_unroll         = other.k_unroll;
+            this->kc               = other.kc;
             this->alphaScalingType = other.alphaScalingType;
             this->betaScalingType  = other.betaScalingType;
+            this->mtag_a           = other.mtag_a;
+            this->mtag_b           = other.mtag_b;
             if (this->kOpsArr != nullptr) {
                 delete[] this->kOpsArr;
             }
@@ -388,8 +409,11 @@ struct kernelInfo
             this->mr               = other.mr;
             this->nr               = other.nr;
             this->k_unroll         = other.k_unroll;
+            this->kc               = other.kc;
             this->alphaScalingType = other.alphaScalingType;
             this->betaScalingType  = other.betaScalingType;
+            this->mtag_a           = other.mtag_a;
+            this->mtag_b           = other.mtag_b;
             if (this->kOpsArr != nullptr) {
                 delete[] this->kOpsArr;
             }
@@ -419,9 +443,10 @@ struct kernelInfo
             }
         }
         return ((this->mr == rhs.mr) && (this->nr == rhs.nr)
-                && (this->k_unroll == rhs.k_unroll)
+                && (this->k_unroll == rhs.k_unroll) && (this->kc == rhs.kc)
                 && (this->alphaScalingType == rhs.alphaScalingType)
                 && (this->betaScalingType == rhs.betaScalingType)
+                && (this->mtag_a == rhs.mtag_a) && (this->mtag_b == rhs.mtag_b)
                 && (this->kOpsArrSize == rhs.kOpsArrSize) && isKOpsArrEqual
                 && (this->anyKOpsOrder == rhs.anyKOpsOrder)
                 && (this->kInstPref == rhs.kInstPref));

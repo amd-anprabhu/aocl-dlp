@@ -117,6 +117,7 @@ jitAmdZenFP32::generateAllKernels(const dlp::jit::jitGeneratorContext& jI)
 
     MR                 = (jI.kI).mr;
     NR                 = (jI.kI).nr;
+    KC                 = (jI.kI).kc;
     K_UNROLL           = (jI.kI).k_unroll;
     int numElemsPerReg = 0; // RegBytes / this->sizeofType<accumType>();
 
@@ -136,8 +137,68 @@ jitAmdZenFP32::generateAllKernels(const dlp::jit::jitGeneratorContext& jI)
     // Convert kernelInstrPreference to kernelType
     utils::kernelInstrType _kType = getGeneratorKernelType(jI.kI.kInstPref);
 
-    // Generate kernel for GEMV(when NR == 1)
-    if (NR == 1) {
+    if (MR == 1) {
+        // Generate kernel for GEMV(when MR == 1)
+        AOCL_MEMORY_TAG mtag_b = (jI.kI).mtag_b;
+
+        // We generate only 3 kernels for now, with the following combinations:
+        // kloop = true, kfringe = true
+        // Index 0 : nloop = false, nfringe = true
+        // Index 1 : nloop = true, nfringe = false
+        // Index 2 : nloop = true, nfringe = true
+        numKernelVariants = 3;
+        kernelCodeBlocks.resize(numKernelVariants);
+
+        utils::gemvM1GeneratorParams params(
+            0, 0, mtag_b, true, true, true, true,
+            dlp::kernel_frame::storageFormat::rowMajor,
+            (jI.kI).alphaScalingType, (jI.kI).betaScalingType, _kType);
+
+        params.NR      = NR;
+        params.KC      = KC;
+        params.nloop   = true;
+        params.kloop   = true;
+        params.nfringe = true;
+        params.kfringe = true;
+
+        for (int i = 1; i <= 3; i += 1) {
+            params.nfringe = (i % 2) ? true : false;
+            params.nloop   = (i > 1) ? true : false;
+
+            void* codeBuffer = utils::jitHelperUtils::allocateJitMemory(
+                utils::JIT_KERNEL_SIZE);
+            if (codeBuffer == nullptr) {
+                err = dlp::jit::jitGeneratorError::errorAllocatingMemory;
+                goto cleanup;
+            }
+            kernelCodeBlocks[i - 1] = codeBuffer;
+
+            // Architecture specific dispatch happens here.
+            if (isZen4) {
+                // Create a new instance of jitAVX512GEMVN1 with the code buffer
+                // and size
+                avx512gen::jitAVX512GEMVM1 base(codeBuffer,
+                                                utils::JIT_KERNEL_SIZE);
+
+                err = base.generateKernel<kdt>(params);
+                if (err != dlp::jit::jitGeneratorError::success) {
+                    goto cleanup;
+                }
+            } else if (isZen) { // AVX2 generation not supported yet
+                return dlp::jit::jitGeneratorError::error;
+            } else {
+                return dlp::jit::jitGeneratorError::error;
+            }
+#ifdef DLP_JIT_DUMP_CODE
+            // The file naming is as such : jit_gemv_m1_kernel.
+            utils::jitHelperUtils::dump_jit_code(
+                kernelCodeBlocks[i - 1], utils::JIT_KERNEL_SIZE,
+                "jit_gemv_m1_kernel", params.NR, i);
+#endif
+        }
+
+    } else if (NR == 1) {
+        // Generate kernel for GEMV(when NR == 1)
 
         // Logic behind kernel generation:
         // 1. We generate kernels for all m_left values from 0 to MR-1.
@@ -176,7 +237,7 @@ jitAmdZenFP32::generateAllKernels(const dlp::jit::jitGeneratorContext& jI)
         kernelCodeBlocks.resize(numKernelVariants);
 
         // Initializing with default values.
-        utils::gemvGeneratorParams params(
+        utils::gemvN1GeneratorParams params(
             0, 0, 0, false, false, false, false,
             dlp::kernel_frame::storageFormat::rowMajor,
             (jI.kI).alphaScalingType, (jI.kI).betaScalingType, _kType);
@@ -200,7 +261,7 @@ jitAmdZenFP32::generateAllKernels(const dlp::jit::jitGeneratorContext& jI)
                 // 2: col-stored, without mloop
                 // 3: col-stored, with mloop
                 params.mloop = ((j == 1) || (j == 3));
-                params.cMatFormat =
+                params.yFormat =
                     ((j / 2) == 0) ? dlp::kernel_frame::storageFormat::rowMajor
                                    : dlp::kernel_frame::storageFormat::colMajor;
 
@@ -233,7 +294,8 @@ jitAmdZenFP32::generateAllKernels(const dlp::jit::jitGeneratorContext& jI)
                     if (err != dlp::jit::jitGeneratorError::success) {
                         goto cleanup;
                     }
-                } else if (isZen) {
+                } else if (isZen) { // AVX2 generation not supported yet
+                    return dlp::jit::jitGeneratorError::error;
                 } else {
                     return dlp::jit::jitGeneratorError::error;
                 }
@@ -356,16 +418,76 @@ cleanup:
 dlp::kernels::kernelError
 jitAmdZenFP32::executeKernel(dlp::kernels::kernelParams* _params)
 {
-    if (NR == 1) {
-        auto params = static_cast<dlp::kernels::gemvParams*>(_params);
+    if (MR == 1) {
+        auto params = static_cast<dlp::kernels::gemvM1Params*>(_params);
+        // Setting the remaining values of gemvM1Params(that are not set as part
+        // of it's parameterized constructor)
+        params->n_iter = params->n / NR;
+        params->n_left = params->n % NR;
+        params->k_iter = params->k / KC;
+        params->k_left = params->k % KC;
+
+        // NOTE :
+        // The parameterized constructor sets the masks to 0 by default
+        // Based on the fringe case, we have to set the appropriate mask
+        // to it's value. Again, the JIT generator for MR == 1 is written
+        // specific to the architecture's kernel dimension(64), thereby
+        // needing 4 masks. The generator would be further generalized in
+        // the future, similar to how the backend support exists for NR == 1
+
+        // All masks are intially set to 0x111...1
+        params->n0_mask = 0xFFFF;
+        params->n1_mask = 0xFFFF;
+        params->n2_mask = 0xFFFF;
+        params->n3_mask = 0xFFFF;
+
+        uint16_t nmask = 0xFFFF >> (16 - ((params->n_left) % 16));
+
+        if (params->n_left >= 48) {
+            params->n3_mask = nmask;
+        } else if (params->n_left >= 32) {
+            params->n3_mask = 0;
+            params->n2_mask = nmask;
+        } else if (params->n_left >= 16) {
+            params->n3_mask = 0;
+            params->n2_mask = 0;
+            params->n1_mask = nmask;
+        } else {
+            params->n3_mask = 0;
+            params->n2_mask = 0;
+            params->n1_mask = 0;
+            params->n0_mask = nmask;
+        }
+
+        params->k_iter_sub_iter = KC / 4;
+        params->k_iter_sub_left = KC % 4;
+        params->k_left_sub_iter = (params->k_left) / 4;
+        params->k_left_sub_left = (params->k_left) % 4;
+
+        // Deploy the associated kernel
+        int  kernel_idx = 0;
+        bool nloop      = (params->n_iter) ? true : false;
+        bool nleft      = (params->n_left) ? true : false;
+        kernel_idx += 2 * nloop + nleft;
+        utils::jit_gemv_m1_kernel kernel =
+            reinterpret_cast<utils::jit_gemv_m1_kernel>(
+                kernelCodeBlocks[kernel_idx - 1]);
+        kernel(params);
+
+    } else if (NR == 1) {
+        auto params = static_cast<dlp::kernels::gemvN1Params*>(_params);
         // Setting the remaining values of gemvN1Params(that are not set as part
         // of it's parameterized constructor)
+        // NOTE : The associated NR value for the generated kernels is 16.
+        //        The mdulo operations are added when calcuating the masks, to
+        //        make sure we use the same code for generic NR values in
+        //        future.
         params->m_iter = params->m / MR;
         params->m_left = params->m % MR;
         params->k_iter = params->k / 16;
         params->k_left = params->k % 16;
-        params->m_mask = 0xFFFF >> (16 - params->m_left);
-        params->k_mask = 0xFFFF >> (16 - params->k_left);
+        params->m_mask = 0xFFFF >> (16 - (params->m_left % 16));
+        params->k_mask = 0xFFFF >> (16 - (params->k_left) % 16);
         params->mr_mask =
             0xFFFF
             >> (16
@@ -378,8 +500,8 @@ jitAmdZenFP32::executeKernel(dlp::kernels::kernelParams* _params)
         int kernel_idx = params->m_left * 4 + is_col_stored * 2 + is_m_loop;
 
         // Deploy the associated kernel
-        utils::jit_gemv_kernel kernel =
-            reinterpret_cast<utils::jit_gemv_kernel>(
+        utils::jit_gemv_n1_kernel kernel =
+            reinterpret_cast<utils::jit_gemv_n1_kernel>(
                 kernelCodeBlocks[kernel_idx]);
         kernel(params);
 

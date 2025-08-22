@@ -216,7 +216,8 @@ aocl_gemm_f32f32f32of32(const char      order,
         lcntx_g->dlp_kernel_hndl = dlp_init_and_get_kernel_hndl(
             DLP_KERNEL_F32F32F32OF32, order, mtag_a, mtag_b, m, n, k, rs_a,
             cs_a, rs_b, cs_b, rs_c, cs_c, (void*)&alpha, (void*)&beta,
-            post_op_list, lcntx_g->blksz.MR, lcntx_g->blksz.NR);
+            post_op_list, lcntx_g->blksz.MR, lcntx_g->blksz.NR,
+            lcntx_g->blksz.KC);
     }
 
     if (is_single_thread(&rntm_g) == TRUE) {

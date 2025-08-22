@@ -39,8 +39,6 @@
 
 namespace amdzen::avx512gen {
 
-using jit_gemv_kernel = void (*)(dlp::kernels::gemvParams*);
-
 class jitAVX512GEMVN1 : public Xbyak::CodeGenerator
 {
   private:
@@ -51,8 +49,8 @@ class jitAVX512GEMVN1 : public Xbyak::CodeGenerator
 
     // Dimensions
     int                              MR; // Number of rows to process at once
-    int                              M_LEFT; // M-dimension left over elements
-    dlp::kernel_frame::storageFormat cMatFormat; // Storage format of C matrix
+    int                              M_LEFT;  // M-dimension left over elements
+    dlp::kernel_frame::storageFormat yFormat; // Storage format of C matrix
     dlp::kernel_frame::scalingType alphaScalingType; // Type of kernel operation
     dlp::kernel_frame::scalingType betaScalingType;  // Type of beta scaling
 
@@ -109,7 +107,7 @@ class jitAVX512GEMVN1 : public Xbyak::CodeGenerator
     dlp::jit::jitGeneratorError allocateRegisters();
 
     template<typename aType, typename xType, typename yType>
-    void initializeParameters(const utils::gemvGeneratorParams&);
+    void initializeParameters(const utils::gemvN1GeneratorParams&);
 
     // Core computation functions
     template<typename aType>
@@ -170,14 +168,130 @@ class jitAVX512GEMVN1 : public Xbyak::CodeGenerator
     // Main kernel generation interface
     template<dlp::kernel_frame::kernelDatatype KDT>
     dlp::jit::jitGeneratorError generateKernel(
-        const utils::gemvGeneratorParams& params);
+        const utils::gemvN1GeneratorParams& params);
 
     // Get the generated kernel function pointer
     // This class will also contain the pointer type to the JIT kernel
     // That way, this typedef is available only when an instance of this class
     // is created.
-    // using jit_kernel = void (*)(dlp::kernels::gemvParams*);
+    // using jit_kernel = void (*)(dlp::kernels::gemvN1Params*);
     // jit_kernel getKernel() { return getCode<jit_kernel>(); }
+};
+
+class jitAVX512GEMVM1 : public Xbyak::CodeGenerator
+{
+  private:
+    // Constants for AVX512 architecture
+    static constexpr int RegBytes = 64; // Size of ZMM register in bytes
+    static constexpr int numRegs  = 32; // Number of ZMM registers
+
+    // Dimensions and configuration
+    int NR; // Number of elements to process per iteration (typically 64)
+    int KC; // K-dimension blocksize
+    AOCL_MEMORY_TAG                  mtag_b;  // Memory tag for B matrix
+    dlp::kernel_frame::storageFormat yFormat; // Storage format of output
+    dlp::kernel_frame::scalingType   alphaScalingType; // Type of alpha scaling
+    dlp::kernel_frame::scalingType   betaScalingType;  // Type of beta scaling
+
+    // Register counts and indices
+    int yReg;         // Number of registers for loading/storing from Y
+    int bReg;         // Number of registers for matrix B
+    int xReg;         // Number of registers for vector x
+    int accumReg;     // Number of registers for accumulation
+    int yBaseIdx;     // Starting index for accumulation registers
+    int bBaseIdx;     // Starting index for B registers
+    int xBaseIdx;     // Starting index for x registers
+    int accumBaseIdx; // Starting index for accumulation registers
+
+    // General purpose registers
+    Xbyak::Reg64 stackPtr;            // Stack frame pointer
+    Xbyak::Reg64 regTmpBptr;          // Pointer to matrix B (single row)
+    Xbyak::Reg64 regXptr;             // Pointer to vector x
+    Xbyak::Reg64 regYptr, regTmpYptr; // Pointer to scalar output y and its temp
+    Xbyak::Reg64 regNIter;            // N-loop iterator
+    Xbyak::Reg64 regKIter;            // K-loop iterator (for vectorization)
+    Xbyak::Reg64 regKSubIter;         // K-loop left over elements
+    Xbyak::Reg64 regRsB;              // Column stride for B
+    Xbyak::Reg64 regPsB;              // Packed stride for B
+    Xbyak::Reg64 regTmp1;             // Temporary register 1
+    Xbyak::Reg64 regTmp2;             // Temporary register 2
+    // Xbyak::Reg64 regTmp3;             // Temporary register 3
+    Xbyak::Reg64 regIncN; // Increment for N-loop
+    Xbyak::Reg64 regIncK; // Increment for K-loop
+
+    // Labels for code sections
+    Xbyak::Label label_n_loop_start;            // Vectorization loop
+    Xbyak::Label label_n_loop_end;              // End of vectorization loop
+    Xbyak::Label label_n_loop_k_loop_start;     // Main n-dimension loop
+    Xbyak::Label label_n_loop_k_loop_end;       // End of n-dimension loop
+    Xbyak::Label label_n_loop_k_fringe_start;   // Main n-dimension loop
+    Xbyak::Label label_n_loop_k_fringe_end;     // End of n-dimension loop
+    Xbyak::Label label_n_fringe_start;          // Handle n-dimension remainder
+    Xbyak::Label label_n_fringe_end;            // End of n-dimension remainder
+    Xbyak::Label label_n_fringe_k_loop_start;   // Handle n-dimension remainder
+    Xbyak::Label label_n_fringe_k_loop_end;     // End of n-dimension remainder
+    Xbyak::Label label_n_fringe_k_fringe_start; // Handle n-dimension remainder
+    Xbyak::Label label_n_fringe_k_fringe_end;   // End of n-dimension remainder
+    Xbyak::Label label_accumulate_result;       // Accumulate final result
+    Xbyak::Label label_store_result;            // Store final scalar result
+
+    // Temporary labels
+    Xbyak::Label temp_label_1;
+    Xbyak::Label temp_label_2;
+
+    // Stack frame management
+    void initializeStackFrame(Xbyak::util::StackFrame&);
+
+    // Register initialization
+    void regInitZmm(int baseIdx, int numRegs);
+
+    // Implementation utilities
+    template<typename accumType>
+    dlp::jit::jitGeneratorError allocateRegisters();
+
+    template<typename bType, typename xType, typename yType>
+    void initializeParameters(const utils::gemvM1GeneratorParams&);
+
+    // Core computation functions
+    template<typename bType, typename xType, typename accumType>
+    dlp::jit::jitGeneratorError compute4x64(bool = false);
+
+    template<typename bType, typename xType, typename accumType>
+    dlp::jit::jitGeneratorError compute1x64(bool = false);
+
+    template<typename bType, typename xType, typename accumType>
+    dlp::jit::jitGeneratorError loopKSubIter(bool = false, bool = false);
+
+    template<typename bType, typename xType, typename yType>
+    dlp::jit::jitGeneratorError finalAccumulate();
+
+    template<typename bType, typename xType, typename yType>
+    dlp::jit::jitGeneratorError scaleWithAlpha();
+
+    template<typename yType>
+    dlp::jit::jitGeneratorError scaleYWithBeta(bool = false);
+
+    template<typename yType>
+    dlp::jit::jitGeneratorError storeYValues(bool = false);
+
+  public:
+    // Enforcing RAII, disallowing copy/move operations
+    jitAVX512GEMVM1(void* buffer = nullptr, size_t size = 0);
+    ~jitAVX512GEMVM1()                            = default;
+    jitAVX512GEMVM1(jitAVX512GEMVM1&)             = delete;
+    jitAVX512GEMVM1& operator=(jitAVX512GEMVM1&)  = delete;
+    jitAVX512GEMVM1(jitAVX512GEMVM1&&)            = delete;
+    jitAVX512GEMVM1& operator=(jitAVX512GEMVM1&&) = delete;
+
+    // Main kernel generation interface
+    template<dlp::kernel_frame::kernelDatatype KDT>
+    dlp::jit::jitGeneratorError generateKernel(
+        const utils::gemvM1GeneratorParams& params);
+
+    // Get the generated kernel function pointer
+    // utils::jit_gemv_m1_kernel getKernel() {
+    //     return getCode<utils::jit_gemv_m1_kernel>();
+    // }
 };
 
 } // namespace amdzen::avx512gen

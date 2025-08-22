@@ -137,7 +137,8 @@ dlp_init_and_get_kernel_hndl(kernel_datatype_t k_dtype,
                              void*             beta,
                              lpgemm_post_op*   metadata,
                              md_t              mr_hint,
-                             md_t              nr_hint);
+                             md_t              nr_hint,
+                             md_t              kc_hint);
 
 void
 dlp_execute_kernel(dlp_kernel_hndl_t   kernel_hndl,
@@ -151,6 +152,8 @@ dlp_execute_kernel(dlp_kernel_hndl_t   kernel_hndl,
                    void*               B,
                    md_t                rs_b,
                    md_t                cs_b,
+                   md_t                n_sub_updated,
+                   md_t                jc_cur_loop_rem,
                    void*               C,
                    md_t                rs_c,
                    md_t                cs_c,

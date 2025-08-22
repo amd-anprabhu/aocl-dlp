@@ -197,10 +197,13 @@ gemmF32DEBackend::getKernelInfoForInput(iDEInput* in)
     kernel_frame::scalingType betaScalingType =
         kernel_frame::scalingType::generic;
 
-    md_t mr           = gemmIn->mr_hint;
-    md_t nr           = gemmIn->nr_hint;
-    md_t k_unroll     = 1;
-    bool anyKOpsOrder = false;
+    md_t            mr           = gemmIn->mr_hint;
+    md_t            nr           = gemmIn->nr_hint;
+    md_t            k_unroll     = 1;
+    md_t            kc           = gemmIn->kc_hint;
+    AOCL_MEMORY_TAG mtag_a       = gemmIn->mtag_a;
+    AOCL_MEMORY_TAG mtag_b       = gemmIn->mtag_b;
+    bool            anyKOpsOrder = false;
 
     // Set the kernel instruction preference based on the CPU features.
     // NOTE : This could be overridden by the user in future
@@ -214,9 +217,59 @@ gemmF32DEBackend::getKernelInfoForInput(iDEInput* in)
         kInstPref = kernel_frame::kernelInstrPreference::avx2_ymm_favour;
     }
 
-    // TODO: Only supports GEMV kernels n = 1 for now.
     if (gemmIn->m == 1) {
-        return std::nullopt;
+        if (isZen) {
+            return std::nullopt;
+        } else if (isZen4) {
+            // NOTE : Since the standard interface send the post-ops
+            //        list, even with no-post ops, we will still have
+            //        one node which mentions the opcode as POST_OPS_DISABLE.
+            //        The null-pointer check is purely defensive.
+
+            mr       = 1;
+            nr       = 64;
+            k_unroll = 1;   // k-unroll is 1 for GEMV N1
+            kc       = 512; // This is harcoded from ZEN4 context.
+
+            if (gemmIn->metadata == nullptr) {
+                kernel_frame::kernelInfo kI{ mr,
+                                             nr,
+                                             k_unroll,
+                                             kc,
+                                             alphaScalingType,
+                                             betaScalingType,
+                                             mtag_a,
+                                             mtag_b,
+                                             nullptr,
+                                             0,
+                                             anyKOpsOrder,
+                                             kInstPref };
+                return std::make_optional(kI);
+            } else if (gemmIn->metadata[0].op_code == POST_OPS_DISABLE) {
+                // This condition is not combined with the previous 'if' clause,
+                // since we don't want unfriendly short-curcuiting.
+                // Ex : Hypothetically, if gemmIn->metadata is NULL, then we
+                //      should ensure that this condition is strictly evaluated
+                //      after null check.
+                kernel_frame::kernelInfo kI{ mr,
+                                             nr,
+                                             k_unroll,
+                                             kc,
+                                             alphaScalingType,
+                                             betaScalingType,
+                                             mtag_a,
+                                             mtag_b,
+                                             nullptr,
+                                             0,
+                                             anyKOpsOrder,
+                                             kInstPref };
+                return std::make_optional(kI);
+            } else {
+                return std::nullopt;
+            }
+        } else {
+            return std::nullopt;
+        }
     } else if (gemmIn->n == 1) {
 
         if (isZen) {
@@ -238,8 +291,11 @@ gemmF32DEBackend::getKernelInfoForInput(iDEInput* in)
                 kernel_frame::kernelInfo kI{ mr,
                                              nr,
                                              k_unroll,
+                                             kc,
                                              alphaScalingType,
                                              betaScalingType,
+                                             mtag_a,
+                                             mtag_b,
                                              nullptr,
                                              0,
                                              anyKOpsOrder,
@@ -254,8 +310,11 @@ gemmF32DEBackend::getKernelInfoForInput(iDEInput* in)
                 kernel_frame::kernelInfo kI{ mr,
                                              nr,
                                              k_unroll,
+                                             kc,
                                              alphaScalingType,
                                              betaScalingType,
+                                             mtag_a,
+                                             mtag_b,
                                              nullptr,
                                              0,
                                              anyKOpsOrder,
@@ -276,8 +335,8 @@ gemmF32DEBackend::getKernelInfoForInput(iDEInput* in)
     } else {
         if (gemmIn->metadata == nullptr) {
             kernel_frame::kernelInfo kI{
-                mr,      nr, k_unroll,     alphaScalingType, betaScalingType,
-                nullptr, 0,  anyKOpsOrder, kInstPref
+                mr,     nr,     k_unroll, kc, alphaScalingType, betaScalingType,
+                mtag_a, mtag_b, nullptr,  0,  anyKOpsOrder,     kInstPref
             };
             return std::make_optional(kI);
         } else {
@@ -294,8 +353,11 @@ gemmF32DEBackend::getKernelInfoForInput(iDEInput* in)
                 kernel_frame::kernelInfo kI{ mr,
                                              nr,
                                              k_unroll,
+                                             kc,
                                              alphaScalingType,
                                              betaScalingType,
+                                             mtag_a,
+                                             mtag_b,
                                              nullptr,
                                              0,
                                              anyKOpsOrder,
@@ -305,8 +367,11 @@ gemmF32DEBackend::getKernelInfoForInput(iDEInput* in)
                 kernel_frame::kernelInfo kI{ mr,
                                              nr,
                                              k_unroll,
+                                             kc,
                                              alphaScalingType,
                                              betaScalingType,
+                                             mtag_a,
+                                             mtag_b,
                                              nullptr,
                                              0,
                                              anyKOpsOrder,

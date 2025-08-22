@@ -154,13 +154,13 @@ LPGEMV(float, float, float, f32f32f32of32)
         // Workaround to select right kernel and blocksizes based on arch
         // since GEMV parameters are not available in lpgemm context.
 #ifdef DLP_KERNELS_ZEN4
+        // NOTE : JIT kernels are not generated when AOCL_ENABLE_INSTRUCTIONS
+        //        is set.
+        // TODO : Support for detecting the value in AOCL_ENABLE_INSTRUCTIONS,
+        //        and generating the appropriate kernels.
         if (dlp_cpuid_is_avx512_supported() == TRUE) {
             if (lpgemm_get_enabled_arch() == DLP_ARCH_ZEN3) {
-                // Disable JIT generated AVX512 kernels for ZEN4
-                // Since we should explicitly run AVX2 kernels optimized
-                // for ZEN4(which are not supported by JIT for now).
-                lcntx->dlp_kernel_hndl.kernel_base = NULL;
-                MR                                 = 16;
+                MR       = 16;
                 ker_fp   = lpgemv_n_one_f32f32f32of32_avx512_256;
                 packa_fp = packa_mr8_f32f32f32of32_col_major;
             } else {
@@ -233,9 +233,9 @@ LPGEMV(float, float, float, f32f32f32of32)
             if (lcntx->dlp_kernel_hndl.kernel_base != NULL) {
                 dlp_execute_kernel(lcntx->dlp_kernel_hndl, mc0, 1, k,
                                    (float*)a_use, rs_a_use, cs_a_use, 1,
-                                   (float*)b_use, rs_b_use, cs_b_use, c_use,
-                                   rs_c, cs_c, (void*)&alpha, (void*)&beta,
-                                   post_op_list, post_ops_attr);
+                                   (float*)b_use, rs_b_use, cs_b_use, 0, 0,
+                                   c_use, rs_c, cs_c, (void*)&alpha,
+                                   (void*)&beta, post_op_list, post_ops_attr);
             } else {
                 ker_fp(mc0, k, a_use, rs_a_use, cs_a_use, mtag_a, b_use,
                        rs_b_use, cs_b_use, mtag_b, c_use, rs_c, cs_c, alpha,
@@ -347,10 +347,18 @@ LPGEMV(float, float, float, f32f32f32of32)
             post_ops_attr.post_op_c_j = jc;
 
             // Call kernel
-            ker_fp(nc0, k, a_use, rs_a_use, cs_a_use, mtag_a, b_use, rs_b_use,
-                   cs_b_use, mtag_b, c_use, rs_c, cs_c, alpha, beta, NR, KC,
-                   n_sub_updated, jc_cur_loop_rem, post_op_list,
-                   &post_ops_attr);
+            if (lcntx->dlp_kernel_hndl.kernel_base != NULL) {
+                dlp_execute_kernel(
+                    lcntx->dlp_kernel_hndl, 1, nc0, k, (float*)a_use, rs_a_use,
+                    cs_a_use, 1, (float*)b_use, rs_b_use, cs_b_use,
+                    n_sub_updated, jc_cur_loop_rem, c_use, rs_c, cs_c,
+                    (void*)&alpha, (void*)&beta, post_op_list, post_ops_attr);
+            } else {
+                ker_fp(nc0, k, a_use, rs_a_use, cs_a_use, mtag_a, b_use,
+                       rs_b_use, cs_b_use, mtag_b, c_use, rs_c, cs_c, alpha,
+                       beta, NR, KC, n_sub_updated, jc_cur_loop_rem,
+                       post_op_list, &post_ops_attr);
+            }
 
             if (mtag_b == REORDERED) {
                 adjust_B_panel_reordered_jc(&jc, jc_cur_loop);
@@ -635,7 +643,7 @@ LPGEMM_5LOOP(float, float, float, f32f32f32of32)
                             lcntx->dlp_kernel_hndl, mc0, nr0, kc0,
                             (float*)a_use, rs_a_use, cs_a_use, ps_a_use,
                             (float*)(b_use + (jr * ps_b_use)), rs_b_use,
-                            cs_b_use, (c_use_ic + jr), rs_c, cs_c_use,
+                            cs_b_use, 0, 0, (c_use_ic + jr), rs_c, cs_c_use,
                             (void*)&alpha, (void*)&beta0, post_op_list,
                             post_ops_attr);
                     } else {

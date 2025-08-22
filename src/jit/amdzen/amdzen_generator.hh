@@ -48,7 +48,7 @@ class jitAmdZenFP32 : public dlp::jit::jitGeneratorBase
 
   public:
     // jitAVX512 base;
-    md_t               MR, NR;
+    md_t               MR, NR, KC;
     md_t               numMRVariants, numNRVariants;
     md_t               numKernelVariants;
     md_t               K_UNROLL;
