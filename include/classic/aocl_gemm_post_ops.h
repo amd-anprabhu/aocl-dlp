@@ -184,6 +184,7 @@ typedef struct
  * applied as post-operations. It uses structured scale factor and zero-point
  * parameters for better organization and type safety.
  */
+
 /**
  * @struct dlp_scale_t
  * @brief Scale operation parameters for post-ops.

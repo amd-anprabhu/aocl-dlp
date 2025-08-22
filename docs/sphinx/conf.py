@@ -32,6 +32,7 @@
 # from sphinx.builders.html import StandaloneHTMLBuilder
 
 from importlib import metadata as _metadata
+import os as _os
 from packaging import version as _version
 
 try:
@@ -104,6 +105,9 @@ html_theme_options = {
     "flavor": "local",
     "repository_provider" : None,
 }
+
+# Set canonical base URL for link generation (local server during development)
+html_baseurl = _os.environ.get('HTML_BASEURL', 'http://localhost:8082')
 
 # -- Breathe configuration -------------------------------------------------
 breathe_default_project = "aocl-dlp"
