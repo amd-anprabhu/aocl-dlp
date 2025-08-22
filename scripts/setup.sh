@@ -23,6 +23,45 @@
 # NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
 # EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 
+# Parse command line arguments and set Python executable
+PYTHON_EXEC="python3"  # Default value
+
+# Check for command line argument
+while [[ $# -gt 0 ]]; do
+    case $1 in
+        --python=*)
+            PYTHON_EXEC="${1#*=}"
+            shift
+            ;;
+        --python)
+            PYTHON_EXEC="$2"
+            shift 2
+            ;;
+        -h|--help)
+            echo "Usage: $0 [--python=PYTHON_EXECUTABLE]"
+            echo "Options:"
+            echo "  --python=EXECUTABLE    Specify Python executable to use (default: python3)"
+            echo "  -h, --help             Show this help message"
+            echo ""
+            echo "Environment variables:"
+            echo "  PYTHON_EXEC            Python executable to use (overridden by --python)"
+            exit 0
+            ;;
+        *)
+            echo "Unknown option: $1"
+            echo "Use --help for usage information."
+            exit 1
+            ;;
+    esac
+done
+
+# Check environment variable if not set by command line
+if [[ "$PYTHON_EXEC" == "python3" && -n "$PYTHON_EXEC_ENV" ]]; then
+    PYTHON_EXEC="$PYTHON_EXEC_ENV"
+fi
+
+echo "Using Python executable: $PYTHON_EXEC"
+
 # This function will make sure we are at the root of repo
 function ensure_git_root {
     git_root="$(git rev-parse --show-toplevel 2>/dev/null)"
@@ -49,16 +88,16 @@ function check_pre_commit {
 }
 
 function check_python3 {
-    if(command -v python3 >/dev/null 2>&1); then
-        return 0  # Return success if Python 3 is found
+    if(command -v "$PYTHON_EXEC" >/dev/null 2>&1); then
+        return 0  # Return success if Python is found
     else
-        return 1  # Return failure if Python 3 is not found
+        return 1  # Return failure if Python is not found
     fi
 }
 
 function check_python3_version {
     # Version should be 3.8 or above
-    version=$(python3 --version 2>&1 | awk '{print $2}')
+    version=$("$PYTHON_EXEC" --version 2>&1 | awk '{print $2}')
     if [[ "$version" < "3.8" ]]; then
         return 1  # Return failure if version is below 3.8
     else
@@ -67,7 +106,7 @@ function check_python3_version {
 }
 
 function check_venv_module {
-    if (python3 -c "import venv" >/dev/null 2>&1); then
+    if ("$PYTHON_EXEC" -c "import venv" >/dev/null 2>&1); then
         return 0  # Return success if venv module is available
     else
         return 1  # Return failure if venv module is not available
@@ -76,7 +115,7 @@ function check_venv_module {
 
 function setup_pre_commit {
     # If any of the below commands error out, it will return 0
-    python3 -m venv .venv || return 1
+    "$PYTHON_EXEC" -m venv .venv || return 1
     source .venv/bin/activate || return 1
     pip install pre-commit || return 1
     pre-commit install || return 1
@@ -156,9 +195,9 @@ if [ -f ".setup_done" ]; then
     fi
 else
     if ( check_python3 ); then
-        echo "Python 3 is installed."
+        echo "Python executable ($PYTHON_EXEC) is available."
     else
-        echo "Python 3 is not installed. Please install it to continue."
+        echo "Python executable ($PYTHON_EXEC) is not installed or not found. Please install it or specify a different path."
         exit 1
     fi
 
@@ -166,6 +205,7 @@ else
         echo "venv module is available."
     else
         echo "If this machine is debian based, try sudo apt install python3-venv"
+        echo "Or ensure that the specified Python executable ($PYTHON_EXEC) has venv support."
         echo "venv module is not available. Please install it to continue."
         exit 1
     fi
