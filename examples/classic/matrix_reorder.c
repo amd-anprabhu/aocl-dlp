@@ -131,7 +131,7 @@ main()
 
     // Step 1: Determine the buffer size needed for the reordered matrix
     msz_t reorder_buffer_size =
-        aocl_get_reorder_buf_size_f32f32f32of32(order, transb, 'B', k, n);
+        aocl_get_reorder_buf_size_f32f32f32of32(order, transb, 'B', k, n, NULL);
 
     printf("Reorder buffer size required: %zu bytes\n", reorder_buffer_size);
 
@@ -146,7 +146,8 @@ main()
     printf("Reordering matrix B...\n");
     double reorder_start_time = get_time_sec();
 
-    aocl_reorder_f32f32f32of32(order, transb, 'B', b, b_reordered, k, n, ldb);
+    aocl_reorder_f32f32f32of32(order, transb, 'B', b, b_reordered, k, n, ldb,
+                               NULL);
 
     double reorder_end_time = get_time_sec();
     printf("Matrix reordering took %.6f seconds\n\n",

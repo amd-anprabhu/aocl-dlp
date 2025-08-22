@@ -59,6 +59,7 @@ function(dlp_define_options)
     option(DLP_ENABLE_ASAN "Enable Address Sanitizer" OFF)
     option(DLP_ENABLE_UBSAN "Enable Undefined Behavior Sanitizer" OFF)
     option(DLP_ENABLE_TSAN "Enable Thread Sanitizer" OFF)
+    option(DLP_CTEST_DISABLED "Disable ctest detection" ON)
 
     # Threading model.
     option(DLP_THREADING_MODEL "Threading model to use" "none")
@@ -76,4 +77,5 @@ function(dlp_define_options)
     set(DLP_ENABLE_ASAN ${DLP_ENABLE_ASAN} PARENT_SCOPE)
     set(DLP_ENABLE_UBSAN ${DLP_ENABLE_UBSAN} PARENT_SCOPE)
     set(DLP_ENABLE_TSAN ${DLP_ENABLE_TSAN} PARENT_SCOPE)
+    set(DLP_CTEST_DISABLED ${DLP_TEST_DISABLED} PARENT_SCOPE)
 endfunction()

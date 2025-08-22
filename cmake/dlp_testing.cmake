@@ -102,7 +102,11 @@ function(dlp_add_test)
     dlp_set_global_compile_flags(${DLP_TEST_NAME})
 
     # Add test to CTest
-    if(NOT DLP_TEST_DISABLED)
+    if(DLP_TEST_DISABLED OR DLP_CTEST_DISABLED)
+        # Traditional Testing
+        add_test(NAME ${DLP_TEST_NAME} COMMAND ${DLP_TEST_NAME})
+    else()
+        # Gtest aware testing
         gtest_discover_tests(${DLP_TEST_NAME})
     endif()
 
