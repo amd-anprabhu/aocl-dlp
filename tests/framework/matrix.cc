@@ -39,6 +39,7 @@
 #include "framework/matrix.hh"
 #include "classic/aocl_bf16_type.h"
 #include "classic/dlp_base_types.h"
+#include "utils/conversion_utils.hh"
 #include <any>
 #include <chrono>   // For time-based seeding
 #include <cmath>    // For std::abs
@@ -47,42 +48,12 @@
 #include <random>   // For random number generation
 #include <stdexcept>
 
-namespace {
-// Helper: BF16 to F32 conversion (uses upper 16 bits as BF16)
-inline float
-bf16_to_f32(bfloat16 value)
-{
-    union
-    {
-        float    f;
-        uint32_t u;
-    } bits;
-    bits.u = static_cast<uint32_t>(static_cast<uint16_t>(value)) << 16U;
-    return bits.f;
-}
-
-// Helper F32 to BF16 conversion.
-inline bfloat16
-f32_to_bf16(float value)
-{
-    union
-    {
-        float    f;
-        uint32_t u;
-    } bits;
-    bits.f = value;
-
-    // Round to nearest even (banker's rounding) for better accuracy
-    // Add 0x8000 (2^15) to round, but only if the lower 16 bits are > 0x8000
-    // or if they equal 0x8000 and the bit above is 1 (round to even)
-    uint32_t rounding_bias = 0x7FFF + ((bits.u >> 16) & 1);
-
-    // Add rounding bias and extract upper 16 bits
-    return static_cast<bfloat16>((bits.u + rounding_bias) >> 16);
-}
-} // namespace
+using dlp::testing::utils::bf16_to_f32;
+using dlp::testing::utils::f32_to_bf16;
 
 namespace dlp { namespace testing { namespace framework {
+    using dlp::testing::utils::bf16_to_f32;
+    using dlp::testing::utils::f32_to_bf16;
 
     /**
      * @brief Default constructor implementation
@@ -475,6 +446,14 @@ namespace dlp { namespace testing { namespace framework {
         // For floating point types, use tolerance-based comparison
         if (m_type == MatrixType::f32 || m_type == MatrixType::bf16) {
             return compareFloatingPointData(other);
+        } else if (m_type == MatrixType::s32) {
+            for (size_t i = 0; i < m_dataSizeBytes / sizeof(int32_t); ++i) {
+                if (reinterpret_cast<const int32_t*>(m_data.get())[i]
+                    != reinterpret_cast<const int32_t*>(
+                        other.m_data.get())[i]) {
+                    return false;
+                }
+            }
         }
 
         // For integer types, use exact comparison
@@ -557,7 +536,10 @@ namespace dlp { namespace testing { namespace framework {
                 float* data         = reinterpret_cast<float*>(m_data.get());
                 size_t elementCount = m_dataSizeBytes / sizeof(float);
                 for (size_t i = 0; i < elementCount; ++i) {
-                    data[i] = dis(gen);
+                    // Generate float value and truncate to remove fractional
+                    // part
+                    float value = dis(gen);
+                    data[i]     = std::trunc(value); // Truncates toward zero
                 }
                 break;
             }
@@ -672,6 +654,25 @@ namespace dlp { namespace testing { namespace framework {
                 int8_t* data      = reinterpret_cast<int8_t*>(m_data.get());
                 for (size_t i = 0; i < m_dataSizeBytes; ++i) {
                     data[i] = fillValue;
+                }
+                break;
+            }
+            case MatrixType::s32: {
+                int32_t  fillValue = std::any_cast<int32_t>(value);
+                int32_t* data      = reinterpret_cast<int32_t*>(m_data.get());
+                for (size_t i = 0; i < m_dataSizeBytes / sizeof(int32_t); ++i) {
+                    data[i] = fillValue;
+                }
+                break;
+            }
+            case MatrixType::bf16: {
+                // For BF16, fill with random uint16_t values
+                float     fillValue          = std::any_cast<float>(value);
+                bfloat16  fillValue_bfloat16 = f32_to_bf16(fillValue);
+                bfloat16* data = reinterpret_cast<bfloat16*>(m_data.get());
+                size_t    elementCount = m_dataSizeBytes / sizeof(bfloat16);
+                for (size_t i = 0; i < elementCount; ++i) {
+                    data[i] = fillValue_bfloat16;
                 }
                 break;
             }

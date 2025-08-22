@@ -39,6 +39,9 @@ fetch_yaml_cpp()
 # Collect framework source files
 dlp_glob_sources_recursive(FRAMEWORK_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/framework")
 
+# Collect utils source files
+dlp_glob_sources_recursive(UTILS_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/utils")
+
 # Collect ref source files
 dlp_glob_sources_recursive(ADAPTORS_SOURCES "${CMAKE_CURRENT_SOURCE_DIR}/adaptors")
 
@@ -51,7 +54,7 @@ foreach(test_source ${TEST_SOURCES})
     get_filename_component(test_name ${test_source} NAME_WE)
     dlp_add_test(
         NAME ${test_name}
-        SOURCES ${test_source} ${ADAPTORS_SOURCES} ${FRAMEWORK_SOURCES}
+        SOURCES ${test_source} ${ADAPTORS_SOURCES} ${FRAMEWORK_SOURCES} ${UTILS_SOURCES}
         INCLUDE_DIRS ${TEST_INCLUDE_DIRS}
         DEPENDS yaml-cpp
     )

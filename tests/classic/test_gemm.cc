@@ -769,14 +769,15 @@ class GemmParameterizedTest : public ::testing::TestWithParam<GemmTestConfig>
                      config_.transA);
         Matrix B_ref(b_rows, b_cols, config_.b_type, layout, config_.ldb,
                      config_.transB);
-        Matrix C_ref(config_.m, config_.n, config_.acc_type, layout,
-                     config_.ldc, false);
+        Matrix C_ref(config_.m, config_.n, config_.c_type, layout, config_.ldc,
+                     false);
 
 // Initialize matrices with deterministic random values
 #if 1
         A.fillRandom(42 + config_.m); // Use configuration to vary seed
         B.fillRandom(43 + config_.n);
         C.fillRandom(44 + config_.k);
+        // C.fillValue(234);
         A_ref = A;
         B_ref = B;
         C_ref = C;
@@ -786,12 +787,12 @@ class GemmParameterizedTest : public ::testing::TestWithParam<GemmTestConfig>
         B_ref.setPacked(false);
         C_ref.setPacked(false);
 #else
-        A.fillValue(0.5f);
-        B.fillValue(0.2f);
-        C.fillValue(0.0f);
-        A_ref.fillValue(0.5f);
-        B_ref.fillValue(0.2f);
-        C_ref.fillValue(0.0f);
+        A.fillValue((int8_t)10);
+        B.fillValue((int8_t)-5);
+        C.fillValue((float)20);
+        A_ref.fillValue((int8_t)10);
+        B_ref.fillValue((int8_t)-5);
+        C_ref.fillValue((float)20);
 #endif
 
         // Make a copy of C for reference computation

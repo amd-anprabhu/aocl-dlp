@@ -256,6 +256,107 @@ UalRef::reorder(const Matrix& in, Matrix& out, MatrixType accType)
                            [](md_t i, md_t j, md_t ld) { return j * ld + i; });
             }
         }
+    } else if (input_type == MatrixType::u8) {
+        const uint8_t* src_data =
+            reinterpret_cast<const uint8_t*>(in.getData());
+        uint8_t* dst_data = reinterpret_cast<uint8_t*>(out.getData());
+
+        md_t src_ld = in.getLeadingDimension();
+        md_t dst_ld = out.getLeadingDimension();
+
+        // Copy data with proper layout handling using templated helper
+        auto copyMatrix = [&](auto getSrcIndex, auto getDstIndex) {
+            for (md_t i = 0; i < input_rows; ++i) {
+                for (md_t j = 0; j < input_cols; ++j) {
+                    auto src_idx = getSrcIndex(i, j, src_ld);
+                    auto dst_idx = getDstIndex(i, j, dst_ld);
+
+                    // Bounds check to prevent access violations
+                    if (static_cast<size_t>(src_idx)
+                            < in.getDataSizeBytes() / sizeof(uint8_t)
+                        && static_cast<size_t>(dst_idx)
+                               < out.getDataSizeBytes() / sizeof(uint8_t)) {
+                        dst_data[dst_idx] = src_data[src_idx];
+                    }
+                }
+            }
+        };
+
+        if (layout == MatrixLayout::ROW_MAJOR) {
+            if (transposed) {
+                // Input is transposed: src[i][j] represents logical[j][i]
+                // Output is not transposed: dst[i][j] represents logical[i][j]
+                // So we need: dst[j][i] = src[i][j]
+                copyMatrix([](md_t i, md_t j, md_t ld) { return i * ld + j; },
+                           [](md_t i, md_t j, md_t ld) { return j * ld + i; });
+            } else {
+                // Direct copy for non-transposed matrices
+                copyMatrix([](md_t i, md_t j, md_t ld) { return i * ld + j; },
+                           [](md_t i, md_t j, md_t ld) { return i * ld + j; });
+            }
+        } else { // COLUMN_MAJOR
+            if (transposed) {
+                // Input is transposed: src[j][i] represents logical[j][i]
+                // Output is not transposed: dst[j][i] represents logical[j][i]
+                // So we need: dst[i][j] = src[j][i]
+                copyMatrix([](md_t i, md_t j, md_t ld) { return j * ld + i; },
+                           [](md_t i, md_t j, md_t ld) { return i * ld + j; });
+            } else {
+                // Direct copy for non-transposed matrices
+                copyMatrix([](md_t i, md_t j, md_t ld) { return j * ld + i; },
+                           [](md_t i, md_t j, md_t ld) { return j * ld + i; });
+            }
+        }
+    } else if (input_type == MatrixType::s8) {
+        const int8_t* src_data = reinterpret_cast<const int8_t*>(in.getData());
+        int8_t*       dst_data = reinterpret_cast<int8_t*>(out.getData());
+
+        md_t src_ld = in.getLeadingDimension();
+        md_t dst_ld = out.getLeadingDimension();
+
+        // Copy data with proper layout handling using templated helper
+        auto copyMatrix = [&](auto getSrcIndex, auto getDstIndex) {
+            for (md_t i = 0; i < input_rows; ++i) {
+                for (md_t j = 0; j < input_cols; ++j) {
+                    auto src_idx = getSrcIndex(i, j, src_ld);
+                    auto dst_idx = getDstIndex(i, j, dst_ld);
+
+                    // Bounds check to prevent access violations
+                    if (static_cast<size_t>(src_idx)
+                            < in.getDataSizeBytes() / sizeof(int8_t)
+                        && static_cast<size_t>(dst_idx)
+                               < out.getDataSizeBytes() / sizeof(int8_t)) {
+                        dst_data[dst_idx] = src_data[src_idx];
+                    }
+                }
+            }
+        };
+
+        if (layout == MatrixLayout::ROW_MAJOR) {
+            if (transposed) {
+                // Input is transposed: src[i][j] represents logical[j][i]
+                // Output is not transposed: dst[i][j] represents logical[i][j]
+                // So we need: dst[j][i] = src[i][j]
+                copyMatrix([](md_t i, md_t j, md_t ld) { return i * ld + j; },
+                           [](md_t i, md_t j, md_t ld) { return j * ld + i; });
+            } else {
+                // Direct copy for non-transposed matrices
+                copyMatrix([](md_t i, md_t j, md_t ld) { return i * ld + j; },
+                           [](md_t i, md_t j, md_t ld) { return i * ld + j; });
+            }
+        } else { // COLUMN_MAJOR
+            if (transposed) {
+                // Input is transposed: src[j][i] represents logical[j][i]
+                // Output is not transposed: dst[j][i] represents logical[j][i]
+                // So we need: dst[i][j] = src[j][i]
+                copyMatrix([](md_t i, md_t j, md_t ld) { return j * ld + i; },
+                           [](md_t i, md_t j, md_t ld) { return i * ld + j; });
+            } else {
+                // Direct copy for non-transposed matrices
+                copyMatrix([](md_t i, md_t j, md_t ld) { return j * ld + i; },
+                           [](md_t i, md_t j, md_t ld) { return j * ld + i; });
+            }
+        }
     } else {
         // For other data types, we'd need similar implementations
         // For now, just return false for unsupported types
@@ -484,6 +585,207 @@ UalRef::gemm(const Matrix& A,
                     B.getMatrixData().getMatrixPtr()),
                 static_cast<int>(B.getLeadingDimension()), beta_f32,
                 reinterpret_cast<bfloat16*>(C.getMatrixData().getMatrixPtr()),
+                static_cast<int>(C.getLeadingDimension()), nullptr);
+
+            return true;
+        }
+
+        case encode_types<MatrixType::u8, MatrixType::s8, MatrixType::s32,
+                          MatrixType::s32>(): {
+            // For u8/s8 operations, alpha/beta are int32_t type
+            int32_t alpha_s32 = static_cast<int32_t>(alpha);
+            int32_t beta_s32  = static_cast<int32_t>(beta);
+
+            dlp::testing::classic::ref::aocl_gemm_u8s8s32os32_ref(
+                layoutA, transA, transB, A.getEffectiveRows(),
+                B.getEffectiveCols(), A.getEffectiveCols(), alpha_s32,
+                reinterpret_cast<const uint8_t*>(
+                    A.getMatrixData().getMatrixPtr()),
+                static_cast<int>(A.getLeadingDimension()),
+                reinterpret_cast<const int8_t*>(
+                    B.getMatrixData().getMatrixPtr()),
+                static_cast<int>(B.getLeadingDimension()), beta_s32,
+                reinterpret_cast<int32_t*>(C.getMatrixData().getMatrixPtr()),
+                static_cast<int>(C.getLeadingDimension()), nullptr);
+
+            return true;
+        }
+
+        case encode_types<MatrixType::s8, MatrixType::s8, MatrixType::s32,
+                          MatrixType::s32>(): {
+            // For s8/s8 operations, alpha/beta are int32_t type
+            int32_t alpha_s32 = static_cast<int32_t>(alpha);
+            int32_t beta_s32  = static_cast<int32_t>(beta);
+
+            dlp::testing::classic::ref::aocl_gemm_s8s8s32os32_ref(
+                layoutA, transA, transB, A.getEffectiveRows(),
+                B.getEffectiveCols(), A.getEffectiveCols(), alpha_s32,
+                reinterpret_cast<const int8_t*>(
+                    A.getMatrixData().getMatrixPtr()),
+                static_cast<int>(A.getLeadingDimension()),
+                reinterpret_cast<const int8_t*>(
+                    B.getMatrixData().getMatrixPtr()),
+                static_cast<int>(B.getLeadingDimension()), beta_s32,
+                reinterpret_cast<int32_t*>(C.getMatrixData().getMatrixPtr()),
+                static_cast<int>(C.getLeadingDimension()), nullptr);
+
+            return true;
+        }
+
+        case encode_types<MatrixType::u8, MatrixType::s8, MatrixType::f32,
+                          MatrixType::s32>(): {
+            int32_t alpha_s32 = static_cast<int32_t>(alpha);
+            int32_t beta_s32  = static_cast<int32_t>(beta);
+
+            dlp::testing::classic::ref::aocl_gemm_u8s8s32of32_ref(
+                layoutA, transA, transB, A.getEffectiveRows(),
+                B.getEffectiveCols(), A.getEffectiveCols(), alpha_s32,
+                reinterpret_cast<const uint8_t*>(
+                    A.getMatrixData().getMatrixPtr()),
+                static_cast<int>(A.getLeadingDimension()),
+                reinterpret_cast<const int8_t*>(
+                    B.getMatrixData().getMatrixPtr()),
+                static_cast<int>(B.getLeadingDimension()), beta_s32,
+                reinterpret_cast<float*>(C.getMatrixData().getMatrixPtr()),
+                static_cast<int>(C.getLeadingDimension()), nullptr);
+
+            return true;
+        }
+
+        case encode_types<MatrixType::u8, MatrixType::s8, MatrixType::s8,
+                          MatrixType::s32>(): {
+            int32_t alpha_s32 = static_cast<int32_t>(alpha);
+            int32_t beta_s32  = static_cast<int32_t>(beta);
+
+            dlp::testing::classic::ref::aocl_gemm_u8s8s32os8_ref(
+                layoutA, transA, transB, A.getEffectiveRows(),
+                B.getEffectiveCols(), A.getEffectiveCols(), alpha_s32,
+                reinterpret_cast<const uint8_t*>(
+                    A.getMatrixData().getMatrixPtr()),
+                static_cast<int>(A.getLeadingDimension()),
+                reinterpret_cast<const int8_t*>(
+                    B.getMatrixData().getMatrixPtr()),
+                static_cast<int>(B.getLeadingDimension()), beta_s32,
+                reinterpret_cast<int8_t*>(C.getMatrixData().getMatrixPtr()),
+                static_cast<int>(C.getLeadingDimension()), nullptr);
+
+            return true;
+        }
+        case encode_types<MatrixType::u8, MatrixType::s8, MatrixType::u8,
+                          MatrixType::s32>(): {
+            int32_t alpha_s32 = static_cast<int32_t>(alpha);
+            int32_t beta_s32  = static_cast<int32_t>(beta);
+
+            dlp::testing::classic::ref::aocl_gemm_u8s8s32ou8_ref(
+                layoutA, transA, transB, A.getEffectiveRows(),
+                B.getEffectiveCols(), A.getEffectiveCols(), alpha_s32,
+                reinterpret_cast<const uint8_t*>(
+                    A.getMatrixData().getMatrixPtr()),
+                static_cast<int>(A.getLeadingDimension()),
+                reinterpret_cast<const int8_t*>(
+                    B.getMatrixData().getMatrixPtr()),
+                static_cast<int>(B.getLeadingDimension()), beta_s32,
+                reinterpret_cast<uint8_t*>(C.getMatrixData().getMatrixPtr()),
+                static_cast<int>(C.getLeadingDimension()), nullptr);
+
+            return true;
+        }
+
+        case encode_types<MatrixType::u8, MatrixType::s8, MatrixType::bf16,
+                          MatrixType::s32>(): {
+            int32_t alpha_s32 = static_cast<int32_t>(alpha);
+            int32_t beta_s32  = static_cast<int32_t>(beta);
+
+            dlp::testing::classic::ref::aocl_gemm_u8s8s32obf16_ref(
+                layoutA, transA, transB, A.getEffectiveRows(),
+                B.getEffectiveCols(), A.getEffectiveCols(), alpha_s32,
+                reinterpret_cast<const uint8_t*>(
+                    A.getMatrixData().getMatrixPtr()),
+                static_cast<int>(A.getLeadingDimension()),
+                reinterpret_cast<const int8_t*>(
+                    B.getMatrixData().getMatrixPtr()),
+                static_cast<int>(B.getLeadingDimension()), beta_s32,
+                reinterpret_cast<bfloat16*>(C.getMatrixData().getMatrixPtr()),
+                static_cast<int>(C.getLeadingDimension()), nullptr);
+
+            return true;
+        }
+
+        case encode_types<MatrixType::s8, MatrixType::s8, MatrixType::f32,
+                          MatrixType::s32>(): {
+            int32_t alpha_s32 = static_cast<int32_t>(alpha);
+            int32_t beta_s32  = static_cast<int32_t>(beta);
+
+            dlp::testing::classic::ref::aocl_gemm_s8s8s32of32_ref(
+                layoutA, transA, transB, A.getEffectiveRows(),
+                B.getEffectiveCols(), A.getEffectiveCols(), alpha_s32,
+                reinterpret_cast<const int8_t*>(
+                    A.getMatrixData().getMatrixPtr()),
+                static_cast<int>(A.getLeadingDimension()),
+                reinterpret_cast<const int8_t*>(
+                    B.getMatrixData().getMatrixPtr()),
+                static_cast<int>(B.getLeadingDimension()), beta_s32,
+                reinterpret_cast<float*>(C.getMatrixData().getMatrixPtr()),
+                static_cast<int>(C.getLeadingDimension()), nullptr);
+
+            return true;
+        }
+
+        case encode_types<MatrixType::s8, MatrixType::s8, MatrixType::s8,
+                          MatrixType::s32>(): {
+            int32_t alpha_s32 = static_cast<int32_t>(alpha);
+            int32_t beta_s32  = static_cast<int32_t>(beta);
+
+            dlp::testing::classic::ref::aocl_gemm_s8s8s32os8_ref(
+                layoutA, transA, transB, A.getEffectiveRows(),
+                B.getEffectiveCols(), A.getEffectiveCols(), alpha_s32,
+                reinterpret_cast<const int8_t*>(
+                    A.getMatrixData().getMatrixPtr()),
+                static_cast<int>(A.getLeadingDimension()),
+                reinterpret_cast<const int8_t*>(
+                    B.getMatrixData().getMatrixPtr()),
+                static_cast<int>(B.getLeadingDimension()), beta_s32,
+                reinterpret_cast<int8_t*>(C.getMatrixData().getMatrixPtr()),
+                static_cast<int>(C.getLeadingDimension()), nullptr);
+
+            return true;
+        }
+
+        case encode_types<MatrixType::s8, MatrixType::s8, MatrixType::bf16,
+                          MatrixType::s32>(): {
+            int32_t alpha_s32 = static_cast<int32_t>(alpha);
+            int32_t beta_s32  = static_cast<int32_t>(beta);
+
+            dlp::testing::classic::ref::aocl_gemm_s8s8s32obf16_ref(
+                layoutA, transA, transB, A.getEffectiveRows(),
+                B.getEffectiveCols(), A.getEffectiveCols(), alpha_s32,
+                reinterpret_cast<const int8_t*>(
+                    A.getMatrixData().getMatrixPtr()),
+                static_cast<int>(A.getLeadingDimension()),
+                reinterpret_cast<const int8_t*>(
+                    B.getMatrixData().getMatrixPtr()),
+                static_cast<int>(B.getLeadingDimension()), beta_s32,
+                reinterpret_cast<bfloat16*>(C.getMatrixData().getMatrixPtr()),
+                static_cast<int>(C.getLeadingDimension()), nullptr);
+
+            return true;
+        }
+
+        case encode_types<MatrixType::s8, MatrixType::s8, MatrixType::u8,
+                          MatrixType::s32>(): {
+            int32_t alpha_s32 = static_cast<int32_t>(alpha);
+            int32_t beta_s32  = static_cast<int32_t>(beta);
+
+            dlp::testing::classic::ref::aocl_gemm_s8s8s32ou8_ref(
+                layoutA, transA, transB, A.getEffectiveRows(),
+                B.getEffectiveCols(), A.getEffectiveCols(), alpha_s32,
+                reinterpret_cast<const int8_t*>(
+                    A.getMatrixData().getMatrixPtr()),
+                static_cast<int>(A.getLeadingDimension()),
+                reinterpret_cast<const int8_t*>(
+                    B.getMatrixData().getMatrixPtr()),
+                static_cast<int>(B.getLeadingDimension()), beta_s32,
+                reinterpret_cast<uint8_t*>(C.getMatrixData().getMatrixPtr()),
                 static_cast<int>(C.getLeadingDimension()), nullptr);
 
             return true;

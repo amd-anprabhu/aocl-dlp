@@ -46,6 +46,9 @@ fetch_yaml_cpp()
 # Collect framework source files
 dlp_glob_sources_recursive(FRAMEWORK_SOURCES "${PROJECT_SOURCE_DIR}/tests/framework")
 
+# Collect utils source files
+dlp_glob_sources_recursive(UTILS_SOURCES "${PROJECT_SOURCE_DIR}/tests/utils")
+
 # Collect ref source files
 dlp_glob_sources_recursive(ADAPTORS_SOURCES "${PROJECT_SOURCE_DIR}/tests/adaptors")
 
@@ -56,7 +59,7 @@ foreach(benchmark_source ${BENCHMARK_SOURCES})
     get_filename_component(benchmark_name ${benchmark_source} NAME_WE)
     dlp_add_benchmark(
         NAME ${benchmark_name}
-        SOURCES ${benchmark_source} ${FRAMEWORK_SOURCES} ${ADAPTORS_SOURCES}
+        SOURCES ${benchmark_source} ${FRAMEWORK_SOURCES} ${UTILS_SOURCES} ${ADAPTORS_SOURCES}
         DEPENDS yaml-cpp
     )
     dlp_set_global_compile_flags(${benchmark_name} VISIBILITY PUBLIC)

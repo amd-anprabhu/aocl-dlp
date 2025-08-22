@@ -189,9 +189,14 @@ generate_exclusion_patterns() {
     local exclusions=(
         # Build and installation directories
         "*/build/*"
+        "*/build-coverage/*"
         "*/install/*"
         "*/exp/*"
         "*/.git/*"
+
+        # Legacy Source Code Exclusions
+        "*/classic/kernels/zen/*"
+        "*/classic/kernels/zen4/f32f32f32/*"
 
         # Test and benchmark code (we want source coverage, not test coverage)
         "*/tests/*"

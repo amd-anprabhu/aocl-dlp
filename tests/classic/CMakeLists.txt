@@ -35,7 +35,7 @@ foreach(test_source ${TEST_SOURCES})
     get_filename_component(test_name ${test_source} NAME_WE)
     dlp_add_test(
         NAME ${test_name}
-        SOURCES ${test_source} ${ADAPTORS_SOURCES} ${FRAMEWORK_SOURCES}
+        SOURCES ${test_source} ${ADAPTORS_SOURCES} ${FRAMEWORK_SOURCES} ${UTILS_SOURCES}
         INCLUDE_DIRS ${TEST_INCLUDE_DIRS}
         DEPENDS yaml-cpp
     )

@@ -26,43 +26,12 @@
  */
 
 #include "adaptors/ref/gemm_ref.hh"
-
-namespace {
-// BF16 to F32 conversion
-inline float
-bf16_to_f32(bfloat16 bf16_val)
-{
-    union
-    {
-        float    f;
-        uint32_t u;
-    } float_bits;
-    float_bits.u = static_cast<uint32_t>(static_cast<uint16_t>(bf16_val))
-                   << 16U;
-    return float_bits.f;
-}
-
-// F32 to BF16 conversion (round-to-nearest-even)
-inline bfloat16
-f32_to_bf16(float f32_val)
-{
-    union
-    {
-        float    f;
-        uint32_t u;
-    } bits;
-    bits.f = f32_val;
-    // Extract LSB of BF16 part for ties-to-even
-    uint32_t lsb = (bits.u >> 16U) & 1U;
-    uint32_t rounding_bias =
-        0x7FFFU + lsb; // 0x7FFF for round, +lsb for ties-to-even
-    uint32_t rounded    = bits.u + rounding_bias;
-    uint16_t bf16_upper = static_cast<uint16_t>(rounded >> 16U);
-    return static_cast<bfloat16>(bf16_upper);
-}
-} // namespace
+#include "utils/conversion_utils.hh"
 
 namespace dlp::testing::classic::ref {
+
+using dlp::testing::utils::bf16_to_f32;
+using dlp::testing::utils::f32_to_bf16;
 
 void
 aocl_gemm_bf16bf16f32obf16_ref(const char      order,
