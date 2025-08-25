@@ -136,32 +136,32 @@ dlp_execute_kernel(dlp_kernel_hndl_t   kernel_hndl,
     // kernels. Also dont use new/delete and malloc/free calls here, since
     // they are lock based and will result in performance degradation.
     if (kernel_hndl.mr == 1) {
-        gemvM1Params obj{ A,
-                          B,
-                          C,
-                          n,
-                          k,
-                          rs_a,
-                          cs_a,
-                          rs_b,
-                          cs_b,
-                          rs_c,
-                          cs_c,
-                          n_sub_updated,
-                          jc_cur_loop_rem,
-                          alpha,
-                          beta,
-                          post_ops_list,
-                          post_ops_attr };
+        gemvM1Params gemvM1ParamsIn{ A,
+                                     B,
+                                     C,
+                                     n,
+                                     k,
+                                     rs_a,
+                                     cs_a,
+                                     rs_b,
+                                     cs_b,
+                                     rs_c,
+                                     cs_c,
+                                     n_sub_updated,
+                                     jc_cur_loop_rem,
+                                     alpha,
+                                     beta,
+                                     post_ops_list,
+                                     post_ops_attr };
         kernelBase*  kB = static_cast<kernelBase*>(kernel_hndl.kernel_base);
-        kB->operator()(std::addressof(obj));
+        kB->operator()(std::addressof(gemvM1ParamsIn));
     } else if (kernel_hndl.nr == 1) {
-        gemvN1Params gemvParamsIn{
+        gemvN1Params gemvN1ParamsIn{
             A,    B,    C,    m,     k,    rs_a,          cs_a,         rs_b,
             cs_b, rs_c, cs_c, alpha, beta, post_ops_list, post_ops_attr
         };
         kernelBase* kB = static_cast<kernelBase*>(kernel_hndl.kernel_base);
-        kB->operator()(std::addressof(gemvParamsIn));
+        kB->operator()(std::addressof(gemvN1ParamsIn));
     } else {
         gemmParams  gemmParamsIn{ A,
                                  B,

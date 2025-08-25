@@ -268,19 +268,13 @@ jitAmdZenFP32::generateAllKernels(const dlp::jit::jitGeneratorContext& jI)
                 void* codeBuffer = kernelCodeBlocks[m_left * 4 + j];
                 // Allocate executable memory
 
-#if DLP_OS_WINDOWS
-                codeBuffer = VirtualAlloc(nullptr, utils::JIT_KERNEL_SIZE,
-                                          MEM_COMMIT | MEM_RESERVE,
-                                          PAGE_EXECUTE_READWRITE);
-                if (codeBuffer == nullptr) {
-#else
                 codeBuffer = utils::jitHelperUtils::allocateJitMemory(
                     utils::JIT_KERNEL_SIZE);
-                if (codeBuffer == MAP_FAILED) {
-#endif
+                if (codeBuffer == nullptr) {
                     err = dlp::jit::jitGeneratorError::errorAllocatingMemory;
                     goto cleanup;
                 }
+
                 kernelCodeBlocks[m_left * 4 + j] = codeBuffer;
 
                 // Architecture specific dispatch happens here.
