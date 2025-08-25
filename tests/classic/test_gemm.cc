@@ -735,12 +735,7 @@ getTestConfigurations()
 class GemmParameterizedTest : public ::testing::TestWithParam<GemmTestConfig>
 {
   protected:
-    void SetUp() override
-    {
-        config_ = GetParam();
-        std::cout << "Setting up test: " << config_.name << " (" << config_.m
-                  << "x" << config_.n << "x" << config_.k << ")" << std::endl;
-    }
+    void SetUp() override { config_ = GetParam(); }
 
     void TearDown() override
     {
