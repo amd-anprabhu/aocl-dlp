@@ -29,14 +29,6 @@
 #include <functional>
 #include <memory>
 
-#include "aocl_dlp_config.h"
-
-#if DLP_OS_WINDOWS
-#include <windows.h>
-#else
-#include <sys/mman.h>
-#endif
-
 #include "avx512_gemv.hh"
 #include "jit_register/jit_register.hh"
 

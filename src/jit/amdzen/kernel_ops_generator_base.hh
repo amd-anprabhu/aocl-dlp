@@ -39,6 +39,8 @@ namespace amdzen::gen {
 class kernelOpsGeneratorInterface
 {
   public:
+    virtual ~kernelOpsGeneratorInterface() = default;
+
     virtual dlp::jit::jitGeneratorError generateKernelOps(
         std::vector<dlp::kernel_frame::kernelOpsMetaData>& kernelOps,
         const Xbyak::Reg64& postOpsArgWrapperPtrReg) = 0;

@@ -38,6 +38,23 @@
 
 namespace dlp::de {
 
+/**
+ * @brief Singleton decision engine for kernel selection and optimization
+ *
+ * decisionEngine manages kernel selection strategies using a 2D array of
+ * backend implementations indexed by [routine_type][datatype]. Implements
+ * Meyer's singleton pattern with thread-safe initialization. Each backend
+ * provides specialized decision logic for optimal kernel selection based on
+ * input characteristics.
+ *
+ * DESIGN PHILOSOPHY:
+ * - 2D backend organization: routine_type × datatype
+ * - Pluggable backend architecture for extensible decision strategies
+ * - Centralized kernel selection logic with distributed backend implementations
+ *
+ * @note Currently supports F32 GEMM operations only, extensible for additional
+ * datatypes and routine types
+ */
 class decisionEngine
 {
     void registerDecisionEngine()
@@ -77,12 +94,12 @@ class decisionEngine
         // Using a set to avoid deleting the same value multiple times.
         // This is required since the same VALUE_TYPE could be inserted
         // multiple times depending on its usage by the composing class.
-        // For example, a kernel could be registered multiple time with
+        // For example, a backend could be registered multiple times with
         // different kernelDatatypes.
         std::set<iDEBackend*> valueSet;
         for (auto& ele : backends) {
             for (auto& ele2 : ele) {
-                if (valueSet.count(ele2) == 0) {
+                if ((ele2 != nullptr) && (valueSet.count(ele2) == 0)) {
                     valueSet.insert(ele2);
                     delete ele2;
                 }
@@ -90,21 +107,50 @@ class decisionEngine
         }
     }
 
+    // Copy/move operations disabled for singleton
     decisionEngine(const decisionEngine&)            = delete;
     decisionEngine& operator=(const decisionEngine&) = delete;
     decisionEngine(decisionEngine&&)                 = delete;
     decisionEngine& operator=(decisionEngine&&)      = delete;
 
-    // 1-D array of dispatch tables: vecKDTs[routine_type][datatype]
+    // 2D array of backend implementations: backends[routine_type][datatype]
     std::vector<std::vector<iDEBackend*>> backends;
 
   public:
+    /**
+     * @brief Meyer's singleton instance accessor with thread-safe
+     * initialization
+     *
+     * Returns reference to the single global decision engine instance.
+     * Thread-safe initialization guaranteed by C++11 standard.
+     *
+     * THREAD SAFETY: Thread-safe initialization, concurrent access safe
+     *
+     * @return Reference to singleton decisionEngine instance
+     */
     static decisionEngine& instance()
     {
         static decisionEngine de;
         return de;
     }
 
+    /**
+     * @brief Retrieves optimal kernel configuration for given input
+     * characteristics
+     *
+     * Queries the appropriate backend implementation based on routine type and
+     * datatype to determine optimal kernel parameters for the given input.
+     * Returns kernelInfo containing recommended kernel dimensions and
+     * configuration.
+     *
+     * THREAD SAFETY: Thread-safe if underlying backends are thread-safe
+     *
+     * @param in Pointer to input characteristics for kernel selection
+     * @param kType Kernel routine type (e.g., GEMM, GEMV)
+     * @param dt Datatype specification for kernel operation
+     * @return Optional kernelInfo with optimal kernel configuration, or nullopt
+     * if no suitable backend is registered
+     */
     std::optional<dlp::kernel_frame::kernelInfo> getKernelInfoForInput(
         iDEInput*                            in,
         dlp::kernel_frame::kernelRoutineType kType,
@@ -119,6 +165,16 @@ class decisionEngine
     }
 };
 
+/**
+ * @brief Convenience accessor for decision engine singleton instance
+ *
+ * Returns reference to the singleton decisionEngine instance.
+ * Equivalent to decisionEngine::instance().
+ *
+ * THREAD SAFETY: Thread-safe (forwards to thread-safe singleton)
+ *
+ * @return Reference to decision engine singleton
+ */
 inline decisionEngine&
 decisionEngineInstance()
 {
