@@ -76,15 +76,16 @@ namespace dlp { namespace testing { namespace framework {
          * data movement
          * @param reordered Whether the matrix is reordered
          */
-        Matrix(md_t                       rows,
-               md_t                       cols,
-               MatrixType                 type,
-               std::unique_ptr<uint8_t[]> data,
-               size_t                     dataSizeBytes,
-               MatrixLayout               layout     = MatrixLayout::ROW_MAJOR,
-               md_t                       leadingDim = 0,
-               bool                       transposed = false,
-               bool                       reordered  = false);
+        Matrix(md_t         rows,
+               md_t         cols,
+               MatrixType   type,
+               uint8_t*     data,
+               size_t       dataSizeBytes,
+               MatrixLayout layout     = MatrixLayout::ROW_MAJOR,
+               md_t         leadingDim = 0,
+               bool         transposed = false,
+               bool         reordered  = false,
+               size_t       alignment  = 0);
 
         /**
          * @brief Convenience constructor with automatic memory allocation
@@ -99,6 +100,8 @@ namespace dlp { namespace testing { namespace framework {
          * @param leadingDim Leading dimension (0 for automatic calculation)
          * @param transposed Whether the matrix is logically transposed
          * @param reordered Whether the matrix is reordered
+         * @param alignment Memory alignment in bytes (0 for no special
+         * alignment)
          */
         Matrix(md_t         rows,
                md_t         cols,
@@ -106,7 +109,8 @@ namespace dlp { namespace testing { namespace framework {
                MatrixLayout layout     = MatrixLayout::ROW_MAJOR,
                md_t         leadingDim = 0,
                bool         transposed = false,
-               bool         reordered  = false);
+               bool         reordered  = false,
+               size_t       alignment  = 0);
 
         /**
          * @brief Copy constructor
@@ -129,9 +133,9 @@ namespace dlp { namespace testing { namespace framework {
         /**
          * @brief Destructor
          *
-         * Memory is automatically released by unique_ptr.
+         * Memory is properly released based on allocation type.
          */
-        ~Matrix() = default;
+        ~Matrix();
 
         /**
          * @brief Copy assignment operator
@@ -563,11 +567,14 @@ namespace dlp { namespace testing { namespace framework {
         md_t m_cols; ///< Number of columns in the matrix
         md_t m_k = std::numeric_limits<md_t>::max(); ///< K Dim for tolerance
                                                      ///< calculation
-        MatrixType                 m_type;           ///< Matrix data type
-        std::unique_ptr<uint8_t[]> m_data;           ///< Matrix data storage
-        size_t       m_dataSizeBytes; ///< Size of allocated memory in bytes
-        MatrixLayout m_layout;        ///< Memory layout
-        md_t         m_leadingDim;    ///< Leading dimension (stride)
+        MatrixType m_type;                           ///< Matrix data type
+        uint8_t*
+               m_data; ///< Matrix data storage (raw pointer for aligned alloc)
+        size_t m_dataSizeBytes; ///< Size of allocated memory in bytes
+        size_t m_alignment;     ///< Memory alignment in bytes (0 for no special
+                                ///< alignment)
+        MatrixLayout m_layout;  ///< Memory layout
+        md_t         m_leadingDim; ///< Leading dimension (stride)
         bool m_transposed; ///< Whether the matrix is logically transposed
         bool m_reordered;  ///< Whether the matrix is reordered
         bool m_packed;     ///< Whether the matrix is packed

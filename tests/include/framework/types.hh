@@ -29,6 +29,7 @@
 #pragma once
 
 #include <cstdint>
+#include <cstdlib>
 #include <memory>
 #include <ostream>
 
@@ -226,9 +227,41 @@ namespace testing {
              * @param sizeBytes Size in bytes to allocate
              * @return Unique pointer to allocated memory
              */
-            inline std::unique_ptr<uint8_t[]> allocateBytes(size_t sizeBytes)
+            inline uint8_t* allocateBytes(size_t sizeBytes,
+                                          size_t alignment = 0)
             {
-                return std::make_unique<uint8_t[]>(sizeBytes);
+                uint8_t* data = nullptr;
+
+                // Allocate memory based on alignment requirements
+                if (alignment > 0) {
+                    // Validate alignment requirements for std::aligned_alloc
+                    if ((alignment & (alignment - 1)) != 0) {
+                        throw std::invalid_argument(
+                            "Alignment must be a power of 2");
+                    }
+                    if (alignment < sizeof(void*)) {
+                        throw std::invalid_argument(
+                            "Alignment must be at least sizeof(void*)");
+                    }
+
+                    // Ensure size is a multiple of alignment for
+                    // std::aligned_alloc
+                    size_t alignedSize =
+                        (sizeBytes + alignment - 1) & ~(alignment - 1);
+
+                    data = static_cast<uint8_t*>(
+                        std::aligned_alloc(alignment, alignedSize));
+                    if (!data) {
+                        throw std::bad_alloc();
+                    }
+
+                    // Update size to reflect actual allocated size
+                    sizeBytes = alignedSize;
+                } else {
+                    // Use regular allocation
+                    data = new uint8_t[sizeBytes];
+                }
+                return data;
             }
         } // namespace MatrixMemory
 

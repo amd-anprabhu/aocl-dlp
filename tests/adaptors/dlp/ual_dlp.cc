@@ -189,9 +189,10 @@ UalDlp::reorder(const Matrix& in,
     // Create output matrix using the new interface with external memory
     // allocation
     // Leading dimension needs to be recomputed as the matrix is copied.
-    auto memory = MatrixMemory::allocateBytes(alloc_bytes);
-    out = Matrix(out_rows, out_cols, in.getMatrixType(), std::move(memory),
-                 alloc_bytes, in.getLayout(), out_leadingDim, false, true);
+    auto memory = MatrixMemory::allocateBytes(alloc_bytes, 4096);
+    out =
+        Matrix(out_rows, out_cols, in.getMatrixType(), std::move(memory),
+               alloc_bytes, in.getLayout(), out_leadingDim, false, true, 4096);
 
     char layout = in.getLayout() == MatrixLayout::ROW_MAJOR ? 'r' : 'c';
 

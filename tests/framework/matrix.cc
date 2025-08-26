@@ -28,12 +28,13 @@
 
 /**
  * @file matrix.cc
- * @brief Implementation of the Matrix class
+ * @brief Implementation of the Matrix class with C++17 aligned allocation
+ * support
  *
  * This file contains the implementation of the Matrix class that handles
- * various data types with support for different memory layouts and virtual
- * transposition. Memory is managed externally via unique_ptr for better
- * safety and flexibility.
+ * various data types with support for different memory layouts, virtual
+ * transposition, and optional memory alignment. Memory is managed using
+ * C++17 aligned_alloc for aligned memory or regular new[] for unaligned memory.
  */
 
 #include "framework/matrix.hh"
@@ -43,6 +44,7 @@
 #include <any>
 #include <chrono>   // For time-based seeding
 #include <cmath>    // For std::abs
+#include <cstdlib>  // For std::aligned_alloc, std::free
 #include <cstring>  // For std::memcpy
 #include <iostream> // For std::cout
 #include <random>   // For random number generation
@@ -67,6 +69,7 @@ namespace dlp { namespace testing { namespace framework {
         , m_type(MatrixType::f32)
         , m_data(nullptr)
         , m_dataSizeBytes(0)
+        , m_alignment(0)
         , m_layout(MatrixLayout::ROW_MAJOR)
         , m_leadingDim(0)
         , m_transposed(false)
@@ -79,23 +82,25 @@ namespace dlp { namespace testing { namespace framework {
      * @brief Main constructor with external memory management
      *
      * Creates a matrix with specified dimensions, data type, layout, and
-     * externally provided memory.
+     * externally provided memory. Takes ownership of the unique_ptr.
      */
-    Matrix::Matrix(md_t                       rows,
-                   md_t                       cols,
-                   MatrixType                 type,
-                   std::unique_ptr<uint8_t[]> data,
-                   size_t                     dataSizeBytes,
-                   MatrixLayout               layout,
-                   md_t                       leadingDim,
-                   bool                       transposed,
-                   bool                       reordered)
+    Matrix::Matrix(md_t         rows,
+                   md_t         cols,
+                   MatrixType   type,
+                   uint8_t*     data,
+                   size_t       dataSizeBytes,
+                   MatrixLayout layout,
+                   md_t         leadingDim,
+                   bool         transposed,
+                   bool         reordered,
+                   size_t       alignment)
         : m_rows(rows)
         , m_cols(cols)
         , m_k(std::numeric_limits<md_t>::max())
         , m_type(type)
-        , m_data(std::move(data))
+        , m_data(data) // Take ownership from raw pointer
         , m_dataSizeBytes(dataSizeBytes)
+        , m_alignment(alignment)
         , m_layout(layout)
         , m_transposed(transposed)
         , m_reordered(reordered)
@@ -121,8 +126,9 @@ namespace dlp { namespace testing { namespace framework {
     /**
      * @brief Convenience constructor with automatic memory allocation
      *
-     * Creates a matrix with automatic memory allocation. This is provided
-     * for convenience but external memory management is preferred.
+     * Creates a matrix with automatic memory allocation using C++17
+     * aligned_alloc if alignment is specified, or regular new[] if no alignment
+     * is needed.
      */
     Matrix::Matrix(md_t         rows,
                    md_t         cols,
@@ -130,11 +136,13 @@ namespace dlp { namespace testing { namespace framework {
                    MatrixLayout layout,
                    md_t         leadingDim,
                    bool         transposed,
-                   bool         reordered)
+                   bool         reordered,
+                   size_t       alignment)
         : m_rows(rows)
         , m_cols(cols)
         , m_k(std::numeric_limits<md_t>::max())
         , m_type(type)
+        , m_alignment(alignment)
         , m_layout(layout)
         , m_transposed(transposed)
         , m_reordered(reordered)
@@ -147,16 +155,44 @@ namespace dlp { namespace testing { namespace framework {
             m_leadingDim = leadingDim;
         }
 
-        // Allocate memory automatically
+        // Calculate required memory size
         m_dataSizeBytes = MatrixMemory::calculateRequiredBytes(
             type, rows, cols, layout, m_leadingDim);
-        m_data = MatrixMemory::allocateBytes(m_dataSizeBytes);
+
+        // Allocate memory based on alignment requirements
+        if (alignment > 0) {
+            // Validate alignment requirements for std::aligned_alloc
+            if ((alignment & (alignment - 1)) != 0) {
+                throw std::invalid_argument("Alignment must be a power of 2");
+            }
+            if (alignment < sizeof(void*)) {
+                throw std::invalid_argument(
+                    "Alignment must be at least sizeof(void*)");
+            }
+
+            // Ensure size is a multiple of alignment for std::aligned_alloc
+            size_t alignedSize =
+                (m_dataSizeBytes + alignment - 1) & ~(alignment - 1);
+
+            m_data = static_cast<uint8_t*>(
+                std::aligned_alloc(alignment, alignedSize));
+            if (!m_data) {
+                throw std::bad_alloc();
+            }
+
+            // Update size to reflect actual allocated size
+            m_dataSizeBytes = alignedSize;
+        } else {
+            // Use regular allocation
+            m_data = new uint8_t[m_dataSizeBytes];
+        }
     }
 
     /**
      * @brief Copy constructor implementation
      *
-     * Creates a deep copy of the source matrix with newly allocated memory.
+     * Creates a deep copy of the source matrix with newly allocated memory
+     * using the same alignment as the source.
      */
     Matrix::Matrix(const Matrix& other)
         : m_rows(other.m_rows)
@@ -164,18 +200,27 @@ namespace dlp { namespace testing { namespace framework {
         , m_k(other.m_k)
         , m_type(other.m_type)
         , m_dataSizeBytes(other.m_dataSizeBytes)
+        , m_alignment(other.m_alignment)
         , m_layout(other.m_layout)
         , m_leadingDim(other.m_leadingDim)
         , m_transposed(other.m_transposed)
         , m_reordered(other.m_reordered)
         , m_packed(other.m_packed)
     {
-        // Allocate new memory
-        m_data = MatrixMemory::allocateBytes(m_dataSizeBytes);
+        // Allocate new memory using same alignment as source
+        if (m_alignment > 0) {
+            m_data = static_cast<uint8_t*>(
+                std::aligned_alloc(m_alignment, m_dataSizeBytes));
+            if (!m_data) {
+                throw std::bad_alloc();
+            }
+        } else {
+            m_data = new uint8_t[m_dataSizeBytes];
+        }
 
         // Copy the data
         if (other.m_data && m_dataSizeBytes > 0) {
-            std::memcpy(m_data.get(), other.m_data.get(), m_dataSizeBytes);
+            std::memcpy(m_data, other.m_data, m_dataSizeBytes);
         }
     }
 
@@ -189,8 +234,9 @@ namespace dlp { namespace testing { namespace framework {
         , m_cols(other.m_cols)
         , m_k(other.m_k)
         , m_type(other.m_type)
-        , m_data(std::move(other.m_data))
+        , m_data(other.m_data)
         , m_dataSizeBytes(other.m_dataSizeBytes)
+        , m_alignment(other.m_alignment)
         , m_layout(other.m_layout)
         , m_leadingDim(other.m_leadingDim)
         , m_transposed(other.m_transposed)
@@ -198,13 +244,33 @@ namespace dlp { namespace testing { namespace framework {
         , m_packed(other.m_packed)
     {
         // Reset other matrix
+        other.m_data          = nullptr;
         other.m_rows          = 0;
         other.m_cols          = 0;
         other.m_dataSizeBytes = 0;
+        other.m_alignment     = 0;
         other.m_leadingDim    = 0;
         other.m_transposed    = false;
         other.m_reordered     = false;
         other.m_packed        = false;
+    }
+
+    /**
+     * @brief Destructor implementation
+     *
+     * Properly releases memory based on allocation type.
+     */
+    Matrix::~Matrix()
+    {
+        if (m_data) {
+            if (m_alignment > 0) {
+                // Memory was allocated with std::aligned_alloc
+                std::free(m_data);
+            } else {
+                // Memory was allocated with new[]
+                delete[] m_data;
+            }
+        }
     }
 
     /**
@@ -219,24 +285,42 @@ namespace dlp { namespace testing { namespace framework {
             return *this;
         }
 
+        // Free existing memory
+        if (m_data) {
+            if (m_alignment > 0) {
+                std::free(m_data);
+            } else {
+                delete[] m_data;
+            }
+        }
+
         // Copy metadata
         m_rows          = other.m_rows;
         m_cols          = other.m_cols;
         m_k             = other.m_k;
         m_type          = other.m_type;
         m_dataSizeBytes = other.m_dataSizeBytes;
+        m_alignment     = other.m_alignment;
         m_layout        = other.m_layout;
         m_leadingDim    = other.m_leadingDim;
         m_transposed    = other.m_transposed;
         m_reordered     = other.m_reordered;
         m_packed        = other.m_packed;
 
-        // Allocate new memory
-        m_data = MatrixMemory::allocateBytes(m_dataSizeBytes);
+        // Allocate new memory using same alignment as source
+        if (m_alignment > 0) {
+            m_data = static_cast<uint8_t*>(
+                std::aligned_alloc(m_alignment, m_dataSizeBytes));
+            if (!m_data) {
+                throw std::bad_alloc();
+            }
+        } else {
+            m_data = new uint8_t[m_dataSizeBytes];
+        }
 
         // Copy the data
         if (other.m_data && m_dataSizeBytes > 0) {
-            std::memcpy(m_data.get(), other.m_data.get(), m_dataSizeBytes);
+            std::memcpy(m_data, other.m_data, m_dataSizeBytes);
         }
 
         return *this;
@@ -254,13 +338,23 @@ namespace dlp { namespace testing { namespace framework {
             return *this;
         }
 
+        // Free existing memory
+        if (m_data) {
+            if (m_alignment > 0) {
+                std::free(m_data);
+            } else {
+                delete[] m_data;
+            }
+        }
+
         // Transfer ownership
         m_rows          = other.m_rows;
         m_cols          = other.m_cols;
         m_k             = other.m_k;
         m_type          = other.m_type;
-        m_data          = std::move(other.m_data);
+        m_data          = other.m_data;
         m_dataSizeBytes = other.m_dataSizeBytes;
+        m_alignment     = other.m_alignment;
         m_layout        = other.m_layout;
         m_leadingDim    = other.m_leadingDim;
         m_transposed    = other.m_transposed;
@@ -268,9 +362,11 @@ namespace dlp { namespace testing { namespace framework {
         m_packed        = other.m_packed;
 
         // Reset other matrix
+        other.m_data          = nullptr;
         other.m_rows          = 0;
         other.m_cols          = 0;
         other.m_dataSizeBytes = 0;
+        other.m_alignment     = 0;
         other.m_leadingDim    = 0;
         other.m_transposed    = false;
         other.m_reordered     = false;
@@ -365,7 +461,7 @@ namespace dlp { namespace testing { namespace framework {
      */
     void* Matrix::getData() const
     {
-        return m_data.get();
+        return m_data;
     }
 
     /**
@@ -373,7 +469,7 @@ namespace dlp { namespace testing { namespace framework {
      */
     MatrixData Matrix::getMatrixData() const
     {
-        return MatrixData(m_type, m_data.get());
+        return MatrixData(m_type, m_data);
     }
 
     /**
@@ -448,17 +544,15 @@ namespace dlp { namespace testing { namespace framework {
             return compareFloatingPointData(other);
         } else if (m_type == MatrixType::s32) {
             for (size_t i = 0; i < m_dataSizeBytes / sizeof(int32_t); ++i) {
-                if (reinterpret_cast<const int32_t*>(m_data.get())[i]
-                    != reinterpret_cast<const int32_t*>(
-                        other.m_data.get())[i]) {
+                if (reinterpret_cast<const int32_t*>(m_data)[i]
+                    != reinterpret_cast<const int32_t*>(other.m_data)[i]) {
                     return false;
                 }
             }
         }
 
         // For integer types, use exact comparison
-        return std::memcmp(m_data.get(), other.m_data.get(), m_dataSizeBytes)
-               == 0;
+        return std::memcmp(m_data, other.m_data, m_dataSizeBytes) == 0;
     }
 
     /**
@@ -481,10 +575,9 @@ namespace dlp { namespace testing { namespace framework {
         }
 
         if (m_type == MatrixType::f32) {
-            const float* thisData =
-                reinterpret_cast<const float*>(m_data.get());
+            const float* thisData = reinterpret_cast<const float*>(m_data);
             const float* otherData =
-                reinterpret_cast<const float*>(other.m_data.get());
+                reinterpret_cast<const float*>(other.m_data);
             size_t elementCount = m_dataSizeBytes / sizeof(float);
 
             for (size_t i = 0; i < elementCount; ++i) {
@@ -494,9 +587,9 @@ namespace dlp { namespace testing { namespace framework {
             }
         } else if (m_type == MatrixType::bf16) {
             const bfloat16* thisData =
-                reinterpret_cast<const bfloat16*>(m_data.get());
+                reinterpret_cast<const bfloat16*>(m_data);
             const bfloat16* otherData =
-                reinterpret_cast<const bfloat16*>(other.m_data.get());
+                reinterpret_cast<const bfloat16*>(other.m_data);
             size_t elementCount = m_dataSizeBytes / sizeof(bfloat16);
 
             for (size_t i = 0; i < elementCount; ++i) {
@@ -533,7 +626,7 @@ namespace dlp { namespace testing { namespace framework {
         switch (m_type) {
             case MatrixType::f32: {
                 std::uniform_real_distribution<float> dis(-1.0f, 1.0f);
-                float* data         = reinterpret_cast<float*>(m_data.get());
+                float* data         = reinterpret_cast<float*>(m_data);
                 size_t elementCount = m_dataSizeBytes / sizeof(float);
                 for (size_t i = 0; i < elementCount; ++i) {
                     // Generate float value and truncate to remove fractional
@@ -545,7 +638,7 @@ namespace dlp { namespace testing { namespace framework {
             }
             case MatrixType::u8: {
                 std::uniform_int_distribution<uint8_t> dis(0, 255);
-                uint8_t*                               data = m_data.get();
+                uint8_t*                               data = m_data;
                 for (size_t i = 0; i < m_dataSizeBytes; ++i) {
                     data[i] = dis(gen);
                 }
@@ -553,7 +646,7 @@ namespace dlp { namespace testing { namespace framework {
             }
             case MatrixType::s8: {
                 std::uniform_int_distribution<int8_t> dis(-128, 127);
-                int8_t* data = reinterpret_cast<int8_t*>(m_data.get());
+                int8_t* data = reinterpret_cast<int8_t*>(m_data);
                 for (size_t i = 0; i < m_dataSizeBytes; ++i) {
                     data[i] = dis(gen);
                 }
@@ -561,7 +654,7 @@ namespace dlp { namespace testing { namespace framework {
             }
             case MatrixType::u16: {
                 std::uniform_int_distribution<uint16_t> dis(0, 65535);
-                uint16_t* data = reinterpret_cast<uint16_t*>(m_data.get());
+                uint16_t* data         = reinterpret_cast<uint16_t*>(m_data);
                 size_t    elementCount = m_dataSizeBytes / sizeof(uint16_t);
                 for (size_t i = 0; i < elementCount; ++i) {
                     data[i] = dis(gen);
@@ -570,7 +663,7 @@ namespace dlp { namespace testing { namespace framework {
             }
             case MatrixType::s16: {
                 std::uniform_int_distribution<int16_t> dis(-32768, 32767);
-                int16_t* data = reinterpret_cast<int16_t*>(m_data.get());
+                int16_t* data         = reinterpret_cast<int16_t*>(m_data);
                 size_t   elementCount = m_dataSizeBytes / sizeof(int16_t);
                 for (size_t i = 0; i < elementCount; ++i) {
                     data[i] = dis(gen);
@@ -579,7 +672,7 @@ namespace dlp { namespace testing { namespace framework {
             }
             case MatrixType::u32: {
                 std::uniform_int_distribution<uint32_t> dis(0, UINT32_MAX);
-                uint32_t* data = reinterpret_cast<uint32_t*>(m_data.get());
+                uint32_t* data         = reinterpret_cast<uint32_t*>(m_data);
                 size_t    elementCount = m_dataSizeBytes / sizeof(uint32_t);
                 for (size_t i = 0; i < elementCount; ++i) {
                     data[i] = dis(gen);
@@ -589,7 +682,7 @@ namespace dlp { namespace testing { namespace framework {
             case MatrixType::s32: {
                 std::uniform_int_distribution<int32_t> dis(INT32_MIN,
                                                            INT32_MAX);
-                int32_t* data = reinterpret_cast<int32_t*>(m_data.get());
+                int32_t* data         = reinterpret_cast<int32_t*>(m_data);
                 size_t   elementCount = m_dataSizeBytes / sizeof(int32_t);
                 for (size_t i = 0; i < elementCount; ++i) {
                     data[i] = dis(gen);
@@ -599,7 +692,7 @@ namespace dlp { namespace testing { namespace framework {
             case MatrixType::bf16: {
                 // For BF16, fill with random uint16_t values
                 std::uniform_real_distribution<float> dis(-1.0f, 1.0f);
-                uint16_t* data = reinterpret_cast<uint16_t*>(m_data.get());
+                uint16_t* data         = reinterpret_cast<uint16_t*>(m_data);
                 size_t    elementCount = m_dataSizeBytes / sizeof(uint16_t);
                 for (size_t i = 0; i < elementCount; ++i) {
                     data[i] = f32_to_bf16(dis(gen));
@@ -610,7 +703,7 @@ namespace dlp { namespace testing { namespace framework {
             case MatrixType::s4: {
                 // For packed 4-bit types, fill with random bytes
                 std::uniform_int_distribution<uint8_t> dis(0, 255);
-                uint8_t*                               data = m_data.get();
+                uint8_t*                               data = m_data;
                 for (size_t i = 0; i < m_dataSizeBytes; ++i) {
                     data[i] = dis(gen);
                 }
@@ -634,7 +727,7 @@ namespace dlp { namespace testing { namespace framework {
         switch (m_type) {
             case MatrixType::f32: {
                 float  fillValue    = std::any_cast<float>(value);
-                float* data         = reinterpret_cast<float*>(m_data.get());
+                float* data         = reinterpret_cast<float*>(m_data);
                 size_t elementCount = m_dataSizeBytes / sizeof(float);
                 for (size_t i = 0; i < elementCount; ++i) {
                     data[i] = fillValue;
@@ -643,7 +736,7 @@ namespace dlp { namespace testing { namespace framework {
             }
             case MatrixType::u8: {
                 uint8_t  fillValue = std::any_cast<uint8_t>(value);
-                uint8_t* data      = m_data.get();
+                uint8_t* data      = m_data;
                 for (size_t i = 0; i < m_dataSizeBytes; ++i) {
                     data[i] = fillValue;
                 }
@@ -651,7 +744,7 @@ namespace dlp { namespace testing { namespace framework {
             }
             case MatrixType::s8: {
                 int8_t  fillValue = std::any_cast<int8_t>(value);
-                int8_t* data      = reinterpret_cast<int8_t*>(m_data.get());
+                int8_t* data      = reinterpret_cast<int8_t*>(m_data);
                 for (size_t i = 0; i < m_dataSizeBytes; ++i) {
                     data[i] = fillValue;
                 }
@@ -659,7 +752,7 @@ namespace dlp { namespace testing { namespace framework {
             }
             case MatrixType::s32: {
                 int32_t  fillValue = std::any_cast<int32_t>(value);
-                int32_t* data      = reinterpret_cast<int32_t*>(m_data.get());
+                int32_t* data      = reinterpret_cast<int32_t*>(m_data);
                 for (size_t i = 0; i < m_dataSizeBytes / sizeof(int32_t); ++i) {
                     data[i] = fillValue;
                 }
@@ -669,7 +762,7 @@ namespace dlp { namespace testing { namespace framework {
                 // For BF16, fill with random uint16_t values
                 float     fillValue          = std::any_cast<float>(value);
                 bfloat16  fillValue_bfloat16 = f32_to_bf16(fillValue);
-                bfloat16* data = reinterpret_cast<bfloat16*>(m_data.get());
+                bfloat16* data         = reinterpret_cast<bfloat16*>(m_data);
                 size_t    elementCount = m_dataSizeBytes / sizeof(bfloat16);
                 for (size_t i = 0; i < elementCount; ++i) {
                     data[i] = fillValue_bfloat16;

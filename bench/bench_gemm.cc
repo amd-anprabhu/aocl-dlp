@@ -43,6 +43,8 @@
 #include <string>
 #include <vector>
 
+#include "aocl_dlp.h"
+
 using namespace dlp::testing::utils;
 using namespace dlp::testing::framework;
 using namespace dlp::testing::classic;
@@ -643,17 +645,21 @@ BM_gemm(benchmark::State& state, GemmTestConfig config_)
     md_t b_rows = config_.transB ? config_.n : config_.k;
     md_t b_cols = config_.transB ? config_.k : config_.n;
 
+    // Use page alignment (4096 bytes) to match legacy benchmark performance
+    const size_t PAGE_ALIGNMENT = 4096;
+
     Matrix A(a_rows, a_cols, config_.a_type, layout, config_.lda,
-             config_.transA);
+             config_.transA, false, PAGE_ALIGNMENT);
     Matrix B(b_rows, b_cols, config_.b_type, layout, config_.ldb,
-             config_.transB);
-    Matrix C(config_.m, config_.n, config_.c_type, layout, config_.ldc, false);
+             config_.transB, false, PAGE_ALIGNMENT);
+    Matrix C(config_.m, config_.n, config_.c_type, layout, config_.ldc, false,
+             false, PAGE_ALIGNMENT);
     Matrix A_ref(a_rows, a_cols, config_.a_type, layout, config_.lda,
-                 config_.transA);
+                 config_.transA, false, PAGE_ALIGNMENT);
     Matrix B_ref(b_rows, b_cols, config_.b_type, layout, config_.ldb,
-                 config_.transB);
+                 config_.transB, false, PAGE_ALIGNMENT);
     Matrix C_ref(config_.m, config_.n, config_.acc_type, layout, config_.ldc,
-                 false);
+                 false, false, PAGE_ALIGNMENT);
 
 // Initialize matrices with deterministic random values
 #if 0
@@ -718,21 +724,44 @@ BM_gemm(benchmark::State& state, GemmTestConfig config_)
     auto n = config_.n;
     auto k = config_.k;
 
+#ifdef BENCH_DEBUG
+    std::cout << "Address of A:" << a_ptr << " Address of B:" << b_ptr
+              << " Address of C:" << c_ptr << std::endl;
+#endif
+
     /* Actual benchmark loop */
     for (auto _ : state) {
         // Reset C matrix to ensure consistent starting conditions
 
         // Perform the GEMM operation using raw pointer API for maximum
         // performance
+
+#if 0
         bool result =
             ual->gemm(m, n, k, a_ptr, a_type, layout, transA, lda, b_ptr,
                       b_type, layout, transB, ldb, c_ptr, c_type, layout, false,
                       ldc, acc_type, alpha, beta);
+#else
+        char _transA  = transA ? 't' : 'n';
+        char _transB  = transB ? 't' : 'n';
+        char _layoutA = layout == MatrixLayout::ROW_MAJOR ? 'r' : 'c';
 
-        if (!result) {
-            state.SkipWithError("GEMM operation failed");
-            return;
-        }
+        // For benchmarking, assume normal memory format (no packing/reordering)
+        char memFormatA = 'n';
+        char memFormatB = 'n';
+
+        aocl_gemm_f32f32f32of32(_layoutA, _transA, _transB, m, n, k, alpha,
+                                reinterpret_cast<float*>(a_ptr), lda,
+                                memFormatA, reinterpret_cast<float*>(b_ptr),
+                                ldb, memFormatB, beta,
+                                reinterpret_cast<float*>(c_ptr), ldc, nullptr);
+
+#endif
+
+        // if (!result) {
+        //     state.SkipWithError("GEMM operation failed");
+        //     return;
+        // }
 
         // Prevent compiler optimization from eliminating the computation
         benchmark::DoNotOptimize(c_ptr);
