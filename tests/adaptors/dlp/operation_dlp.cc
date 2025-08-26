@@ -44,9 +44,10 @@ DlpOperation::DlpOperation()
 DlpOperation::~DlpOperation()
 {
     if (m_postops) {
-        // Clean up manually allocated memory for zero points in SUM operations
+        // Clean up manually allocated memory for zero points in Scale
+        // operations
         if (m_postops->scale) {
-            for (size_t i = 0; i < m_sum_ops.size(); ++i) {
+            for (size_t i = 0; i < m_scale_ops.size(); ++i) {
                 // Check if this is a dynamically allocated zero point
                 // (for SCALE operations where we allocated it ourselves)
                 if (m_postops->scale[i].zp
@@ -54,7 +55,8 @@ DlpOperation::~DlpOperation()
                     && m_postops->scale[i].zp->zero_point_type == DLP_S8) {
                     // Check if this was allocated by us (no zero point provided
                     // originally)
-                    if (i < m_sum_ops.size() && !m_sum_ops[i]->hasZeroPoint()) {
+                    if (i < m_scale_ops.size()
+                        && !m_scale_ops[i]->hasZeroPoint()) {
                         // This was our dynamically allocated zero point
                         delete static_cast<int8_t*>(
                             m_postops->scale[i].zp->zero_point);
@@ -117,11 +119,11 @@ DlpOperation::addOperation(
             break;
         }
         case dlp::testing::framework::OperationType::Scale: {
-            auto sum_param =
+            auto scale_param =
                 std::unique_ptr<dlp::testing::framework::ScaleParam>(
                     static_cast<dlp::testing::framework::ScaleParam*>(
                         param.release()));
-            m_sum_ops.push_back(std::move(sum_param));
+            m_scale_ops.push_back(std::move(scale_param));
             break;
         }
         case dlp::testing::framework::OperationType::Bias: {
@@ -172,8 +174,8 @@ DlpOperation::finalize()
         convertElementWiseOperations();
     }
 
-    if (!m_sum_ops.empty()) {
-        convertSumOperations();
+    if (!m_scale_ops.empty()) {
+        convertScaleOperations();
     }
 
     if (!m_bias_ops.empty()) {
@@ -226,9 +228,9 @@ DlpOperation::convertElementWiseOperations()
 }
 
 void
-DlpOperation::convertSumOperations()
+DlpOperation::convertScaleOperations()
 {
-    size_t count = m_sum_ops.size();
+    size_t count = m_scale_ops.size();
     if (count == 0)
         return;
 
@@ -238,7 +240,7 @@ DlpOperation::convertSumOperations()
 
     // Fill the array
     for (size_t i = 0; i < count; ++i) {
-        const auto& param = *m_sum_ops[i];
+        const auto& param = *m_scale_ops[i];
 
         // Initialize all fields to safe defaults
         m_postops->scale[i].sf = nullptr;
@@ -384,7 +386,7 @@ DlpOperation::buildSequenceVector()
     sequence.reserve(m_operation_params.size());
 
     // Track array indices for each operation type
-    size_t eltwise_idx = 0, sum_idx = 0, bias_idx = 0, matrix_add_idx = 0,
+    size_t eltwise_idx = 0, scale_idx = 0, bias_idx = 0, matrix_add_idx = 0,
            matrix_mul_idx = 0;
 
     for (const auto& param : m_operation_params) {
@@ -395,7 +397,7 @@ DlpOperation::buildSequenceVector()
                 break;
             case dlp::testing::framework::OperationType::Scale: {
                 sequence.push_back(SCALE);
-                sum_idx++;
+                scale_idx++;
                 break;
             }
             case dlp::testing::framework::OperationType::Bias:
@@ -480,8 +482,6 @@ DLP_POST_OP_TYPE
 DlpOperation::getPostOpType(dlp::testing::framework::OperationType type)
 {
     switch (type) {
-        case dlp::testing::framework::OperationType::Sum:
-            return SUM;
         case dlp::testing::framework::OperationType::ElementWise:
             return ELTWISE;
         case dlp::testing::framework::OperationType::Bias:

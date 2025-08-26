@@ -1321,12 +1321,12 @@ TEST(GEMMTest, IsolateSegFault)
             std::cout << "Calling GEMM with SCALE..." << std::endl;
             bool result = ual_dlp->gemm(A, B, C, MatrixType::f32, operation);
 
-            std::cout << "SUM test result: " << (result ? "SUCCESS" : "FAILED")
-                      << std::endl;
+            std::cout << "Scale test result: "
+                      << (result ? "SUCCESS" : "FAILED") << std::endl;
             EXPECT_TRUE(result);
         } catch (const std::exception& e) {
-            std::cout << "Exception in SUM test: " << e.what() << std::endl;
-            FAIL() << "Exception in SUM test: " << e.what();
+            std::cout << "Exception in Scale test: " << e.what() << std::endl;
+            FAIL() << "Exception in Scale test: " << e.what();
         }
     }
 }

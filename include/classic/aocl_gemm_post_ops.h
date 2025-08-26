@@ -74,12 +74,11 @@ typedef enum
  */
 typedef enum
 {
-    SUM        = 1, /**< Element-wise sum with another tensor */
-    ELTWISE    = 2, /**< Element-wise operations (activations) */
-    BIAS       = 3, /**< Bias addition operation */
-    SCALE      = 4, /**< Scaling operation */
-    MATRIX_ADD = 5, /**< Matrix addition operation */
-    MATRIX_MUL = 6, /**< Matrix multiplication operation */
+    ELTWISE    = 1, /**< Element-wise operations (activations) */
+    BIAS       = 2, /**< Bias addition operation */
+    SCALE      = 3, /**< Scaling operation */
+    MATRIX_ADD = 4, /**< Matrix addition operation */
+    MATRIX_MUL = 5, /**< Matrix multiplication operation */
 } DLP_POST_OP_TYPE;
 
 /**

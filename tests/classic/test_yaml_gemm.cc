@@ -606,13 +606,13 @@ TEST(YamlParserTest, ParseListOnlyConfig)
         // PostOps (3 operations with cartesian=true):
         // With corrected logic: cartesian=true generates all permutations of
         // the full sequence For 3 operations ["Elementwise-PRELU", "Bias",
-        // "Sum"]:
-        // 1. [PRELU, Bias, Sum]
-        // 2. [PRELU, Sum, Bias]
-        // 3. [Bias, PRELU, Sum]
-        // 4. [Bias, Sum, PRELU]
-        // 5. [Sum, PRELU, Bias]
-        // 6. [Sum, Bias, PRELU]
+        // "Scale"]:
+        // 1. [PRELU, Bias, Scale]
+        // 2. [PRELU, Scale, Bias]
+        // 3. [Bias, PRELU, Scale]
+        // 4. [Bias, Scale, PRELU]
+        // 5. [Scale, PRELU, Bias]
+        // 6. [Scale, Bias, PRELU]
         // PostOps total: 3! = 6 permutations
         //
         // Total combinations: 54 base × 6 PostOps = 324

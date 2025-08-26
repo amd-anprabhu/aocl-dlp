@@ -46,11 +46,10 @@ class IOperation;
 enum class OperationType : uint8_t
 {
     ElementWise = 0,
-    Sum         = 1,
-    Bias        = 2,
-    MatAdd      = 3,
-    MatMul      = 4,
-    Scale       = 5,
+    Bias        = 1,
+    MatAdd      = 2,
+    MatMul      = 3,
+    Scale       = 4,
 };
 
 /**
@@ -563,8 +562,6 @@ class ScaleBuilder
     }
 };
 
-// SumBuilder removed
-
 /**
  * @class BiasBuilder
  * @brief Type-safe builder for Bias operations
@@ -701,12 +698,11 @@ namespace postops {
         return SigmoidBuilder{};
     }
 
-    // Sum/Scale operation factories
+    // Scale operation factories
     inline ScaleBuilder createScale()
     {
         return ScaleBuilder{};
     }
-    // createSum() removed
 
     // Other operation factories
     inline BiasBuilder createBias()

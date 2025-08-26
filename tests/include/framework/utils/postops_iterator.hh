@@ -57,8 +57,8 @@ class PostOpsIterator
      */
     struct PostOpConfig
     {
-        std::string
-            type; ///< Operation type (e.g., "Elementwise-PRELU", "Bias", "Sum")
+        std::string type; ///< Operation type (e.g., "Elementwise-PRELU",
+                          ///< "Bias", "Scale")
         std::map<std::string, std::vector<std::any>>
             params; ///< Parameters with their possible values
     };

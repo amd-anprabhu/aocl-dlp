@@ -1170,21 +1170,20 @@ TEST_F(PostOpsTest, ParameterCloning)
 }
 
 // Test your vision: exactly as described in the task
-TEST_F(PostOpsTest, YourVisionRealized)
+TEST_F(PostOpsTest, BasicPostOpFlowTest)
 {
-    // Exactly as you envisioned!
     auto ew = postops::createPrelu()
                   .setAlpha(Matrix::fromValue(0.2f, MatrixType::f32))
                   .build();
 
-    auto sum = postops::createScale()
-                   .setScaleFactor(Matrix::fromVector(
-                       std::vector<float>{ 1.0f, 2.0f }, MatrixType::f32))
-                   .build();
+    auto scale = postops::createScale()
+                     .setScaleFactor(Matrix::fromVector(
+                         std::vector<float>{ 1.0f, 2.0f }, MatrixType::f32))
+                     .build();
 
     OperationParams params;
     params.add(std::move(ew));
-    params.add(std::move(sum));
+    params.add(std::move(scale));
 
     // Backend integration
     auto operation = OperationFactory::createOperation(UALType::DLP);
@@ -1205,6 +1204,6 @@ TEST_F(PostOpsTest, YourVisionRealized)
     // Verify second operation (Scale)
     const auto& second_param = *operation->getParams()[1];
     EXPECT_EQ(second_param.getType(), OperationType::Scale);
-    const auto& sum_param = static_cast<const ScaleParam&>(second_param);
-    EXPECT_TRUE(sum_param.hasScaleFactor());
+    const auto& scale_param = static_cast<const ScaleParam&>(second_param);
+    EXPECT_TRUE(scale_param.hasScaleFactor());
 }

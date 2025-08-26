@@ -59,7 +59,6 @@ AOCL-DLP supports the following post-operations:
 
 | Post-Op Type | Description |
 |--------------|-------------|
-| SUM          | Element-wise addition with optional scaling and zero point |
 | ELTWISE      | Element-wise operations including activation functions |
 | BIAS         | Bias addition to result |
 | SCALE        | Scaling operation |

@@ -65,7 +65,8 @@ class DlpOperation : public dlp::testing::framework::IOperation
     // Collections for different operation types (filled during addOperation)
     std::vector<std::unique_ptr<dlp::testing::framework::ElementWiseParam>>
         m_elementwise_ops;
-    std::vector<std::unique_ptr<dlp::testing::framework::ScaleParam>> m_sum_ops;
+    std::vector<std::unique_ptr<dlp::testing::framework::ScaleParam>>
+        m_scale_ops;
     std::vector<std::unique_ptr<dlp::testing::framework::BiasParam>> m_bias_ops;
     std::vector<std::unique_ptr<dlp::testing::framework::MatrixAddParam>>
         m_matrix_add_ops;
@@ -80,7 +81,7 @@ class DlpOperation : public dlp::testing::framework::IOperation
 
     // Helper methods for batch conversion (called once in finalize)
     void convertElementWiseOperations();
-    void convertSumOperations();
+    void convertScaleOperations();
     void convertBiasOperations();
     void convertMatrixAddOperations();
     void convertMatrixMulOperations();

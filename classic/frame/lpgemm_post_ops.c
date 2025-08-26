@@ -337,23 +337,6 @@ lpgemm_translate_to_post_ops_list(dlp_metadata_t* metadata,
     for (md_t i = 0; i < metadata->seq_length; ++i) {
         // Dispatcher code
         switch (*(metadata->seq_vector + i)) {
-            case SUM: {
-                lpgemm_set_node_params(
-                    (post_op_list + i), POST_OPS_SUM, NULL,
-                    (metadata->scale + s_i)->zp
-                        ? (metadata->scale + s_i)->zp->zero_point
-                        : NULL,
-                    NULL,
-                    (metadata->scale + s_i)->sf
-                        ? (metadata->scale + s_i)->sf->scale_factor
-                        : NULL,
-                    (metadata->scale + s_i)->sf
-                        ? (metadata->scale + s_i)->sf->scale_factor_len
-                        : 0,
-                    DLP_INVALID, DLP_INVALID, DLP_INVALID);
-
-                s_i += 1;
-            } break;
             case ELTWISE: {
                 LPGEMM_POST_OP_CODE tmp_code = POST_OPS_DISABLE;
                 // Eltwise algo dispatcher.

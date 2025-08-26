@@ -173,7 +173,7 @@ TEST_F(PostOpsYamlTest, PostOpsCombinationCountTest)
         const MicroTest& microTest = parser.getMicroTest();
 
         // First test case has PostOps with cartesian enabled
-        // Operations: PRELU (2 alpha_types) + Bias (2 bias_dims) + Sum (2
+        // Operations: PRELU (2 alpha_types) + Bias (2 bias_dims) + Scale (2
         // scale_lens) Cartesian should generate many combinations:
         // - Empty combination: 1
         // - Single operations: 3

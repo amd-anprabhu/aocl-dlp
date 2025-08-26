@@ -1083,7 +1083,7 @@ UalRef::applyPostOperation(Matrix& matrix,
 }
 
 /**
- * @brief Apply sum/scale post-operation to a matrix
+ * @brief Apply scale post-operation to a matrix
  */
 template<>
 void
@@ -1393,63 +1393,6 @@ UalRef::applySigmoid(Matrix& matrix)
             data[i] = 1.0f / (1.0f + std::exp(-data[i]));
         }
     });
-}
-
-void
-UalRef::applySum(Matrix& matrix, const Matrix* zeroPoint)
-{
-    // Handle BF16 as unsupported
-    if (matrix.getMatrixType() == MatrixType::bf16) {
-        return;
-    }
-
-    // For sum operations, we would typically add another matrix
-    // Since no second matrix is provided, this is essentially a no-op
-    // But we implement it to maintain consistency with the multi-datatype
-    // pattern
-
-    // If zeroPoint is provided, we could subtract it from each element
-    if (zeroPoint && zeroPoint->getMatrixType() == MatrixType::f32) {
-        const float* zero_data =
-            reinterpret_cast<const float*>(zeroPoint->getData());
-        float zero_val = *zero_data; // Assume single value for now
-
-        // If already f32, apply directly
-        if (matrix.getMatrixType() == MatrixType::f32) {
-            float* data = reinterpret_cast<float*>(matrix.getData());
-            size_t size = matrix.getDataSizeBytes() / sizeof(float);
-
-            for (size_t i = 0; i < size; ++i) {
-                data[i] -= zero_val; // Subtract zero point
-            }
-            return;
-        }
-
-        // For other types, convert to float, apply operation, convert back
-        md_t rows = matrix.getRows();
-        md_t cols = matrix.getCols();
-        md_t ld   = cols; // Use simple row-major layout for temp matrix
-
-        // Create temporary float matrix
-        std::unique_ptr<float[]> temp_data(new float[rows * ld]);
-
-        // Convert to float
-        if (!copyMatrixToFloat(matrix, temp_data.get(), ld)) {
-            return;
-        }
-
-        // Apply zero point subtraction in float
-        size_t size = rows * cols;
-        for (size_t i = 0; i < size; ++i) {
-            temp_data[i] -= zero_val;
-        }
-
-        // Convert back to original type
-        copyFloatToMatrix(temp_data.get(), ld, matrix);
-    }
-
-    // If no zeroPoint provided, this is a no-op but we've maintained
-    // consistency
 }
 
 void
