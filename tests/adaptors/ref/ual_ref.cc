@@ -374,7 +374,15 @@ UalRef::reorder(const Matrix& in,
     // If the input matrix is transposed, we need to swap dimensions to get the
     // logical layout
     md_t output_rows, output_cols, min_leading_dim;
-
+    if (layout == MatrixLayout::ROW_MAJOR) {
+        if (in.getLeadingDimension() < in.getCols()) {
+            return false;
+        }
+    } else if (layout == MatrixLayout::COLUMN_MAJOR) {
+        if (in.getLeadingDimension() < in.getRows()) {
+            return false;
+        }
+    }
     if (transposed) {
         // Swap dimensions to match logical layout (like DLP does)
         output_rows = input_cols;

@@ -132,7 +132,7 @@ gemm_tests:
     acc_type: ["f32"]
     storage_format: ["row-major"]
     transA: [false, true]
-    transB: [true]
+    transB: [false, true]
     # Non optional
     m:
       lb: 10
@@ -221,8 +221,8 @@ gemm_tests:
     c_type: ["s32"]
     acc_type: ["s32"]
     storage_format: ["row-major"]
-    transA: [false, false]
-    transB: [false]
+    transA: [false, true]
+    transB: [false, true]
     # Non optional
     m:
       lb: 1
@@ -246,19 +246,12 @@ gemm_tests:
       step: 1
     ldc: 20
     mtagA: ["none"]
-    mtagB: ["none"]   # Matrix B reordering can improve performance
+    mtagB: ["none", "reorder"]   # Matrix B reordering can improve performance
     tolerances:
       float: 1.0e-5
       bfloat16: 1.0e-2
       int8: 0
-    post_operations:
-      cartesian: true
-      operations:
-        - type: "Elementwise-PRELU"
-          params:
-            alpha_type: ["f32"]
-            alpha: 2.0
-    # product_type: "simple"
+
   # 6
   - name: "small_matrix_int_postops"
     a_type: ["u8"]
@@ -301,7 +294,8 @@ gemm_tests:
       operations:
         - type: "Elementwise-PRELU"
           params:
-            alpha_type: ["s32"]
+            alpha_type: ["f32"]
+            alpha: 2.0
         # - type: "Bias"
         #   params:
         #     bias_type: ["s32"]

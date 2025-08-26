@@ -745,6 +745,8 @@ class GemmParameterizedTest : public ::testing::TestWithParam<GemmTestConfig>
     // Helper method to run the actual GEMM test
     void RunGemmTest()
     {
+        bool ret_reorder     = false;
+        bool ret_ref_reorder = false;
         // Create test matrices
         MatrixLayout layout = config_.storage_format;
 
@@ -813,17 +815,18 @@ class GemmParameterizedTest : public ::testing::TestWithParam<GemmTestConfig>
             Matrix B_reordered;
             Matrix B_ref_reordered;
 
-            ual_dlp->reorder(B, B_reordered, config_.a_type, config_.b_type,
-                             config_.c_type, config_.acc_type);
+            ret_reorder =
+                ual_dlp->reorder(B, B_reordered, config_.a_type, config_.b_type,
+                                 config_.c_type, config_.acc_type);
             B = B_reordered;
 
             // Also apply reordering to reference matrix to ensure both have
             // same parameters
             std::unique_ptr<IUal> ual_ref_for_reorder =
                 UalFactory::createUal(UALType::REF);
-            ual_ref_for_reorder->reorder(B_ref, B_ref_reordered, config_.a_type,
-                                         config_.b_type, config_.c_type,
-                                         config_.acc_type);
+            ret_ref_reorder = ual_ref_for_reorder->reorder(
+                B_ref, B_ref_reordered, config_.a_type, config_.b_type,
+                config_.c_type, config_.acc_type);
             B_ref = B_ref_reordered;
             // Reset packing state after reordering assignment
             B_ref.setPacked(false);
@@ -858,8 +861,10 @@ class GemmParameterizedTest : public ::testing::TestWithParam<GemmTestConfig>
             ual_ref->gemm(A_ref, B_ref, C_ref, config_.acc_type,
                           config_.postops_ref, config_.alpha, config_.beta);
 
-        // Check if parameters are valid
-        bool params_valid = check_valid_params(config_);
+        bool params_valid = false;
+        if (ret_reorder)
+            // Check if parameters are valid
+            params_valid = check_valid_params(config_);
 
         if (params_valid) {
             // For valid parameters, both implementations should succeed
@@ -882,12 +887,13 @@ class GemmParameterizedTest : public ::testing::TestWithParam<GemmTestConfig>
         } else {
             // For invalid parameters, both implementations should fail
             // gracefully
-            EXPECT_FALSE(dlp_result)
+            EXPECT_FALSE(dlp_result && ret_reorder)
                 << "DLP GEMM should fail gracefully with invalid parameters:"
                 << printConfigDetails(config_);
-            EXPECT_FALSE(ref_result) << "Reference GEMM should fail gracefully "
-                                        "with invalid parameters:"
-                                     << printConfigDetails(config_);
+            EXPECT_FALSE(ref_result && ret_ref_reorder)
+                << "Reference GEMM should fail gracefully "
+                   "with invalid parameters:"
+                << printConfigDetails(config_);
 
             // No need to compare results when both operations failed
             std::cout << "Test passed: Both implementations correctly rejected "

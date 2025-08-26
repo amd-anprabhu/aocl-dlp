@@ -122,7 +122,7 @@ UalDlp::reorder(const Matrix& in,
 
     // Determine appropriate reorder function based on input type and GEMM
     // context The A, B, C types provide context for optimal reordering strategy
-    md_t alloc_bytes = 0;
+    msz_t alloc_bytes = 0;
 
     // Select reorder function based on input matrix type and GEMM context
     if (in.getMatrixType() == MatrixType::f32) {
@@ -158,13 +158,13 @@ UalDlp::reorder(const Matrix& in,
     } else if (in.getMatrixType() == MatrixType::s8) {
         // For s8, consider the accumulation type and output type
         if (accType == MatrixType::s32) {
-            alloc_bytes = aocl_get_reorder_buf_size_u8s8s32os32(
+            alloc_bytes = aocl_get_reorder_buf_size_s8s8s32os32(
                 in.getLayout() == MatrixLayout::ROW_MAJOR ? 'r' : 'c',
                 in.isTransposed() ? 't' : 'n', 'B', effective_rows,
                 effective_cols, &meta);
         } else {
             // Handle other accumulation types - for now, fall back to standard
-            alloc_bytes = aocl_get_reorder_buf_size_u8s8s32os32(
+            alloc_bytes = aocl_get_reorder_buf_size_s8s8s32os32(
                 in.getLayout() == MatrixLayout::ROW_MAJOR ? 'r' : 'c',
                 in.isTransposed() ? 't' : 'n', 'B', effective_rows,
                 effective_cols, &meta);
