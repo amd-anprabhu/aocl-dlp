@@ -213,11 +213,19 @@ aocl_gemm_f32f32f32of32(const char      order,
 
     // Only enable JIT kernels if AOCL_ENABLE_INSTRUCTIONS is not set.
     if (dlp_aocl_enable_instruction_query() == FALSE) {
-        lcntx_g->dlp_kernel_hndl = dlp_init_and_get_kernel_hndl(
-            DLP_KERNEL_F32F32F32OF32, order, mtag_a, mtag_b, m, n, k, rs_a,
-            cs_a, rs_b, cs_b, rs_c, cs_c, (void*)&alpha, (void*)&beta,
-            post_op_list, lcntx_g->blksz.MR, lcntx_g->blksz.NR,
-            lcntx_g->blksz.KC);
+        if (is_row_major == TRUE) {
+            lcntx_g->dlp_kernel_hndl = dlp_init_and_get_kernel_hndl(
+                DLP_KERNEL_F32F32F32OF32, order, mtag_a, mtag_b, m, n, k, rs_a,
+                cs_a, rs_b, cs_b, rs_c, cs_c, (void*)&alpha, (void*)&beta,
+                post_op_list, lcntx_g->blksz.MR, lcntx_g->blksz.NR,
+                lcntx_g->blksz.KC);
+        } else {
+            lcntx_g->dlp_kernel_hndl = dlp_init_and_get_kernel_hndl(
+                DLP_KERNEL_F32F32F32OF32, order, mtag_b, mtag_a, n, m, k, rs_b,
+                cs_b, rs_a, cs_a, rs_c, cs_c, (void*)&alpha, (void*)&beta,
+                post_op_list, lcntx_g->blksz.MR, lcntx_g->blksz.NR,
+                lcntx_g->blksz.KC);
+        }
     }
 
     if (is_single_thread(&rntm_g) == TRUE) {
