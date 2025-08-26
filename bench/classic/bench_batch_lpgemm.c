@@ -582,8 +582,7 @@ GEN_GET_BIAS_POST_OP_VAL_f32(bf16bf16f32obf16) GEN_GET_BIAS_POST_OP_VAL_f32(
                                             ? (post_op[gc_i]->scale)           \
                                                   ->zp->zero_point_type        \
                                             : DLP_INVALID);                    \
-                                } else if (post_op[mat_idx + gs_i]             \
-                                               ->seq_vector[op_id]             \
+                                } else if (post_op[gc_i]->seq_vector[op_id]    \
                                            == MATRIX_ADD) {                    \
                                     md_t rs_m =                                \
                                         (post_op[gc_i]->matrix_add)->ldm;      \

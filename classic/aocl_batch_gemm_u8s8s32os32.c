@@ -133,62 +133,63 @@ aocl_batch_gemm_u8s8s32os32(const char*      order,
         md_t     m_local[g_sz], n_local[g_sz], k_local[g_sz];
 
         bool is_column_major = ((order[gc_i] == 'c') || (order[gc_i] == 'C'));
-
+        // Column major isn't supported
+        if (is_column_major == TRUE) {
+            dlp_print_msg("Column major inputs not supported.", __FILE__,
+                          __LINE__);
+            DLP_METADATA_SET_ERROR(metadata[gc_i], DLP_CLSC_NOT_SUPPORTED);
+            goto err_hndl;
+        }
+        // Batch GEMM executes only for the Row major case.
         for (md_t gs_i = 0; gs_i < g_sz; gs_i++) {
-            if (is_column_major == TRUE) {
-                dlp_print_msg("Column major inputs not supported.", __FILE__,
-                              __LINE__);
+            rs_a[gs_i] = lda[gc_i];
+            cs_a[gs_i] = 1;
+
+            if (dlp_is_trans(dlp_transa)) {
+                rs_a[gs_i] = 1;
+                cs_a[gs_i] = lda[gc_i];
+            }
+
+            rs_b[gs_i] = ldb[gc_i];
+            cs_b[gs_i] = 1;
+
+            if (dlp_is_trans(dlp_transb)) {
+                rs_b[gs_i] = 1;
+                cs_b[gs_i] = ldb[gc_i];
+            }
+
+            dlp_param_map_char_to_lpmtag(mem_format_a[gc_i], &(mtag_a[gs_i]));
+            dlp_param_map_char_to_lpmtag(mem_format_b[gc_i], &(mtag_b[gs_i]));
+
+            // Reorder is not supported for A matrix
+            if (mtag_a[gs_i] == REORDERED) {
+                dlp_print_msg(" Reordering of A matrix is not supported in row "
+                              "major case.",
+                              __FILE__, __LINE__);
                 DLP_METADATA_SET_ERROR(metadata[gc_i], DLP_CLSC_NOT_SUPPORTED);
                 goto err_hndl;
-            } else // row-major
-            {
-                rs_a[gs_i] = lda[gc_i];
-                cs_a[gs_i] = 1;
-
-                if (dlp_is_trans(dlp_transa)) {
-                    rs_a[gs_i] = 1;
-                    cs_a[gs_i] = lda[gc_i];
-                }
-
-                rs_b[gs_i] = ldb[gc_i];
-                cs_b[gs_i] = 1;
-
-                if (dlp_is_trans(dlp_transb)) {
-                    rs_b[gs_i] = 1;
-                    cs_b[gs_i] = ldb[gc_i];
-                }
-
-                dlp_param_map_char_to_lpmtag(mem_format_a[gc_i],
-                                             &(mtag_a[gs_i]));
-                dlp_param_map_char_to_lpmtag(mem_format_b[gc_i],
-                                             &(mtag_b[gs_i]));
-
-                // Reorder is not supported for A matrix
-                if (mtag_a[gs_i] == REORDERED) {
-                    dlp_print_msg(
-                        " Reordering of A matrix is not supported in row "
-                        "major case.",
-                        __FILE__, __LINE__);
-                    DLP_METADATA_SET_ERROR(metadata[gc_i],
-                                           DLP_CLSC_NOT_SUPPORTED);
-                    goto err_hndl;
-                }
-                // From 5-loop function point of view,
-                // A matrix when in column major storage needs to be packed to
-                // row-major storage as kernel expects A matrix to be in
-                // row-major format.
-                if (dlp_is_trans(dlp_transa)) {
-                    mtag_a[gs_i] = PACK;
-                }
-
-                // copy the values of m & n
-                m_local[gs_i] = m[gc_i];
-                n_local[gs_i] = n[gc_i];
-
-                // copy the values of a & b pointers
-                a_local[gs_i] = (uint8_t*)(a[mat_idx + gs_i]);
-                b_local[gs_i] = (int8_t*)(b[mat_idx + gs_i]);
             }
+            // A matrix packing is not supported in row major case.
+            // If A matrix is packed and not transposed, set to Unpack
+            // and proceed with GEMM.
+            if ((mtag_a[gs_i] == PACK) && (!dlp_is_trans(dlp_transa))) {
+                mtag_a[gs_i] = UNPACKED;
+            }
+            // From 5-loop function point of view,
+            // A matrix when in column major storage needs to be packed to
+            // row-major storage as kernel expects A matrix to be in
+            // row-major format.
+            if (dlp_is_trans(dlp_transa)) {
+                mtag_a[gs_i] = PACK;
+            }
+
+            // copy the values of m & n
+            m_local[gs_i] = m[gc_i];
+            n_local[gs_i] = n[gc_i];
+
+            // copy the values of a & b pointers
+            a_local[gs_i] = (uint8_t*)(a[mat_idx + gs_i]);
+            b_local[gs_i] = (int8_t*)(b[mat_idx + gs_i]);
 
             k_local[gs_i] = k[gc_i];
 
@@ -329,61 +330,62 @@ aocl_batch_gemm_u8s8s32os8(const char*      order,
         dlp_param_map_netlib_to_dlp_trans(transb[gc_i], &dlp_transb);
 
         bool is_column_major = ((order[gc_i] == 'c') || (order[gc_i] == 'C'));
-
+        // Column major isn't supported
+        if (is_column_major == TRUE) {
+            dlp_print_msg("Column major inputs not supported.", __FILE__,
+                          __LINE__);
+            DLP_METADATA_SET_ERROR(metadata[gc_i], DLP_CLSC_NOT_SUPPORTED);
+            goto err_hndl;
+        }
+        // Batch GEMM executes only for the Row major case.
         for (md_t gs_i = 0; gs_i < g_sz; gs_i++) {
-            if (is_column_major == TRUE) {
-                dlp_print_msg("Column major inputs not supported.", __FILE__,
-                              __LINE__);
+            rs_a[gs_i] = lda[gc_i];
+            cs_a[gs_i] = 1;
+
+            if (dlp_is_trans(dlp_transa)) {
+                rs_a[gs_i] = 1;
+                cs_a[gs_i] = lda[gc_i];
+            }
+
+            rs_b[gs_i] = ldb[gc_i];
+            cs_b[gs_i] = 1;
+
+            if (dlp_is_trans(dlp_transb)) {
+                rs_b[gs_i] = 1;
+                cs_b[gs_i] = ldb[gc_i];
+            }
+
+            dlp_param_map_char_to_lpmtag(mem_format_a[gc_i], &(mtag_a[gs_i]));
+            dlp_param_map_char_to_lpmtag(mem_format_b[gc_i], &(mtag_b[gs_i]));
+
+            // Reorder is not supported for A matrix
+            if (mtag_a[gs_i] == REORDERED) {
+                dlp_print_msg(" Reordering of A matrix is not supported in row "
+                              "major case.",
+                              __FILE__, __LINE__);
                 DLP_METADATA_SET_ERROR(metadata[gc_i], DLP_CLSC_NOT_SUPPORTED);
                 goto err_hndl;
-            } else // row-major
-            {
-                rs_a[gs_i] = lda[gc_i];
-                cs_a[gs_i] = 1;
-
-                if (dlp_is_trans(dlp_transa)) {
-                    rs_a[gs_i] = 1;
-                    cs_a[gs_i] = lda[gc_i];
-                }
-
-                rs_b[gs_i] = ldb[gc_i];
-                cs_b[gs_i] = 1;
-
-                if (dlp_is_trans(dlp_transb)) {
-                    rs_b[gs_i] = 1;
-                    cs_b[gs_i] = ldb[gc_i];
-                }
-
-                dlp_param_map_char_to_lpmtag(mem_format_a[gc_i],
-                                             &(mtag_a[gs_i]));
-                dlp_param_map_char_to_lpmtag(mem_format_b[gc_i],
-                                             &(mtag_b[gs_i]));
-
-                // Reorder is not supported for A matrix
-                if (mtag_a[gs_i] == REORDERED) {
-                    dlp_print_msg(
-                        " Reordering of A matrix is not supported in row "
-                        "major case.",
-                        __FILE__, __LINE__);
-                    DLP_METADATA_SET_ERROR(metadata[gc_i],
-                                           DLP_CLSC_NOT_SUPPORTED);
-                    goto err_hndl;
-                }
-                // From 5-loop function point of view,
-                // A matrix when in column major storage needs to be packed to
-                // row-major storage as kernel expects A matrix to be in
-                // row-major format.
-                if (dlp_is_trans(dlp_transa)) {
-                    mtag_a[gs_i] = PACK;
-                }
-                // copy the values of m & n
-                m_local[gs_i] = m[gc_i];
-                n_local[gs_i] = n[gc_i];
-
-                // copy the values of a & b pointers
-                a_local[gs_i] = (uint8_t*)(a[mat_idx + gs_i]);
-                b_local[gs_i] = (int8_t*)(b[mat_idx + gs_i]);
             }
+            // A matrix packing is not supported in row major case.
+            // If A matrix is packed and not transposed, set to Unpack
+            // and proceed with GEMM.
+            if ((mtag_a[gs_i] == PACK) && (!dlp_is_trans(dlp_transa))) {
+                mtag_a[gs_i] = UNPACKED;
+            }
+            // From 5-loop function point of view,
+            // A matrix when in column major storage needs to be packed to
+            // row-major storage as kernel expects A matrix to be in
+            // row-major format.
+            if (dlp_is_trans(dlp_transa)) {
+                mtag_a[gs_i] = PACK;
+            }
+            // copy the values of m & n
+            m_local[gs_i] = m[gc_i];
+            n_local[gs_i] = n[gc_i];
+
+            // copy the values of a & b pointers
+            a_local[gs_i] = (uint8_t*)(a[mat_idx + gs_i]);
+            b_local[gs_i] = (int8_t*)(b[mat_idx + gs_i]);
 
             k_local[gs_i] = k[gc_i];
 
@@ -525,60 +527,62 @@ aocl_batch_gemm_u8s8s32of32(const char*      order,
         dlp_param_map_netlib_to_dlp_trans(transb[gc_i], &dlp_transb);
 
         bool is_column_major = ((order[gc_i] == 'c') || (order[gc_i] == 'C'));
+        // Column major isn't supported
+        if (is_column_major == TRUE) {
+            dlp_print_msg("Column major inputs not supported.", __FILE__,
+                          __LINE__);
+            DLP_METADATA_SET_ERROR(metadata[gc_i], DLP_CLSC_NOT_SUPPORTED);
+            goto err_hndl;
+        }
+        // Batch GEMM executes only for the Row major case.
         for (md_t gs_i = 0; gs_i < g_sz; gs_i++) {
-            if (is_column_major == TRUE) {
-                dlp_print_msg("Column major inputs not supported.", __FILE__,
-                              __LINE__);
+            rs_a[gs_i] = lda[gc_i];
+            cs_a[gs_i] = 1;
+
+            if (dlp_is_trans(dlp_transa)) {
+                rs_a[gs_i] = 1;
+                cs_a[gs_i] = lda[gc_i];
+            }
+
+            rs_b[gs_i] = ldb[gc_i];
+            cs_b[gs_i] = 1;
+
+            if (dlp_is_trans(dlp_transb)) {
+                rs_b[gs_i] = 1;
+                cs_b[gs_i] = ldb[gc_i];
+            }
+
+            dlp_param_map_char_to_lpmtag(mem_format_a[gc_i], &(mtag_a[gs_i]));
+            dlp_param_map_char_to_lpmtag(mem_format_b[gc_i], &(mtag_b[gs_i]));
+
+            // Reorder is not supported for A matrix
+            if (mtag_a[gs_i] == REORDERED) {
+                dlp_print_msg(" Reordering of A matrix is not supported in row "
+                              "major case.",
+                              __FILE__, __LINE__);
                 DLP_METADATA_SET_ERROR(metadata[gc_i], DLP_CLSC_NOT_SUPPORTED);
                 goto err_hndl;
-            } else // row-major
-            {
-                rs_a[gs_i] = lda[gc_i];
-                cs_a[gs_i] = 1;
-
-                if (dlp_is_trans(dlp_transa)) {
-                    rs_a[gs_i] = 1;
-                    cs_a[gs_i] = lda[gc_i];
-                }
-
-                rs_b[gs_i] = ldb[gc_i];
-                cs_b[gs_i] = 1;
-
-                if (dlp_is_trans(dlp_transb)) {
-                    rs_b[gs_i] = 1;
-                    cs_b[gs_i] = ldb[gc_i];
-                }
-
-                dlp_param_map_char_to_lpmtag(mem_format_a[gc_i],
-                                             &(mtag_a[gs_i]));
-                dlp_param_map_char_to_lpmtag(mem_format_b[gc_i],
-                                             &(mtag_b[gs_i]));
-
-                // Reorder is not supported for A matrix
-                if (mtag_a[gs_i] == REORDERED) {
-                    dlp_print_msg(
-                        " Reordering of A matrix is not supported in row "
-                        "major case.",
-                        __FILE__, __LINE__);
-                    DLP_METADATA_SET_ERROR(metadata[gc_i],
-                                           DLP_CLSC_NOT_SUPPORTED);
-                    goto err_hndl;
-                }
-                // From 5-loop function point of view,
-                // A matrix when in column major storage needs to be packed to
-                // row-major storage as kernel expects A matrix to be in
-                // row-major format.
-                if (dlp_is_trans(dlp_transa)) {
-                    mtag_a[gs_i] = PACK;
-                }
-                // copy the values of m & n
-                m_local[gs_i] = m[gc_i];
-                n_local[gs_i] = n[gc_i];
-
-                // copy the values of a & b pointers
-                a_local[gs_i] = (uint8_t*)(a[mat_idx + gs_i]);
-                b_local[gs_i] = (int8_t*)(b[mat_idx + gs_i]);
             }
+            // A matrix packing is not supported in row major case.
+            // If A matrix is packed and not transposed, set to Unpack
+            // and proceed with GEMM.
+            if ((mtag_a[gs_i] == PACK) && (!dlp_is_trans(dlp_transa))) {
+                mtag_a[gs_i] = UNPACKED;
+            }
+            // From 5-loop function point of view,
+            // A matrix when in column major storage needs to be packed to
+            // row-major storage as kernel expects A matrix to be in
+            // row-major format.
+            if (dlp_is_trans(dlp_transa)) {
+                mtag_a[gs_i] = PACK;
+            }
+            // copy the values of m & n
+            m_local[gs_i] = m[gc_i];
+            n_local[gs_i] = n[gc_i];
+
+            // copy the values of a & b pointers
+            a_local[gs_i] = (uint8_t*)(a[mat_idx + gs_i]);
+            b_local[gs_i] = (int8_t*)(b[mat_idx + gs_i]);
 
             k_local[gs_i] = k[gc_i];
 
@@ -719,60 +723,56 @@ aocl_batch_gemm_u8s8s32obf16(const char*      order,
         dlp_param_map_netlib_to_dlp_trans(transb[gc_i], &dlp_transb);
 
         bool is_column_major = ((order[gc_i] == 'c') || (order[gc_i] == 'C'));
+        // Column major isn't supported
+        if (is_column_major == TRUE) {
+            dlp_print_msg("Column major inputs not supported.", __FILE__,
+                          __LINE__);
+            DLP_METADATA_SET_ERROR(metadata[gc_i], DLP_CLSC_NOT_SUPPORTED);
+            goto err_hndl;
+        }
+        // Batch GEMM executes only for the Row major case.
         for (md_t gs_i = 0; gs_i < g_sz; gs_i++) {
-            if (is_column_major == TRUE) {
-                dlp_print_msg("Column major inputs not supported.", __FILE__,
-                              __LINE__);
+            rs_a[gs_i] = lda[gc_i];
+            cs_a[gs_i] = 1;
+
+            if (dlp_is_trans(dlp_transa)) {
+                rs_a[gs_i] = 1;
+                cs_a[gs_i] = lda[gc_i];
+            }
+
+            rs_b[gs_i] = ldb[gc_i];
+            cs_b[gs_i] = 1;
+
+            if (dlp_is_trans(dlp_transb)) {
+                rs_b[gs_i] = 1;
+                cs_b[gs_i] = ldb[gc_i];
+            }
+
+            dlp_param_map_char_to_lpmtag(mem_format_a[gc_i], &(mtag_a[gs_i]));
+            dlp_param_map_char_to_lpmtag(mem_format_b[gc_i], &(mtag_b[gs_i]));
+
+            // Reorder is not supported for A matrix
+            if (mtag_a[gs_i] == REORDERED) {
+                dlp_print_msg(" Reordering of A matrix is not supported in row "
+                              "major case.",
+                              __FILE__, __LINE__);
                 DLP_METADATA_SET_ERROR(metadata[gc_i], DLP_CLSC_NOT_SUPPORTED);
                 goto err_hndl;
-            } else // row-major
-            {
-                rs_a[gs_i] = lda[gc_i];
-                cs_a[gs_i] = 1;
-
-                if (dlp_is_trans(dlp_transa)) {
-                    rs_a[gs_i] = 1;
-                    cs_a[gs_i] = lda[gc_i];
-                }
-
-                rs_b[gs_i] = ldb[gc_i];
-                cs_b[gs_i] = 1;
-
-                if (dlp_is_trans(dlp_transb)) {
-                    rs_b[gs_i] = 1;
-                    cs_b[gs_i] = ldb[gc_i];
-                }
-
-                dlp_param_map_char_to_lpmtag(mem_format_a[gc_i],
-                                             &(mtag_a[gs_i]));
-                dlp_param_map_char_to_lpmtag(mem_format_b[gc_i],
-                                             &(mtag_b[gs_i]));
-
-                // Reorder is not supported for A matrix
-                if (mtag_a[gs_i] == REORDERED) {
-                    dlp_print_msg(
-                        " Reordering of A matrix is not supported in row "
-                        "major case.",
-                        __FILE__, __LINE__);
-                    DLP_METADATA_SET_ERROR(metadata[gc_i],
-                                           DLP_CLSC_NOT_SUPPORTED);
-                    goto err_hndl;
-                }
-                // From 5-loop function point of view,
-                // A matrix when in column major storage needs to be packed to
-                // row-major storage as kernel expects A matrix to be in
-                // row-major format.
-                if (dlp_is_trans(dlp_transa)) {
-                    mtag_a[gs_i] = PACK;
-                }
-                // copy the values of m & n
-                m_local[gs_i] = m[gc_i];
-                n_local[gs_i] = n[gc_i];
-
-                // copy the values of a & b pointers
-                a_local[gs_i] = (uint8_t*)(a[mat_idx + gs_i]);
-                b_local[gs_i] = (int8_t*)(b[mat_idx + gs_i]);
             }
+            // From 5-loop function point of view,
+            // A matrix when in column major storage needs to be packed to
+            // row-major storage as kernel expects A matrix to be in
+            // row-major format.
+            if (dlp_is_trans(dlp_transa)) {
+                mtag_a[gs_i] = PACK;
+            }
+            // copy the values of m & n
+            m_local[gs_i] = m[gc_i];
+            n_local[gs_i] = n[gc_i];
+
+            // copy the values of a & b pointers
+            a_local[gs_i] = (uint8_t*)(a[mat_idx + gs_i]);
+            b_local[gs_i] = (int8_t*)(b[mat_idx + gs_i]);
 
             k_local[gs_i] = k[gc_i];
 
@@ -913,60 +913,62 @@ aocl_batch_gemm_u8s8s32ou8(const char*      order,
         dlp_param_map_netlib_to_dlp_trans(transb[gc_i], &dlp_transb);
 
         bool is_column_major = ((order[gc_i] == 'c') || (order[gc_i] == 'C'));
+        // Column major isn't supported
+        if (is_column_major == TRUE) {
+            dlp_print_msg("Column major inputs not supported.", __FILE__,
+                          __LINE__);
+            DLP_METADATA_SET_ERROR(metadata[gc_i], DLP_CLSC_NOT_SUPPORTED);
+            goto err_hndl;
+        }
+        // Batch GEMM executes only for the Row major case.
         for (md_t gs_i = 0; gs_i < g_sz; gs_i++) {
-            if (is_column_major == TRUE) {
-                dlp_print_msg("Column major inputs not supported.", __FILE__,
-                              __LINE__);
+            rs_a[gs_i] = lda[gc_i];
+            cs_a[gs_i] = 1;
+
+            if (dlp_is_trans(dlp_transa)) {
+                rs_a[gs_i] = 1;
+                cs_a[gs_i] = lda[gc_i];
+            }
+
+            rs_b[gs_i] = ldb[gc_i];
+            cs_b[gs_i] = 1;
+
+            if (dlp_is_trans(dlp_transb)) {
+                rs_b[gs_i] = 1;
+                cs_b[gs_i] = ldb[gc_i];
+            }
+
+            dlp_param_map_char_to_lpmtag(mem_format_a[gc_i], &(mtag_a[gs_i]));
+            dlp_param_map_char_to_lpmtag(mem_format_b[gc_i], &(mtag_b[gs_i]));
+
+            // Reorder is not supported for A matrix
+            if (mtag_a[gs_i] == REORDERED) {
+                dlp_print_msg(" Reordering of A matrix is not supported in row "
+                              "major case.",
+                              __FILE__, __LINE__);
                 DLP_METADATA_SET_ERROR(metadata[gc_i], DLP_CLSC_NOT_SUPPORTED);
                 goto err_hndl;
-            } else // row-major
-            {
-                rs_a[gs_i] = lda[gc_i];
-                cs_a[gs_i] = 1;
-
-                if (dlp_is_trans(dlp_transa)) {
-                    rs_a[gs_i] = 1;
-                    cs_a[gs_i] = lda[gc_i];
-                }
-
-                rs_b[gs_i] = ldb[gc_i];
-                cs_b[gs_i] = 1;
-
-                if (dlp_is_trans(dlp_transb)) {
-                    rs_b[gs_i] = 1;
-                    cs_b[gs_i] = ldb[gc_i];
-                }
-
-                dlp_param_map_char_to_lpmtag(mem_format_a[gc_i],
-                                             &(mtag_a[gs_i]));
-                dlp_param_map_char_to_lpmtag(mem_format_b[gc_i],
-                                             &(mtag_b[gs_i]));
-
-                // Reorder is not supported for A matrix
-                if (mtag_a[gs_i] == REORDERED) {
-                    dlp_print_msg(
-                        " Reordering of A matrix is not supported in row "
-                        "major case.",
-                        __FILE__, __LINE__);
-                    DLP_METADATA_SET_ERROR(metadata[gc_i],
-                                           DLP_CLSC_NOT_SUPPORTED);
-                    goto err_hndl;
-                }
-                // From 5-loop function point of view,
-                // A matrix when in column major storage needs to be packed to
-                // row-major storage as kernel expects A matrix to be in
-                // row-major format.
-                if (dlp_is_trans(dlp_transa)) {
-                    mtag_a[gs_i] = PACK;
-                }
-                // copy the values of m & n
-                m_local[gs_i] = m[gc_i];
-                n_local[gs_i] = n[gc_i];
-
-                // copy the values of a & b pointers
-                a_local[gs_i] = (uint8_t*)(a[mat_idx + gs_i]);
-                b_local[gs_i] = (int8_t*)(b[mat_idx + gs_i]);
             }
+            // A matrix packing is not supported in row major case.
+            // If A matrix is packed and not transposed, set to Unpack
+            // and proceed with GEMM.
+            if ((mtag_a[gs_i] == PACK) && (!dlp_is_trans(dlp_transa))) {
+                mtag_a[gs_i] = UNPACKED;
+            }
+            // From 5-loop function point of view,
+            // A matrix when in column major storage needs to be packed to
+            // row-major storage as kernel expects A matrix to be in
+            // row-major format.
+            if (dlp_is_trans(dlp_transa)) {
+                mtag_a[gs_i] = PACK;
+            }
+            // copy the values of m & n
+            m_local[gs_i] = m[gc_i];
+            n_local[gs_i] = n[gc_i];
+
+            // copy the values of a & b pointers
+            a_local[gs_i] = (uint8_t*)(a[mat_idx + gs_i]);
+            b_local[gs_i] = (int8_t*)(b[mat_idx + gs_i]);
 
             k_local[gs_i] = k[gc_i];
 

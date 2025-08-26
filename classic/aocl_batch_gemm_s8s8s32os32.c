@@ -134,19 +134,17 @@ aocl_batch_gemm_s8s8s32os32(const char*      order,
         dlp_param_map_netlib_to_dlp_trans(transb[gc_i], &dlp_transb);
 
         bool is_column_major = ((order[gc_i] == 'c') || (order[gc_i] == 'C'));
+        // Column major support disabled for int API's till micro-kernel
+        // post-ops are updated to account for column major.
+        if ((is_column_major == TRUE) && (metadata[gc_i] != NULL)) {
+            dlp_print_msg("Column major inputs not supported with Post-ops.",
+                          __FILE__, __LINE__);
+            DLP_METADATA_SET_ERROR(metadata[gc_i], DLP_CLSC_NOT_SUPPORTED);
+            goto err_hndl;
+        }
+
         for (md_t gs_i = 0; gs_i < g_sz; gs_i++) {
             if (is_column_major == TRUE) {
-                // Column major support disabled for int API's till micro-kernel
-                // post-ops are updated to account for column major.
-                if (metadata[gc_i] != NULL) {
-                    dlp_print_msg(
-                        "Column major inputs not supported with Post-ops.",
-                        __FILE__, __LINE__);
-                    DLP_METADATA_SET_ERROR(metadata[gc_i],
-                                           DLP_CLSC_NOT_SUPPORTED);
-                    goto err_hndl;
-                }
-
                 rs_a[gs_i] = ldb[gc_i];
                 cs_a[gs_i] = 1;
 
@@ -178,6 +176,14 @@ aocl_batch_gemm_s8s8s32os32(const char*      order,
                     DLP_METADATA_SET_ERROR(metadata[gc_i],
                                            DLP_CLSC_NOT_SUPPORTED);
                     goto err_hndl;
+                }
+                // A matrix packing is done in column major case, only when the
+                // matrix has to be transposed to row-major format. In col-maj
+                // case, inputs are swapped and B becomes A from kernel point of
+                // view. Hence, if B is packed, set B to unpacked and proceed
+                // with GEMM.
+                if ((mtag_b[gs_i] == PACK)) {
+                    mtag_b[gs_i] = UNPACKED;
                 }
                 // From 5-loop function point of view,
                 // A matrix when in column major storage needs to be packed to
@@ -227,6 +233,12 @@ aocl_batch_gemm_s8s8s32os32(const char*      order,
                     DLP_METADATA_SET_ERROR(metadata[gc_i],
                                            DLP_CLSC_NOT_SUPPORTED);
                     goto err_hndl;
+                }
+                // A matrix packing is not supported in row major case.
+                // If A matrix is packed and not transposed, set to Unpack
+                // and proceed with GEMM.
+                if ((mtag_a[gs_i] == PACK) && (!dlp_is_trans(dlp_transa))) {
+                    mtag_a[gs_i] = UNPACKED;
                 }
                 // From 5-loop function point of view,
                 // A matrix when in column major storage needs to be packed to
@@ -386,20 +398,17 @@ aocl_batch_gemm_s8s8s32os8(const char*      order,
         dlp_param_map_netlib_to_dlp_trans(transb[gc_i], &dlp_transb);
 
         bool is_column_major = ((order[gc_i] == 'c') || (order[gc_i] == 'C'));
+        // Column major support disabled for int API's till micro-kernel
+        // post-ops are updated to account for column major.
+        if ((is_column_major == TRUE) && (metadata[gc_i] != NULL)) {
+            dlp_print_msg("Column major inputs not supported with Post-ops.",
+                          __FILE__, __LINE__);
+            DLP_METADATA_SET_ERROR(metadata[gc_i], DLP_CLSC_NOT_SUPPORTED);
+            goto err_hndl;
+        }
 
         for (md_t gs_i = 0; gs_i < g_sz; gs_i++) {
             if (is_column_major == TRUE) {
-                // Column major support disabled for int API's till micro-kernel
-                // post-ops are updated to account for column major.
-                if (metadata[gc_i] != NULL) {
-                    dlp_print_msg(
-                        "Column major inputs not supported with Post-ops.",
-                        __FILE__, __LINE__);
-                    DLP_METADATA_SET_ERROR(metadata[gc_i],
-                                           DLP_CLSC_NOT_SUPPORTED);
-                    goto err_hndl;
-                }
-
                 rs_a[gs_i] = ldb[gc_i];
                 cs_a[gs_i] = 1;
 
@@ -431,6 +440,14 @@ aocl_batch_gemm_s8s8s32os8(const char*      order,
                     DLP_METADATA_SET_ERROR(metadata[gc_i],
                                            DLP_CLSC_NOT_SUPPORTED);
                     goto err_hndl;
+                }
+                // A matrix packing is done in column major case, only when the
+                // matrix has to be transposed to row-major format. In col-maj
+                // case, inputs are swapped and B becomes A from kernel point of
+                // view. Hence, if B is packed, set B to unpacked and proceed
+                // with GEMM.
+                if ((mtag_b[gs_i] == PACK)) {
+                    mtag_b[gs_i] = UNPACKED;
                 }
                 // From 5-loop function point of view,
                 // A matrix when in column major storage needs to be packed to
@@ -480,6 +497,12 @@ aocl_batch_gemm_s8s8s32os8(const char*      order,
                     DLP_METADATA_SET_ERROR(metadata[gc_i],
                                            DLP_CLSC_NOT_SUPPORTED);
                     goto err_hndl;
+                }
+                // A matrix packing is not supported in row major case.
+                // If A matrix is packed and not transposed, set to Unpack
+                // and proceed with GEMM.
+                if ((mtag_a[gs_i] == PACK) && (!dlp_is_trans(dlp_transa))) {
+                    mtag_a[gs_i] = UNPACKED;
                 }
                 // From 5-loop function point of view,
                 // A matrix when in column major storage needs to be packed to
@@ -637,19 +660,17 @@ aocl_batch_gemm_s8s8s32of32(const char*      order,
         dlp_param_map_netlib_to_dlp_trans(transb[gc_i], &dlp_transb);
 
         bool is_column_major = ((order[gc_i] == 'c') || (order[gc_i] == 'C'));
+        // Column major support disabled for int API's till micro-kernel
+        // post-ops are updated to account for column major.
+        if ((is_column_major == TRUE) && (metadata[gc_i] != NULL)) {
+            dlp_print_msg("Column major inputs not supported with Post-ops.",
+                          __FILE__, __LINE__);
+            DLP_METADATA_SET_ERROR(metadata[gc_i], DLP_CLSC_NOT_SUPPORTED);
+            goto err_hndl;
+        }
+
         for (md_t gs_i = 0; gs_i < g_sz; gs_i++) {
             if (is_column_major == TRUE) {
-                // Column major support disabled for int API's till micro-kernel
-                // post-ops are updated to account for column major.
-                if (metadata[gc_i] != NULL) {
-                    dlp_print_msg(
-                        "Column major inputs not supported with Post-ops.",
-                        __FILE__, __LINE__);
-                    DLP_METADATA_SET_ERROR(metadata[gc_i],
-                                           DLP_CLSC_NOT_SUPPORTED);
-                    goto err_hndl;
-                }
-
                 rs_a[gs_i] = ldb[gc_i];
                 cs_a[gs_i] = 1;
 
@@ -681,6 +702,14 @@ aocl_batch_gemm_s8s8s32of32(const char*      order,
                     DLP_METADATA_SET_ERROR(metadata[gc_i],
                                            DLP_CLSC_NOT_SUPPORTED);
                     goto err_hndl;
+                }
+                // A matrix packing is done in column major case, only when the
+                // matrix has to be transposed to row-major format. In col-maj
+                // case, inputs are swapped and B becomes A from kernel point of
+                // view. Hence, if B is packed, set B to unpacked and proceed
+                // with GEMM.
+                if ((mtag_b[gs_i] == PACK)) {
+                    mtag_b[gs_i] = UNPACKED;
                 }
                 // From 5-loop function point of view,
                 // A matrix when in column major storage needs to be packed to
@@ -729,6 +758,12 @@ aocl_batch_gemm_s8s8s32of32(const char*      order,
                     DLP_METADATA_SET_ERROR(metadata[gc_i],
                                            DLP_CLSC_NOT_SUPPORTED);
                     goto err_hndl;
+                }
+                // A matrix packing is not supported in row major case.
+                // If A matrix is packed and not transposed, set to Unpack
+                // and proceed with GEMM.
+                if ((mtag_a[gs_i] == PACK) && (!dlp_is_trans(dlp_transa))) {
+                    mtag_a[gs_i] = UNPACKED;
                 }
                 // From 5-loop function point of view,
                 // A matrix when in column major storage needs to be packed to
@@ -886,19 +921,17 @@ aocl_batch_gemm_s8s8s32obf16(const char*      order,
         dlp_param_map_netlib_to_dlp_trans(transb[gc_i], &dlp_transb);
 
         bool is_column_major = ((order[gc_i] == 'c') || (order[gc_i] == 'C'));
+        // Column major support disabled for int API's till micro-kernel
+        // post-ops are updated to account for column major.
+        if ((is_column_major == TRUE) && (metadata[gc_i] != NULL)) {
+            dlp_print_msg("Column major inputs not supported with Post-ops.",
+                          __FILE__, __LINE__);
+            DLP_METADATA_SET_ERROR(metadata[gc_i], DLP_CLSC_NOT_SUPPORTED);
+            goto err_hndl;
+        }
+
         for (md_t gs_i = 0; gs_i < g_sz; gs_i++) {
             if (is_column_major == TRUE) {
-                // Column major support disabled for int API's till micro-kernel
-                // post-ops are updated to account for column major.
-                if (metadata[gc_i] != NULL) {
-                    dlp_print_msg(
-                        "Column major inputs not supported with Post-ops.",
-                        __FILE__, __LINE__);
-                    DLP_METADATA_SET_ERROR(metadata[gc_i],
-                                           DLP_CLSC_NOT_SUPPORTED);
-                    goto err_hndl;
-                }
-
                 rs_a[gs_i] = ldb[gc_i];
                 cs_a[gs_i] = 1;
 
@@ -930,6 +963,14 @@ aocl_batch_gemm_s8s8s32obf16(const char*      order,
                     DLP_METADATA_SET_ERROR(metadata[gc_i],
                                            DLP_CLSC_NOT_SUPPORTED);
                     goto err_hndl;
+                }
+                // A matrix packing is done in column major case, only when the
+                // matrix has to be transposed to row-major format. In col-maj
+                // case, inputs are swapped and B becomes A from kernel point of
+                // view. Hence, if B is packed, set B to unpacked and proceed
+                // with GEMM.
+                if ((mtag_b[gs_i] == PACK)) {
+                    mtag_b[gs_i] = UNPACKED;
                 }
                 // From 5-loop function point of view,
                 // A matrix when in column major storage needs to be packed to
@@ -980,6 +1021,12 @@ aocl_batch_gemm_s8s8s32obf16(const char*      order,
                                            DLP_CLSC_NOT_SUPPORTED);
                     goto err_hndl;
                 }
+                // A matrix packing is not supported in row major case.
+                // If A matrix is packed and not transposed, set to Unpack
+                // and proceed with GEMM.
+                if ((mtag_a[gs_i] == PACK) && (!dlp_is_trans(dlp_transa))) {
+                    mtag_a[gs_i] = UNPACKED;
+                }
                 // From 5-loop function point of view,
                 // A matrix when in column major storage needs to be packed to
                 // row-major storage as kernel expects A matrix to be in
@@ -996,6 +1043,7 @@ aocl_batch_gemm_s8s8s32obf16(const char*      order,
                 a_local[gs_i] = (int8_t*)(a[mat_idx + gs_i]);
                 b_local[gs_i] = (int8_t*)(b[mat_idx + gs_i]);
             }
+
             k_local[gs_i] = k[gc_i];
 
             rs_c[gs_i] = ldc[gc_i];
@@ -1135,20 +1183,17 @@ aocl_batch_gemm_s8s8s32ou8(const char*      order,
         dlp_param_map_netlib_to_dlp_trans(transb[gc_i], &dlp_transb);
 
         bool is_column_major = ((order[gc_i] == 'c') || (order[gc_i] == 'C'));
+        // Column major support disabled for int API's till micro-kernel
+        // post-ops are updated to account for column major.
+        if ((is_column_major == TRUE) && (metadata[gc_i] != NULL)) {
+            dlp_print_msg("Column major inputs not supported with Post-ops.",
+                          __FILE__, __LINE__);
+            DLP_METADATA_SET_ERROR(metadata[gc_i], DLP_CLSC_NOT_SUPPORTED);
+            goto err_hndl;
+        }
 
         for (md_t gs_i = 0; gs_i < g_sz; gs_i++) {
             if (is_column_major == TRUE) {
-                // Column major support disabled for int API's till micro-kernel
-                // post-ops are updated to account for column major.
-                if (metadata[gc_i] != NULL) {
-                    dlp_print_msg(
-                        "Column major inputs not supported with Post-ops.",
-                        __FILE__, __LINE__);
-                    DLP_METADATA_SET_ERROR(metadata[gc_i],
-                                           DLP_CLSC_NOT_SUPPORTED);
-                    goto err_hndl;
-                }
-
                 rs_a[gs_i] = ldb[gc_i];
                 cs_a[gs_i] = 1;
 
@@ -1180,6 +1225,14 @@ aocl_batch_gemm_s8s8s32ou8(const char*      order,
                     DLP_METADATA_SET_ERROR(metadata[gc_i],
                                            DLP_CLSC_NOT_SUPPORTED);
                     goto err_hndl;
+                }
+                // A matrix packing is done in column major case, only when the
+                // matrix has to be transposed to row-major format. In col-maj
+                // case, inputs are swapped and B becomes A from kernel point of
+                // view. Hence, if B is packed, set B to unpacked and proceed
+                // with GEMM.
+                if ((mtag_b[gs_i] == PACK)) {
+                    mtag_b[gs_i] = UNPACKED;
                 }
                 // From 5-loop function point of view,
                 // A matrix when in column major storage needs to be packed to
@@ -1230,6 +1283,12 @@ aocl_batch_gemm_s8s8s32ou8(const char*      order,
                                            DLP_CLSC_NOT_SUPPORTED);
                     goto err_hndl;
                 }
+                // A matrix packing is not supported in row major case.
+                // If A matrix is packed and not transposed, set to Unpack
+                // and proceed with GEMM.
+                if ((mtag_a[gs_i] == PACK) && (!dlp_is_trans(dlp_transa))) {
+                    mtag_a[gs_i] = UNPACKED;
+                }
                 // From 5-loop function point of view,
                 // A matrix when in column major storage needs to be packed to
                 // row-major storage as kernel expects A matrix to be in
@@ -1246,6 +1305,8 @@ aocl_batch_gemm_s8s8s32ou8(const char*      order,
                 a_local[gs_i] = (int8_t*)(a[mat_idx + gs_i]);
                 b_local[gs_i] = (int8_t*)(b[mat_idx + gs_i]);
             }
+
+            k_local[gs_i] = k[gc_i];
 
             rs_c[gs_i] = ldc[gc_i];
             cs_c[gs_i] = 1;

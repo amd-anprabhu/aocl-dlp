@@ -1893,7 +1893,7 @@ mat_mul_accuracy_check_accum_bf16s4f32obf16(
                 (temp_dscale_ptr, n_scale);                                    \
                 (metadata->scale)->sf->scale_factor_len  = n_scale;            \
                 (metadata->scale)->sf->scale_factor_type = DLP_F32;            \
-                if (strcmp(#BLAS_SFX, "u8s8s32ou8"))                           \
+                if (!strcmp(#BLAS_SFX, "u8s8s32ou8"))                          \
                     for (md_t i = 0; i < n_scale; i++)                         \
                         temp_dscale_ptr[i] = abs(temp_dscale_ptr[i]);          \
             }                                                                  \
@@ -1971,7 +1971,7 @@ mat_mul_accuracy_check_accum_bf16s4f32obf16(
                 GEN_FUNC_NAME(fill_array_, C_DSCALE_type)                      \
                 (temp_dzero_point_ptr, n_zp);                                  \
                 (metadata->scale)->zp->zero_point_len = n_zp;                  \
-                if (strcmp(#BLAS_SFX, "u8s8s32ou8"))                           \
+                if (!strcmp(#BLAS_SFX, "u8s8s32ou8"))                          \
                     for (md_t i = 0; i < n_zp; i++)                            \
                         temp_dzero_point_ptr[i] =                              \
                             abs(temp_dzero_point_ptr[i]);                      \
