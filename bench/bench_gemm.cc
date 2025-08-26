@@ -654,15 +654,9 @@ BM_gemm(benchmark::State& state, GemmTestConfig config_)
              config_.transB, false, PAGE_ALIGNMENT);
     Matrix C(config_.m, config_.n, config_.c_type, layout, config_.ldc, false,
              false, PAGE_ALIGNMENT);
-    Matrix A_ref(a_rows, a_cols, config_.a_type, layout, config_.lda,
-                 config_.transA, false, PAGE_ALIGNMENT);
-    Matrix B_ref(b_rows, b_cols, config_.b_type, layout, config_.ldb,
-                 config_.transB, false, PAGE_ALIGNMENT);
-    Matrix C_ref(config_.m, config_.n, config_.acc_type, layout, config_.ldc,
-                 false, false, PAGE_ALIGNMENT);
 
 // Initialize matrices with deterministic random values
-#if 0
+#if 1
     A.fillRandom(42 + config_.m); // Use configuration to vary seed
     B.fillRandom(43 + config_.n);
     C.fillRandom(44 + config_.k);
@@ -848,9 +842,8 @@ main(int argc, char** argv)
     }
 
     // Print information about the benchmark
-    std::cout << "=== UAL GEMM FP32 Benchmark ===" << std::endl;
-    std::cout << "Benchmarking DLP UAL implementation for FP32 GEMM"
-              << std::endl;
+    std::cout << "=== UAL GEMM Benchmark ===" << std::endl;
+    std::cout << "Benchmarking DLP UAL implementation for GEMM" << std::endl;
     std::cout << "Format: C = A * B (no post-operations)" << std::endl;
     std::cout << "Metrics: GFLOPS, Memory Bandwidth (GB/s)" << std::endl;
     std::cout << "=======================================" << std::endl;

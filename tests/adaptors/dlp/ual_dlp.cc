@@ -598,6 +598,186 @@ UalDlp::gemm(md_t         m,
             return true;
         }
 
+        case encode_types<MatrixType::bf16, MatrixType::bf16, MatrixType::f32,
+                          MatrixType::f32>(): {
+            float alpha_f32 = static_cast<float>(alpha);
+            float beta_f32  = static_cast<float>(beta);
+
+            aocl_gemm_bf16bf16f32of32(
+                layoutA, transA, transB, m, n, k, alpha_f32,
+                reinterpret_cast<bfloat16*>(matA), matA_leadingDim, memFormatA,
+                reinterpret_cast<bfloat16*>(matB), matB_leadingDim, memFormatB,
+                beta_f32, reinterpret_cast<float*>(matC), matC_leadingDim,
+                nullptr);
+
+            return true;
+        }
+
+        case encode_types<MatrixType::bf16, MatrixType::bf16, MatrixType::bf16,
+                          MatrixType::f32>(): {
+            float alpha_f32 = static_cast<float>(alpha);
+            float beta_f32  = static_cast<float>(beta);
+
+            aocl_gemm_bf16bf16f32obf16(
+                layoutA, transA, transB, m, n, k, alpha_f32,
+                reinterpret_cast<bfloat16*>(matA), matA_leadingDim, memFormatA,
+                reinterpret_cast<bfloat16*>(matB), matB_leadingDim, memFormatB,
+                beta_f32, reinterpret_cast<bfloat16*>(matC), matC_leadingDim,
+                nullptr);
+
+            return true;
+        }
+
+        case encode_types<MatrixType::u8, MatrixType::s8, MatrixType::s32,
+                          MatrixType::s32>(): {
+            int32_t alpha_s32 = static_cast<int32_t>(alpha);
+            int32_t beta_s32  = static_cast<int32_t>(beta);
+
+            aocl_gemm_u8s8s32os32(
+                layoutA, transA, transB, m, n, k, alpha_s32,
+                reinterpret_cast<uint8_t*>(matA), matA_leadingDim, memFormatA,
+                reinterpret_cast<int8_t*>(matB), matB_leadingDim, memFormatB,
+                beta_s32, reinterpret_cast<int32_t*>(matC), matC_leadingDim,
+                nullptr);
+
+            return true;
+        }
+
+        case encode_types<MatrixType::u8, MatrixType::s8, MatrixType::s8,
+                          MatrixType::s32>(): {
+            int32_t alpha_s32 = static_cast<int32_t>(alpha);
+            int32_t beta_s32  = static_cast<int32_t>(beta);
+
+            aocl_gemm_u8s8s32os8(
+                layoutA, transA, transB, m, n, k, alpha_s32,
+                reinterpret_cast<uint8_t*>(matA), matA_leadingDim, memFormatA,
+                reinterpret_cast<int8_t*>(matB), matB_leadingDim, memFormatB,
+                beta_s32, reinterpret_cast<int8_t*>(matC), matC_leadingDim,
+                nullptr);
+
+            return true;
+        }
+
+        case encode_types<MatrixType::u8, MatrixType::s8, MatrixType::u8,
+                          MatrixType::s32>(): {
+            int32_t alpha_s32 = static_cast<int32_t>(alpha);
+            int32_t beta_s32  = static_cast<int32_t>(beta);
+
+            aocl_gemm_u8s8s32ou8(
+                layoutA, transA, transB, m, n, k, alpha_s32,
+                reinterpret_cast<uint8_t*>(matA), matA_leadingDim, memFormatA,
+                reinterpret_cast<int8_t*>(matB), matB_leadingDim, memFormatB,
+                beta_s32, reinterpret_cast<uint8_t*>(matC), matC_leadingDim,
+                nullptr);
+
+            return true;
+        }
+
+        case encode_types<MatrixType::u8, MatrixType::s8, MatrixType::f32,
+                          MatrixType::s32>(): {
+            int32_t alpha_s32 = static_cast<int32_t>(alpha);
+            int32_t beta_s32  = static_cast<int32_t>(beta);
+
+            aocl_gemm_u8s8s32of32(
+                layoutA, transA, transB, m, n, k, alpha_s32,
+                reinterpret_cast<uint8_t*>(matA), matA_leadingDim, memFormatA,
+                reinterpret_cast<int8_t*>(matB), matB_leadingDim, memFormatB,
+                beta_s32, reinterpret_cast<float*>(matC), matC_leadingDim,
+                nullptr);
+
+            return true;
+        }
+
+        case encode_types<MatrixType::u8, MatrixType::s8, MatrixType::bf16,
+                          MatrixType::s32>(): {
+            int32_t alpha_s32 = static_cast<int32_t>(alpha);
+            int32_t beta_s32  = static_cast<int32_t>(beta);
+
+            aocl_gemm_u8s8s32obf16(
+                layoutA, transA, transB, m, n, k, alpha_s32,
+                reinterpret_cast<uint8_t*>(matA), matA_leadingDim, memFormatA,
+                reinterpret_cast<int8_t*>(matB), matB_leadingDim, memFormatB,
+                beta_s32, reinterpret_cast<bfloat16*>(matC), matC_leadingDim,
+                nullptr);
+
+            return true;
+        }
+
+        case encode_types<MatrixType::s8, MatrixType::s8, MatrixType::s32,
+                          MatrixType::s32>(): {
+            int32_t alpha_s32 = static_cast<int32_t>(alpha);
+            int32_t beta_s32  = static_cast<int32_t>(beta);
+
+            aocl_gemm_s8s8s32os32(
+                layoutA, transA, transB, m, n, k, alpha_s32,
+                reinterpret_cast<int8_t*>(matA), matA_leadingDim, memFormatA,
+                reinterpret_cast<int8_t*>(matB), matB_leadingDim, memFormatB,
+                beta_s32, reinterpret_cast<int32_t*>(matC), matC_leadingDim,
+                nullptr);
+
+            return true;
+        }
+
+        case encode_types<MatrixType::s8, MatrixType::s8, MatrixType::s8,
+                          MatrixType::s32>(): {
+            int32_t alpha_s32 = static_cast<int32_t>(alpha);
+            int32_t beta_s32  = static_cast<int32_t>(beta);
+
+            aocl_gemm_s8s8s32os8(
+                layoutA, transA, transB, m, n, k, alpha_s32,
+                reinterpret_cast<int8_t*>(matA), matA_leadingDim, memFormatA,
+                reinterpret_cast<int8_t*>(matB), matB_leadingDim, memFormatB,
+                beta_s32, reinterpret_cast<int8_t*>(matC), matC_leadingDim,
+                nullptr);
+
+            return true;
+        }
+
+        case encode_types<MatrixType::s8, MatrixType::s8, MatrixType::u8,
+                          MatrixType::s32>(): {
+            int32_t alpha_s32 = static_cast<int32_t>(alpha);
+            int32_t beta_s32  = static_cast<int32_t>(beta);
+
+            aocl_gemm_s8s8s32ou8(
+                layoutA, transA, transB, m, n, k, alpha_s32,
+                reinterpret_cast<int8_t*>(matA), matA_leadingDim, memFormatA,
+                reinterpret_cast<int8_t*>(matB), matB_leadingDim, memFormatB,
+                beta_s32, reinterpret_cast<uint8_t*>(matC), matC_leadingDim,
+                nullptr);
+
+            return true;
+        }
+
+        case encode_types<MatrixType::s8, MatrixType::s8, MatrixType::f32,
+                          MatrixType::s32>(): {
+            int32_t alpha_s32 = static_cast<int32_t>(alpha);
+            int32_t beta_s32  = static_cast<int32_t>(beta);
+
+            aocl_gemm_s8s8s32of32(
+                layoutA, transA, transB, m, n, k, alpha_s32,
+                reinterpret_cast<int8_t*>(matA), matA_leadingDim, memFormatA,
+                reinterpret_cast<int8_t*>(matB), matB_leadingDim, memFormatB,
+                beta_s32, reinterpret_cast<float*>(matC), matC_leadingDim,
+                nullptr);
+
+            return true;
+        }
+
+        case encode_types<MatrixType::s8, MatrixType::s8, MatrixType::bf16,
+                          MatrixType::s32>(): {
+            int32_t alpha_s32 = static_cast<int32_t>(alpha);
+            int32_t beta_s32  = static_cast<int32_t>(beta);
+
+            aocl_gemm_s8s8s32obf16(
+                layoutA, transA, transB, m, n, k, alpha_s32,
+                reinterpret_cast<int8_t*>(matA), matA_leadingDim, memFormatA,
+                reinterpret_cast<int8_t*>(matB), matB_leadingDim, memFormatB,
+                beta_s32, reinterpret_cast<bfloat16*>(matC), matC_leadingDim,
+                nullptr);
+
+            return true;
+        }
+
         default:
             return false;
     }

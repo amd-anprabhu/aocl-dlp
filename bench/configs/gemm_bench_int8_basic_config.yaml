@@ -1,0 +1,262 @@
+# GEMM benchmarking configuration file
+gemm_tests:
+  # Basic test cases u8s8s32os32
+  - name: "medium_matrix"
+    a_type: "u8"
+    b_type: "s8"
+    c_type: "s32"
+    acc_type: "s32"
+    storage_format: "row-major"
+    transA: false
+    transB: false
+    # Non optional
+    m: [160, 256, 512]
+    n: [160, 256, 512]
+    k: [160, 256, 512]
+    alpha: [2.5, 0, -2.5]
+    beta: [2.5, 0, -2.5]
+    # Optional Params
+    lda: [160, 512, 16000]
+    ldb: [160, 512, 16000]
+    ldc: [160, 512, 16000]
+    mtagA: ["none","pack","pack"]
+    mtagB: ["none","pack","none"]   # Matrix B reordering can improve performance
+    tolerances:
+      float: 1.0e-5
+      bfloat16: 1.0e-2
+      int8: 0
+    product_type: "simple"
+  # Basic test cases u8s8s32os8
+  - name: "medium_matrix"
+    a_type: "u8"
+    b_type: "s8"
+    c_type: "s8"
+    acc_type: "s32"
+    storage_format: "row-major"
+    transA: false
+    transB: true
+    # Non optional
+    m: [160, 256, 512]
+    n: [160, 256, 512]
+    k: [160, 256, 512]
+    alpha: [2.5, 0, -2.5]
+    beta: [2.5, 0, -2.5]
+    # Optional Params
+    lda: [160, 512, 16000]
+    ldb: [160, 512, 16000]
+    ldc: [160, 512, 16000]
+    mtagA: ["none","pack","pack"]
+    mtagB: ["none","pack","none"]   # Matrix B reordering can improve performance
+    tolerances:
+      float: 1.0e-5
+      bfloat16: 1.0e-2
+      int8: 0
+    product_type: "simple"
+  # Basic test cases u8s8s32ou8
+  - name: "medium_matrix"
+    a_type: "u8"
+    b_type: "s8"
+    c_type: "u8"
+    acc_type: "s32"
+    storage_format: "row-major"
+    transA: false
+    transB: true
+    # Non optional
+    m: [160, 256, 512]
+    n: [160, 256, 512]
+    k: [160, 256, 512]
+    alpha: [2.5, 0, -2.5]
+    beta: [2.5, 0, -2.5]
+    # Optional Params
+    lda: [160, 512, 16000]
+    ldb: [160, 512, 16000]
+    ldc: [160, 512, 16000]
+    mtagA: ["none","pack","pack"]
+    mtagB: ["none","pack","none"]   # Matrix B reordering can improve performance
+    tolerances:
+      float: 1.0e-5
+      bfloat16: 1.0e-2
+      int8: 0
+    product_type: "simple"
+  # Basic test cases u8s8s32of32
+  - name: "medium_matrix"
+    a_type: "u8"
+    b_type: "s8"
+    c_type: "f32"
+    acc_type: "s32"
+    storage_format: "row-major"
+    transA: false
+    transB: true
+    # Non optional
+    m: [160, 256, 512]
+    n: [160, 256, 512]
+    k: [160, 256, 512]
+    alpha: [2.5, 0, -2.5]
+    beta: [2.5, 0, -2.5]
+    # Optional Params
+    lda: [160, 512, 16000]
+    ldb: [160, 512, 16000]
+    ldc: [160, 512, 16000]
+    mtagA: ["none","pack","pack"]
+    mtagB: ["none","pack","none"]   # Matrix B reordering can improve performance
+    tolerances:
+      float: 1.0e-5
+      bfloat16: 1.0e-2
+      int8: 0
+    product_type: "simple"
+  # Basic test cases u8s8s32obf16
+  - name: "medium_matrix"
+    a_type: "u8"
+    b_type: "s8"
+    c_type: "bf16"
+    acc_type: "s32"
+    storage_format: "row-major"
+    transA: false
+    transB: true
+    # Non optional
+    m: [160, 256, 512]
+    n: [160, 256, 512]
+    k: [160, 256, 512]
+    alpha: [2.5, 0, -2.5]
+    beta: [2.5, 0, -2.5]
+    # Optional Params
+    lda: [160, 512, 16000]
+    ldb: [160, 512, 16000]
+    ldc: [160, 512, 16000]
+    mtagA: ["none","pack","pack"]
+    mtagB: ["none","pack","none"]   # Matrix B reordering can improve performance
+    tolerances:
+      float: 1.0e-5
+      bfloat16: 1.0e-2
+      int8: 0
+    product_type: "simple"
+  # Basic test cases s8s8s32os32
+  - name: "medium_matrix"
+    a_type: "s8"
+    b_type: "s8"
+    c_type: "s32"
+    acc_type: "s32"
+    storage_format: "row-major"
+    transA: false
+    transB: true
+    # Non optional
+    m: [160, 256, 512]
+    n: [160, 256, 512]
+    k: [160, 256, 512]
+    alpha: [2.5, 0, -2.5]
+    beta: [2.5, 0, -2.5]
+    # Optional Params
+    lda: [160, 512, 16000]
+    ldb: [160, 512, 16000]
+    ldc: [160, 512, 16000]
+    mtagA: ["none","pack","pack"]
+    mtagB: ["none","pack","none"]   # Matrix B reordering can improve performance
+    tolerances:
+      float: 1.0e-5
+      bfloat16: 1.0e-2
+      int8: 0
+    product_type: "simple"
+  # Basic test cases s8s8s32os8
+  - name: "medium_matrix"
+    a_type: "s8"
+    b_type: "s8"
+    c_type: "s8"
+    acc_type: "s32"
+    storage_format: "row-major"
+    transA: false
+    transB: true
+    # Non optional
+    m: [160, 256, 512]
+    n: [160, 256, 512]
+    k: [160, 256, 512]
+    alpha: [2.5, 0, -2.5]
+    beta: [2.5, 0, -2.5]
+    # Optional Params
+    lda: [160, 512, 16000]
+    ldb: [160, 512, 16000]
+    ldc: [160, 512, 16000]
+    mtagA: ["none","pack","pack"]
+    mtagB: ["none","pack","none"]   # Matrix B reordering can improve performance
+    tolerances:
+      float: 1.0e-5
+      bfloat16: 1.0e-2
+      int8: 0
+    product_type: "simple"
+  # Basic test cases s8s8s32ou8
+  - name: "medium_matrix"
+    a_type: "s8"
+    b_type: "s8"
+    c_type: "u8"
+    acc_type: "s32"
+    storage_format: "row-major"
+    transA: false
+    transB: true
+    # Non optional
+    m: [160, 256, 512]
+    n: [160, 256, 512]
+    k: [160, 256, 512]
+    alpha: [2.5, 0, -2.5]
+    beta: [2.5, 0, -2.5]
+    # Optional Params
+    lda: [160, 512, 16000]
+    ldb: [160, 512, 16000]
+    ldc: [160, 512, 16000]
+    mtagA: ["none","pack","pack"]
+    mtagB: ["none","pack","none"]   # Matrix B reordering can improve performance
+    tolerances:
+      float: 1.0e-5
+      bfloat16: 1.0e-2
+      int8: 0
+    product_type: "simple"
+  # Basic test cases s8s8s32of32
+  - name: "medium_matrix"
+    a_type: "s8"
+    b_type: "s8"
+    c_type: "f32"
+    acc_type: "s32"
+    storage_format: "row-major"
+    transA: false
+    transB: true
+    # Non optional
+    m: [160, 256, 512]
+    n: [160, 256, 512]
+    k: [160, 256, 512]
+    alpha: [2.5, 0, -2.5]
+    beta: [2.5, 0, -2.5]
+    # Optional Params
+    lda: [160, 512, 16000]
+    ldb: [160, 512, 16000]
+    ldc: [160, 512, 16000]
+    mtagA: ["none","pack","pack"]
+    mtagB: ["none","pack","none"]   # Matrix B reordering can improve performance
+    tolerances:
+      float: 1.0e-5
+      bfloat16: 1.0e-2
+      int8: 0
+    product_type: "simple"
+  # Basic test cases s8s8s32obf16
+  - name: "medium_matrix"
+    a_type: "s8"
+    b_type: "s8"
+    c_type: "bf16"
+    acc_type: "s32"
+    storage_format: "row-major"
+    transA: false
+    transB: true
+    # Non optional
+    m: [160, 256, 512]
+    n: [160, 256, 512]
+    k: [160, 256, 512]
+    alpha: [2.5, 0, -2.5]
+    beta: [2.5, 0, -2.5]
+    # Optional Params
+    lda: [160, 512, 16000]
+    ldb: [160, 512, 16000]
+    ldc: [160, 512, 16000]
+    mtagA: ["none","pack","pack"]
+    mtagB: ["none","pack","none"]   # Matrix B reordering can improve performance
+    tolerances:
+      float: 1.0e-5
+      bfloat16: 1.0e-2
+      int8: 0
+    product_type: "simple"
